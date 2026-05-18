@@ -1,10 +1,10 @@
-# OpsRadar — 운영 인텔리전스 AI
+# 운영 인텔리전스 AI
 
 ## 팀 구성
 
 | 이름 | 역할 | 담당 파일 |
 |---|---|---|
-| 김희진 | 팀장·기획 | 요구사항·PR 승인 |
+| 김희진 | 팀장·기획 | 요구사항 정의 |
 | 이성우 | AI·챗봇 | services/*.py, endpoints/chat.py |
 | 김예은 | 인프라 | 배포 환경·Azure VM |
 | 김성호 | 백엔드·DB | endpoints/*, models/*, schemas/* |
