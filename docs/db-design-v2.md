@@ -32,6 +32,8 @@ erDiagram
   USERS ||--o{ CHAT_MESSAGES : sends
   PROJECTS ||--o{ WEEKLY_REPORTS : has
   USERS ||--o{ WEEKLY_REPORTS : creates
+  PROJECTS ||--o{ MONTHLY_REPORTS : has
+  USERS ||--o{ MONTHLY_REPORTS : creates
   PROJECTS ||--o{ HANDOFF_REPORTS : has
   USERS ||--o{ HANDOFF_REPORTS : creates
   PROJECTS ||--o{ AI_SUMMARIES : has
@@ -102,8 +104,8 @@ erDiagram
   CHUNK_EMBEDDINGS {
     uuid id PK
     uuid chunk_id FK
-    string vector_store "faiss"
-    string vector_id "FAISS chunk id"
+    string faiss_index_path
+    int faiss_index_id
     string embedding_model
     timestamp created_at
   }
@@ -115,15 +117,17 @@ erDiagram
     uuid created_by FK
     uuid source_document_id FK
     uuid source_chunk_id FK
+    uuid linked_issue_id FK
     string title
     text description
     string status
     string priority
     string source_type
     string approval_status
+    int confidence_score
     uuid reviewed_by FK
     timestamp reviewed_at
-    date due_date
+    timestamp due_date
     timestamp created_at
     timestamp updated_at
   }
@@ -138,6 +142,9 @@ erDiagram
     text description
     string severity
     string status
+    string source_type
+    int confidence_score
+    boolean is_candidate
     timestamp created_at
     timestamp updated_at
   }
@@ -148,7 +155,7 @@ erDiagram
     uuid user_id FK
     string role
     text content
-    json sources_json
+    jsonb sources_json
     timestamp created_at
   }
 
@@ -156,12 +163,21 @@ erDiagram
     uuid id PK
     uuid project_id FK
     uuid created_by FK
-    date week_start
-    date week_end
+    timestamp week_start
+    timestamp week_end
     text content
     int progress_rate
     timestamp created_at
-    timestamp updated_at
+  }
+
+  MONTHLY_REPORTS {
+    uuid id PK
+    uuid project_id FK
+    uuid created_by FK
+    timestamp month_start
+    timestamp month_end
+    text content
+    int progress_rate
   }
 
   HANDOFF_REPORTS {
@@ -171,7 +187,7 @@ erDiagram
     string title
     text content
     int handoff_score
-    json missing_items_json
+    jsonb missing_items_json
     timestamp created_at
     timestamp updated_at
   }
@@ -182,7 +198,7 @@ erDiagram
     uuid document_id FK
     string summary_type
     text summary
-    json extracted_json
+    jsonb extracted_json
     timestamp created_at
   }
 ```
@@ -191,7 +207,10 @@ erDiagram
 
 - `project_members` is the N:M bridge between users and projects and stores the project role.
 - `document_chunks` keeps `project_id` to make project-scoped RAG filtering cheap and explicit.
-- `chunk_embeddings` stores only FAISS metadata. The embedding vector itself is not stored in PostgreSQL.
+- `chunk_embeddings` stores only FAISS metadata (`faiss_index_path`, integer `faiss_index_id`). The embedding vector itself is not stored in PostgreSQL.
 - AI-extracted todos and manually-created todos share the `todos` table. Use `source_type` (`ai` or `manual`) and `approval_status` (`pending`, `approved`, `rejected`) to split them in the Todo page.
-- `chat_messages.sources_json` stores answer citations such as `document_id`, `chunk_id`, `file_name`, and `page_number`.
+- `todos.confidence_score` stores the AI confidence percentage shown in the Todo screen when available.
+- AI-extracted issue candidates and confirmed issues share the `issues` table. Use `is_candidate` to split candidate/confirmed tabs and `confidence_score` to display the issue candidate score.
+- `weekly_reports` and `monthly_reports` are the supported report grains. Daily reports are intentionally excluded for MVP.
+- `chat_messages.sources_json JSONB` stores answer citations such as `document_id`, `chunk_id`, `file_name`, and `page_number`; this is the MVP option before introducing a separate `chat_message_sources` table.
 - `ai_summaries.extracted_json` stores flexible AI outputs such as summaries, extracted issue candidates, and optional decisions. Approved Todo items live in `todos`.

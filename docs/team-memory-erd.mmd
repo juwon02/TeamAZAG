@@ -21,6 +21,8 @@ erDiagram
   USERS ||--o{ CHAT_MESSAGES : sends
   PROJECTS ||--o{ WEEKLY_REPORTS : has
   USERS ||--o{ WEEKLY_REPORTS : creates
+  PROJECTS ||--o{ MONTHLY_REPORTS : has
+  USERS ||--o{ MONTHLY_REPORTS : creates
   PROJECTS ||--o{ HANDOFF_REPORTS : has
   USERS ||--o{ HANDOFF_REPORTS : creates
   PROJECTS ||--o{ AI_SUMMARIES : has
@@ -91,8 +93,8 @@ erDiagram
   CHUNK_EMBEDDINGS {
     uuid id PK
     uuid chunk_id FK
-    string vector_store
-    string vector_id
+    string faiss_index_path
+    int faiss_index_id
     string embedding_model
     timestamp created_at
   }
@@ -104,11 +106,17 @@ erDiagram
     uuid created_by FK
     uuid source_document_id FK
     uuid source_chunk_id FK
+    uuid linked_issue_id FK
     string title
     text description
     string status
     string priority
-    date due_date
+    string source_type
+    string approval_status
+    int confidence_score
+    uuid reviewed_by FK
+    timestamp reviewed_at
+    timestamp due_date
     timestamp created_at
     timestamp updated_at
   }
@@ -123,6 +131,9 @@ erDiagram
     text description
     string severity
     string status
+    string source_type
+    int confidence_score
+    boolean is_candidate
     timestamp created_at
     timestamp updated_at
   }
@@ -133,7 +144,7 @@ erDiagram
     uuid user_id FK
     string role
     text content
-    json sources_json
+    jsonb sources_json
     timestamp created_at
   }
 
@@ -141,12 +152,21 @@ erDiagram
     uuid id PK
     uuid project_id FK
     uuid created_by FK
-    date week_start
-    date week_end
+    timestamp week_start
+    timestamp week_end
     text content
     int progress_rate
     timestamp created_at
-    timestamp updated_at
+  }
+
+  MONTHLY_REPORTS {
+    uuid id PK
+    uuid project_id FK
+    uuid created_by FK
+    timestamp month_start
+    timestamp month_end
+    text content
+    int progress_rate
   }
 
   HANDOFF_REPORTS {
@@ -156,7 +176,7 @@ erDiagram
     string title
     text content
     int handoff_score
-    json missing_items_json
+    jsonb missing_items_json
     timestamp created_at
     timestamp updated_at
   }
@@ -167,6 +187,6 @@ erDiagram
     uuid document_id FK
     string summary_type
     text summary
-    json extracted_json
+    jsonb extracted_json
     timestamp created_at
   }

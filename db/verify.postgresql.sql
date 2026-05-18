@@ -24,6 +24,8 @@ SELECT 'chat_messages', COUNT(*), 5 FROM chat_messages
 UNION ALL
 SELECT 'weekly_reports', COUNT(*), 1 FROM weekly_reports
 UNION ALL
+SELECT 'monthly_reports', COUNT(*), 1 FROM monthly_reports
+UNION ALL
 SELECT 'handoff_reports', COUNT(*), 1 FROM handoff_reports
 UNION ALL
 SELECT 'ai_summaries', COUNT(*), 2 FROM ai_summaries;
@@ -37,12 +39,13 @@ FROM information_schema.columns
 WHERE table_schema = 'public'
   AND (
     (table_name = 'documents' AND column_name IN ('project_id', 'uploaded_by'))
-    OR (table_name = 'todos' AND column_name IN ('project_id', 'assignee_id', 'created_by', 'source_type', 'approval_status', 'reviewed_by'))
-    OR (table_name = 'issues' AND column_name IN ('project_id', 'reporter_id', 'assignee_id'))
+    OR (table_name = 'todos' AND column_name IN ('project_id', 'assignee_id', 'created_by', 'source_type', 'approval_status', 'confidence_score', 'reviewed_by'))
+    OR (table_name = 'issues' AND column_name IN ('project_id', 'reporter_id', 'assignee_id', 'confidence_score', 'is_candidate'))
     OR (table_name = 'chat_messages' AND column_name IN ('project_id', 'user_id', 'sources_json'))
+    OR (table_name = 'monthly_reports' AND column_name IN ('project_id', 'created_by', 'month_start', 'month_end', 'progress_rate'))
     OR (table_name = 'handoff_reports' AND column_name IN ('handoff_score', 'missing_items_json'))
     OR (table_name = 'users' AND column_name IN ('email', 'password_hash'))
-    OR (table_name = 'chunk_embeddings' AND column_name IN ('vector_store', 'vector_id', 'embedding_model'))
+    OR (table_name = 'chunk_embeddings' AND column_name IN ('faiss_index_path', 'faiss_index_id', 'embedding_model'))
   )
 ORDER BY table_name, column_name;
 
@@ -78,13 +81,13 @@ WHERE table_schema = 'public'
   AND table_name = 'chunk_embeddings'
 ORDER BY ordinal_position;
 
--- 5-1. Confirm FAISS is the seeded vector store reference.
+-- 5-1. Confirm FAISS is the seeded index reference.
 SELECT
-  vector_store,
+  faiss_index_path,
   COUNT(*) AS row_count
 FROM chunk_embeddings
-GROUP BY vector_store
-ORDER BY vector_store;
+GROUP BY faiss_index_path
+ORDER BY faiss_index_path;
 
 -- 5-2. Confirm AI Todo approval queue exists in the shared todos table.
 SELECT
@@ -95,15 +98,23 @@ FROM todos
 GROUP BY source_type, approval_status
 ORDER BY source_type, approval_status;
 
+-- 5-3. Confirm issue candidate tab split exists.
+SELECT
+  is_candidate,
+  COUNT(*) AS row_count
+FROM issues
+GROUP BY is_candidate
+ORDER BY is_candidate;
+
 -- 6. Dashboard smoke test for seeded project.
 SELECT
   p.id AS project_id,
   p.name AS project_name,
   COUNT(t.id) FILTER (WHERE t.approval_status = 'approved') AS total_todo_count,
-  COUNT(t.id) FILTER (WHERE t.approval_status = 'approved' AND t.status = 'done') AS completed_todo_count,
+  COUNT(t.id) FILTER (WHERE t.approval_status = 'approved' AND t.status = 'completed') AS completed_todo_count,
   COUNT(t.id) FILTER (
     WHERE t.approval_status = 'approved'
-      AND t.status <> 'done'
+      AND t.status <> 'completed'
       AND t.due_date IS NOT NULL
       AND t.due_date < CURRENT_DATE
   ) AS delayed_todo_count,
@@ -115,8 +126,15 @@ SELECT
     SELECT COUNT(*)
     FROM issues i
     WHERE i.project_id = p.id
+      AND i.is_candidate = false
       AND i.status IN ('open', 'in_progress')
   ) AS unresolved_issue_count,
+  (
+    SELECT COUNT(*)
+    FROM issues i
+    WHERE i.project_id = p.id
+      AND i.is_candidate = true
+  ) AS candidate_issue_count,
   (
     SELECT hr.handoff_score
     FROM handoff_reports hr

@@ -17,11 +17,12 @@
 | `project_members` | User/project N:M membership | unique `(project_id, user_id)`, role in owner/manager/member/viewer |
 | `documents` | Uploaded or connected source documents | required `project_id`, `uploaded_by`, source type supports upload, Slack, Notion, Meet, Gmail, Teams, Jira |
 | `document_chunks` | RAG chunk units | required `document_id`, `project_id`; unique `(document_id, chunk_index)` |
-| `chunk_embeddings` | FAISS vector references | stores `vector_store`, `vector_id`, `embedding_model`; no vector payload |
-| `todos` | Project action items, including AI-extracted candidates | required `project_id`; `source_type` splits manual/AI; `approval_status` splits pending/approved/rejected |
-| `issues` | Project risks/issues | required `project_id`; indexes on project, status, severity |
+| `chunk_embeddings` | FAISS vector references | stores `faiss_index_path`, integer `faiss_index_id`, `embedding_model`; no vector payload |
+| `todos` | Project action items, including AI-extracted candidates | required `project_id`; optional `linked_issue_id`; `source_type` splits manual/AI; `approval_status` splits pending/approved/rejected; optional `confidence_score` |
+| `issues` | Project risks/issues | required `project_id`; `source_type` splits manual/AI; `is_candidate` splits candidate/confirmed tabs; optional `confidence_score` |
 | `chat_messages` | Project AI/user chat log | required `project_id`; `sources_json` array for citations |
 | `weekly_reports` | Generated weekly project report | required `project_id`; unique project/week range |
+| `monthly_reports` | Generated monthly project report | required `project_id`; unique project/month range |
 | `handoff_reports` | Generated handoff report | required `project_id`; `handoff_score` 0-100 |
 | `ai_summaries` | AI-generated summaries and extracted entities | required `project_id`; `summary_type` constrained |
 
@@ -60,3 +61,33 @@ source_type = ai,     approval_status = rejected  -> AI Todo rejected by the use
 ```
 
 The frontend can show AI items with an icon or badge instead of needing a separate table.
+
+## Issue Candidate Model
+
+AI-extracted issue candidates are stored in the same `issues` table as confirmed issues.
+
+```text
+is_candidate = true   -> candidate issue shown in the candidate tab
+is_candidate = false  -> confirmed issue shown in the official issue tab
+```
+
+`confidence_score` is nullable and constrained to 0-100 when present.
+
+## Enum Values
+
+```text
+documents.source_type: email, meeting, chat, other
+documents.status: parsing, embedding, completed, failed
+todos.status: pending, in_progress, completed
+todos.priority / issues.severity: high, medium, low
+todos.source_type / issues.source_type: ai, manual
+todos.approval_status: pending, approved, rejected
+issues.status: open, in_progress, resolved
+chat_messages.role: user, assistant
+report period / ai_summaries.summary_type: weekly, monthly
+project_members.role: admin, member
+```
+
+## Chat Source Model
+
+For MVP, `chat_messages.sources_json JSONB` remains the source citation store. A separate `chat_message_sources` table can be added later if reverse lookups like "show chats that referenced this document" become a priority.

@@ -7,10 +7,10 @@ SELECT
   p.id AS project_id,
   p.name AS project_name,
   COUNT(t.id) FILTER (WHERE t.approval_status = 'approved') AS total_todo_count,
-  COUNT(t.id) FILTER (WHERE t.approval_status = 'approved' AND t.status = 'done') AS completed_todo_count,
+  COUNT(t.id) FILTER (WHERE t.approval_status = 'approved' AND t.status = 'completed') AS completed_todo_count,
   COUNT(t.id) FILTER (
     WHERE t.approval_status = 'approved'
-      AND t.status <> 'done'
+      AND t.status <> 'completed'
       AND t.due_date IS NOT NULL
       AND t.due_date < CURRENT_DATE
   ) AS delayed_todo_count,
@@ -26,8 +26,15 @@ SELECT
     SELECT COUNT(*)
     FROM issues i
     WHERE i.project_id = p.id
+      AND i.is_candidate = false
       AND i.status IN ('open', 'in_progress')
   ) AS unresolved_issue_count,
+  (
+    SELECT COUNT(*)
+    FROM issues i
+    WHERE i.project_id = p.id
+      AND i.is_candidate = true
+  ) AS candidate_issue_count,
   (
     SELECT hr.handoff_score
     FROM handoff_reports hr
@@ -56,7 +63,7 @@ SELECT
 FROM todos
 WHERE project_id = :project_id
   AND approval_status = 'approved'
-  AND status = 'done'
+  AND status = 'completed'
 GROUP BY project_id;
 
 -- 4. Delayed Todo count.
@@ -66,7 +73,7 @@ SELECT
 FROM todos
 WHERE project_id = :project_id
   AND approval_status = 'approved'
-  AND status <> 'done'
+  AND status <> 'completed'
   AND due_date IS NOT NULL
   AND due_date < CURRENT_DATE
 GROUP BY project_id;
@@ -87,6 +94,7 @@ SELECT
   COUNT(*) AS unresolved_issue_count
 FROM issues
 WHERE project_id = :project_id
+  AND is_candidate = false
   AND status IN ('open', 'in_progress')
 GROUP BY project_id;
 
@@ -98,21 +106,24 @@ SELECT
   i.description,
   i.severity,
   i.status,
+  i.confidence_score,
+  i.is_candidate,
   i.created_at,
   reporter.name AS reporter_name,
   assignee.name AS assignee_name,
   d.file_name AS source_file_name
 FROM issues i
-JOIN users reporter ON reporter.id = i.reporter_id
+LEFT JOIN users reporter ON reporter.id = i.reporter_id
 LEFT JOIN users assignee ON assignee.id = i.assignee_id
 LEFT JOIN documents d ON d.id = i.source_document_id
 WHERE i.project_id = :project_id
+  AND i.is_candidate = false
   AND i.status IN ('open', 'in_progress')
-  AND i.severity IN ('critical', 'high')
+  AND i.severity = 'high'
 ORDER BY
   CASE i.severity
-    WHEN 'critical' THEN 1
-    WHEN 'high' THEN 2
+    WHEN 'high' THEN 1
+    WHEN 'medium' THEN 2
     ELSE 3
   END,
   i.created_at DESC
@@ -161,6 +172,7 @@ SELECT
   t.due_date,
   t.source_type,
   t.approval_status,
+  t.confidence_score,
   assignee.name AS assignee_name,
   d.file_name AS source_file_name,
   dc.page_number AS source_page_number
@@ -185,6 +197,7 @@ SELECT
   t.due_date,
   t.source_type,
   t.approval_status,
+  t.confidence_score,
   assignee.name AS assignee_name,
   creator.name AS created_by_name
 FROM todos t
@@ -194,10 +207,9 @@ WHERE t.project_id = :project_id
   AND t.approval_status = 'approved'
 ORDER BY
   CASE t.status
-    WHEN 'delayed' THEN 1
     WHEN 'in_progress' THEN 2
-    WHEN 'todo' THEN 3
-    WHEN 'done' THEN 4
+    WHEN 'pending' THEN 3
+    WHEN 'completed' THEN 4
     ELSE 5
   END,
   t.due_date ASC NULLS LAST,
@@ -223,3 +235,42 @@ RETURNING
   approval_status,
   reviewed_by,
   reviewed_at;
+
+-- 13. Issue candidate list for review tab.
+SELECT
+  i.id,
+  i.project_id,
+  i.title,
+  i.description,
+  i.severity,
+  i.status,
+  i.confidence_score,
+  i.is_candidate,
+  i.created_at,
+  reporter.name AS reporter_name,
+  assignee.name AS assignee_name,
+  d.file_name AS source_file_name
+FROM issues i
+JOIN users reporter ON reporter.id = i.reporter_id
+LEFT JOIN users assignee ON assignee.id = i.assignee_id
+LEFT JOIN documents d ON d.id = i.source_document_id
+WHERE i.project_id = :project_id
+  AND i.is_candidate = true
+ORDER BY i.confidence_score DESC NULLS LAST, i.created_at DESC
+LIMIT :limit;
+
+-- 14. Promote or reject an issue candidate.
+-- Bind :issue_id, :is_candidate where is_candidate is false to confirm, or delete separately to reject.
+UPDATE issues
+SET
+  is_candidate = :is_candidate,
+  updated_at = now()
+WHERE id = :issue_id
+  AND is_candidate = true
+RETURNING
+  id,
+  project_id,
+  title,
+  confidence_score,
+  is_candidate,
+  updated_at;
