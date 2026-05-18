@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # DB
-    DATABASE_URL: str = "mysql+pymysql://user:password@localhost:3306/opsradar"
+    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/opsradar"
 
     # AI Provider (azure | gemini)
     AI_PROVIDER: str = "gemini"
@@ -13,8 +13,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_DEPLOYMENT: str = ""
 
     # Vector DB
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8001
+    FAISS_INDEX_PATH: str = "data/faiss/index.faiss"
 
     class Config:
         env_file = ".env"
