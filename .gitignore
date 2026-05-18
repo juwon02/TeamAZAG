@@ -20,6 +20,7 @@ env/
 # 벡터 DB (로컬에만 존재, 용량 큼)
 # ────────────────────────────────────────────
 faiss_db/
+data/faiss/
 chroma_db/
 chroma_test/
 
