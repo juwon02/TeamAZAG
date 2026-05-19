@@ -1,0 +1,637 @@
+{
+  "teams": [
+    {
+      "id": "a0000000-0000-0000-0000-000000000001",
+      "name": "AZAG",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    }
+  ],
+
+  "users": [
+    {
+      "id": "b0000000-0000-0000-0000-000000000001",
+      "name": "김희진",
+      "email": "heejin@azag.dev",
+      "password_hash": "hash_heejin",
+      "role": "pm",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "b0000000-0000-0000-0000-000000000002",
+      "name": "이성우",
+      "email": "sungwoo@azag.dev",
+      "password_hash": "hash_sungwoo",
+      "role": "ai",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "b0000000-0000-0000-0000-000000000003",
+      "name": "김예은",
+      "email": "yeeun@azag.dev",
+      "password_hash": "hash_yeeun",
+      "role": "infra",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "b0000000-0000-0000-0000-000000000004",
+      "name": "김성호",
+      "email": "sungho@azag.dev",
+      "password_hash": "hash_sungho",
+      "role": "backend",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "b0000000-0000-0000-0000-000000000005",
+      "name": "박주원",
+      "email": "juwon@azag.dev",
+      "password_hash": "hash_juwon",
+      "role": "frontend",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    }
+  ],
+
+  "projects": [
+    {
+      "id": "c0000000-0000-0000-0000-000000000001",
+      "team_id": "a0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "name": "OpsRadar MVP",
+      "description": "운영 기록을 AI가 분석하여 조직의 현재 상태와 리스크를 자동 구조화하는 AI 운영 인텔리전스 시스템",
+      "status": "in_progress",
+      "start_date": "2026-05-01",
+      "end_date": "2026-06-26",
+      "created_at": "2026-05-01T09:00:00Z",
+      "updated_at": "2026-05-01T09:00:00Z"
+    }
+  ],
+
+  "project_members": [
+    {
+      "id": "d0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000001",
+      "role": "admin",
+      "joined_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "d0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000002",
+      "role": "member",
+      "joined_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "d0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000003",
+      "role": "member",
+      "joined_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "d0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000004",
+      "role": "member",
+      "joined_at": "2026-05-01T09:00:00Z"
+    },
+    {
+      "id": "d0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000005",
+      "role": "member",
+      "joined_at": "2026-05-01T09:00:00Z"
+    }
+  ],
+
+  "documents": [
+    {
+      "id": "e0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "uploaded_by": "b0000000-0000-0000-0000-000000000001",
+      "file_name": "meeting_notes_20260505_kickoff.pdf",
+      "file_type": "meeting",
+      "source_type": "meeting",
+      "storage_path": "/storage/docs/meeting_notes_20260505_kickoff.pdf",
+      "status": "completed",
+      "uploaded_at": "2026-05-05T10:00:00Z",
+      "created_at": "2026-05-05T10:00:00Z",
+      "updated_at": "2026-05-05T10:00:00Z"
+    },
+    {
+      "id": "e0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "uploaded_by": "b0000000-0000-0000-0000-000000000004",
+      "file_name": "chat_logs_20260512_backend.txt",
+      "file_type": "chat",
+      "source_type": "chat",
+      "storage_path": "/storage/docs/chat_logs_20260512_backend.txt",
+      "status": "completed",
+      "uploaded_at": "2026-05-12T14:00:00Z",
+      "created_at": "2026-05-12T14:00:00Z",
+      "updated_at": "2026-05-12T14:00:00Z"
+    },
+    {
+      "id": "e0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "uploaded_by": "b0000000-0000-0000-0000-000000000001",
+      "file_name": "meeting_notes_20260512_week2.pdf",
+      "file_type": "meeting",
+      "source_type": "meeting",
+      "storage_path": "/storage/docs/meeting_notes_20260512_week2.pdf",
+      "status": "completed",
+      "uploaded_at": "2026-05-12T18:00:00Z",
+      "created_at": "2026-05-12T18:00:00Z",
+      "updated_at": "2026-05-12T18:00:00Z"
+    },
+    {
+      "id": "e0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "uploaded_by": "b0000000-0000-0000-0000-000000000002",
+      "file_name": "chat_logs_20260514_ai_pipeline.txt",
+      "file_type": "chat",
+      "source_type": "chat",
+      "storage_path": "/storage/docs/chat_logs_20260514_ai_pipeline.txt",
+      "status": "completed",
+      "uploaded_at": "2026-05-14T09:00:00Z",
+      "created_at": "2026-05-14T09:00:00Z",
+      "updated_at": "2026-05-14T09:00:00Z"
+    },
+    {
+      "id": "e0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "uploaded_by": "b0000000-0000-0000-0000-000000000003",
+      "file_name": "issue_log_20260514_azure_timeout.txt",
+      "file_type": "other",
+      "source_type": "other",
+      "storage_path": "/storage/docs/issue_log_20260514_azure_timeout.txt",
+      "status": "completed",
+      "uploaded_at": "2026-05-14T11:00:00Z",
+      "created_at": "2026-05-14T11:00:00Z",
+      "updated_at": "2026-05-14T11:00:00Z"
+    }
+  ],
+
+  "document_chunks": [
+    {
+      "id": "f0000000-0000-0000-0000-000000000001",
+      "document_id": "e0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "2026-05-05 킥오프 회의. 참석: 김희진(PM), 이성우(AI), 김예은(인프라), 김성호(백엔드), 박주원(프론트). 프로젝트명 OpsRadar로 확정. 8주 MVP 일정 합의. 기술스택: FastAPI + PostgreSQL + FAISS + React.",
+      "chunk_index": 0,
+      "page_number": 1,
+      "created_at": "2026-05-05T10:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000002",
+      "document_id": "e0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "1주차 주요 액션아이템: 김성호 - DB 스키마 설계 및 기본 API 껍데기 구현. 이성우 - RAG 파이프라인 설계 시작. 김예은 - Azure VM 및 PostgreSQL 환경 세팅. 박주원 - React 프로젝트 초기화 및 레이아웃 구성.",
+      "chunk_index": 1,
+      "page_number": 1,
+      "created_at": "2026-05-05T10:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000003",
+      "document_id": "e0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "김성호: documents API 엔드포인트 완성했습니다. POST /api/v1/documents/upload 동작 확인. 김희진: todos API도 이번 주 안에 껍데기라도 올려주세요. 김성호: 네 오늘 중으로 올리겠습니다.",
+      "chunk_index": 0,
+      "page_number": 1,
+      "created_at": "2026-05-12T14:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000004",
+      "document_id": "e0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "박주원: 프론트 레이아웃 완성. 사이드바 7개 메뉴 구현. 근데 API 명세서 기준으로 연동하면 되는거죠? 김희진: 맞아요 노션 API 명세서 참고하면 됩니다. 박주원: 확인했습니다. 업로드 UI부터 시작하겠습니다.",
+      "chunk_index": 1,
+      "page_number": 1,
+      "created_at": "2026-05-12T14:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000005",
+      "document_id": "e0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "2주차 회의 (2026-05-12). 진행상황: 백엔드 API 껍데기 완성(김성호), Azure VM 세팅 완료(김예은), 프론트 레이아웃 완성(박주원). 이슈: RAG 파이프라인 FAISS 연동 예상보다 복잡. 이성우 추가 시간 필요.",
+      "chunk_index": 0,
+      "page_number": 1,
+      "created_at": "2026-05-12T18:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000006",
+      "document_id": "e0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "이성우: FAISS 인덱스 저장/로드 구현 완료. 근데 Azure OpenAI API 타임아웃이 계속 발생합니다. 5초 이상 지연 케이스가 늘고 있어요. 김성호: 혹시 배치 사이즈 문제 아닐까요? 이성우: 확인해볼게요.",
+      "chunk_index": 0,
+      "page_number": 1,
+      "created_at": "2026-05-14T09:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000007",
+      "document_id": "e0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "이성우: RAG 검색 정확도가 예상보다 낮습니다. 청크 사이즈를 줄여봤는데도 관련 없는 결과가 섞여요. 임베딩 모델 교체를 고려해봐야 할 것 같습니다. 희진님 확인 부탁드려요.",
+      "chunk_index": 1,
+      "page_number": 1,
+      "created_at": "2026-05-14T09:30:00Z"
+    },
+    {
+      "id": "f0000000-0000-0000-0000-000000000008",
+      "document_id": "e0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "content": "[이슈 로그 2026-05-14] Azure OpenAI API 응답 지연 5초 초과. 발생 빈도: 오전 기준 약 30%. 원인 추정: 토큰 한도 근접 또는 리전 부하. 담당: 이성우. 임시 조치: 재시도 로직 추가 필요.",
+      "chunk_index": 0,
+      "page_number": 1,
+      "created_at": "2026-05-14T11:30:00Z"
+    }
+  ],
+
+  "chunk_embeddings": [
+    { "id": "g0000000-0000-0000-0000-000000000001", "chunk_id": "f0000000-0000-0000-0000-000000000001", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 0, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-05T10:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000002", "chunk_id": "f0000000-0000-0000-0000-000000000002", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 1, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-05T10:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000003", "chunk_id": "f0000000-0000-0000-0000-000000000003", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 2, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-12T14:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000004", "chunk_id": "f0000000-0000-0000-0000-000000000004", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 3, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-12T14:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000005", "chunk_id": "f0000000-0000-0000-0000-000000000005", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 4, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-12T18:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000006", "chunk_id": "f0000000-0000-0000-0000-000000000006", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 5, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-14T09:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000007", "chunk_id": "f0000000-0000-0000-0000-000000000007", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 6, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-14T09:35:00Z" },
+    { "id": "g0000000-0000-0000-0000-000000000008", "chunk_id": "f0000000-0000-0000-0000-000000000008", "faiss_index_path": "data/faiss/index.faiss", "faiss_index_id": 7, "embedding_model": "text-embedding-ada-002", "created_at": "2026-05-14T11:35:00Z" }
+  ],
+
+  "todos": [
+    {
+      "id": "h0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000002",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000005",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000008",
+      "linked_issue_id": null,
+      "title": "Azure OpenAI API 타임아웃 원인 분석 및 재시도 로직 구현",
+      "status": "in_progress",
+      "priority": "high",
+      "source_type": "ai",
+      "approval_status": "approved",
+      "confidence_score": 92,
+      "due_date": "2026-05-16T18:00:00Z",
+      "created_at": "2026-05-14T12:00:00Z",
+      "updated_at": "2026-05-14T12:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000002",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000004",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000007",
+      "linked_issue_id": null,
+      "title": "RAG 검색 정확도 개선 — 청크 사이즈 및 임베딩 모델 재검토",
+      "status": "pending",
+      "priority": "high",
+      "source_type": "ai",
+      "approval_status": "pending",
+      "confidence_score": 87,
+      "due_date": "2026-05-18T18:00:00Z",
+      "created_at": "2026-05-14T12:00:00Z",
+      "updated_at": "2026-05-14T12:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000004",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000003",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000005",
+      "linked_issue_id": null,
+      "title": "todos API 엔드포인트 비즈니스 로직 구현",
+      "status": "in_progress",
+      "priority": "high",
+      "source_type": "ai",
+      "approval_status": "approved",
+      "confidence_score": 85,
+      "due_date": "2026-05-15T18:00:00Z",
+      "created_at": "2026-05-12T19:00:00Z",
+      "updated_at": "2026-05-12T19:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000005",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": "b0000000-0000-0000-0000-000000000001",
+      "source_document_id": "e0000000-0000-0000-0000-000000000002",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000004",
+      "linked_issue_id": null,
+      "title": "파일 업로드 UI — API 연동 및 분석 상태 표시 구현",
+      "status": "completed",
+      "priority": "high",
+      "source_type": "ai",
+      "approval_status": "approved",
+      "confidence_score": 90,
+      "due_date": "2026-05-13T18:00:00Z",
+      "created_at": "2026-05-12T19:00:00Z",
+      "updated_at": "2026-05-13T17:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000003",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": "b0000000-0000-0000-0000-000000000001",
+      "source_document_id": "e0000000-0000-0000-0000-000000000001",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000002",
+      "linked_issue_id": null,
+      "title": "Azure VM PostgreSQL 환경 세팅 완료 확인",
+      "status": "completed",
+      "priority": "medium",
+      "source_type": "ai",
+      "approval_status": "approved",
+      "confidence_score": 88,
+      "due_date": "2026-05-09T18:00:00Z",
+      "created_at": "2026-05-05T11:00:00Z",
+      "updated_at": "2026-05-09T16:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000006",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": null,
+      "source_chunk_id": null,
+      "linked_issue_id": null,
+      "title": "3주차 팀 미팅 자료 준비 및 진행",
+      "status": "pending",
+      "priority": "medium",
+      "source_type": "manual",
+      "approval_status": "approved",
+      "confidence_score": null,
+      "due_date": "2026-05-19T10:00:00Z",
+      "created_at": "2026-05-14T09:00:00Z",
+      "updated_at": "2026-05-14T09:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000007",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": "b0000000-0000-0000-0000-000000000004",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": null,
+      "source_chunk_id": null,
+      "linked_issue_id": null,
+      "title": "ERDCloud 수정 — monthly_reports 추가 및 FAISS 컬럼 반영",
+      "status": "pending",
+      "priority": "medium",
+      "source_type": "manual",
+      "approval_status": "approved",
+      "confidence_score": null,
+      "due_date": "2026-05-16T18:00:00Z",
+      "created_at": "2026-05-14T10:00:00Z",
+      "updated_at": "2026-05-14T10:00:00Z"
+    },
+    {
+      "id": "h0000000-0000-0000-0000-000000000008",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "assignee_id": null,
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "reviewed_by": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000004",
+      "source_chunk_id": "f0000000-0000-0000-0000-000000000006",
+      "linked_issue_id": null,
+      "title": "FAISS 인덱스 파일 백업 정책 수립",
+      "status": "pending",
+      "priority": "low",
+      "source_type": "ai",
+      "approval_status": "pending",
+      "confidence_score": 62,
+      "due_date": null,
+      "created_at": "2026-05-14T12:00:00Z",
+      "updated_at": "2026-05-14T12:00:00Z"
+    }
+  ],
+
+  "issues": [
+    {
+      "id": "i0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "reporter_id": "b0000000-0000-0000-0000-000000000002",
+      "assignee_id": "b0000000-0000-0000-0000-000000000002",
+      "source_document_id": "e0000000-0000-0000-0000-000000000005",
+      "title": "Azure OpenAI API 타임아웃 이슈 — 응답 지연 5초 초과 빈발",
+      "severity": "high",
+      "status": "in_progress",
+      "source_type": "ai",
+      "confidence_score": 95,
+      "is_candidate": false,
+      "created_at": "2026-05-14T11:00:00Z",
+      "updated_at": "2026-05-14T12:00:00Z"
+    },
+    {
+      "id": "i0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "reporter_id": "b0000000-0000-0000-0000-000000000002",
+      "assignee_id": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000004",
+      "title": "RAG 검색 정확도 Blocked — 관련 없는 청크 혼입 문제",
+      "severity": "high",
+      "status": "open",
+      "source_type": "ai",
+      "confidence_score": 88,
+      "is_candidate": false,
+      "created_at": "2026-05-14T09:30:00Z",
+      "updated_at": "2026-05-14T09:30:00Z"
+    },
+    {
+      "id": "i0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "reporter_id": "b0000000-0000-0000-0000-000000000004",
+      "assignee_id": "b0000000-0000-0000-0000-000000000004",
+      "source_document_id": "e0000000-0000-0000-0000-000000000003",
+      "title": "Dashboard API 집계 쿼리 미구현 — 3주차 연동 지연 가능성",
+      "severity": "medium",
+      "status": "open",
+      "source_type": "ai",
+      "confidence_score": 78,
+      "is_candidate": false,
+      "created_at": "2026-05-12T19:00:00Z",
+      "updated_at": "2026-05-12T19:00:00Z"
+    },
+    {
+      "id": "i0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "reporter_id": null,
+      "assignee_id": null,
+      "source_document_id": "e0000000-0000-0000-0000-000000000004",
+      "title": "FAISS 인덱스 파일 백업 정책 미수립 — 데이터 유실 위험",
+      "severity": "medium",
+      "status": "open",
+      "source_type": "ai",
+      "confidence_score": 62,
+      "is_candidate": true,
+      "created_at": "2026-05-14T12:00:00Z",
+      "updated_at": "2026-05-14T12:00:00Z"
+    },
+    {
+      "id": "i0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "reporter_id": "b0000000-0000-0000-0000-000000000003",
+      "assignee_id": "b0000000-0000-0000-0000-000000000003",
+      "source_document_id": "e0000000-0000-0000-0000-000000000001",
+      "title": "Azure VM PostgreSQL 연결 설정 오류 — asyncpg 드라이버 미설치",
+      "severity": "medium",
+      "status": "resolved",
+      "source_type": "manual",
+      "confidence_score": null,
+      "is_candidate": false,
+      "created_at": "2026-05-06T10:00:00Z",
+      "updated_at": "2026-05-08T15:00:00Z"
+    }
+  ],
+
+  "weekly_reports": [
+    {
+      "id": "j0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "week_start": "2026-05-05",
+      "week_end": "2026-05-09",
+      "content": "## 1주차 운영 보고서\n\n**개요**\n킥오프 완료. 기술스택 및 역할 확정. 환경 세팅 시작.\n\n**주요 완료 사항**\n- 프로젝트 킥오프 및 역할 분담 확정\n- Azure VM PostgreSQL 환경 세팅 완료 (김예은)\n- 프로젝트 폴더 구조 확정 및 GitHub dev 브랜치 생성\n\n**이슈**\n- Azure VM PostgreSQL 연결 오류 발생 → asyncpg 드라이버 누락으로 확인 후 해결\n\n**다음 주 목표**\n- 백엔드 API 껍데기 완성\n- 프론트 레이아웃 구현\n- RAG 파이프라인 설계 시작",
+      "progress_rate": 20,
+      "created_at": "2026-05-09T18:00:00Z"
+    },
+    {
+      "id": "j0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "week_start": "2026-05-12",
+      "week_end": "2026-05-16",
+      "content": "## 2주차 운영 보고서\n\n**개요**\nAPI 껍데기 완성. 프론트 레이아웃 완성. RAG 파이프라인 진행 중.\n\n**주요 완료 사항**\n- 백엔드 API 엔드포인트 껍데기 전체 완성 (김성호)\n- 프론트 사이드바 + 라우팅 구조 완성 (박주원)\n- 파일 업로드 UI → API 연동 완성 (박주원)\n- FAISS 인덱스 저장/로드 기본 구현 (이성우)\n\n**이슈**\n- Azure OpenAI API 타임아웃 빈발 (High) — 이성우 분석 중\n- RAG 검색 정확도 낮음 (High) — 청크 사이즈 재검토 필요\n- Dashboard 집계 API 미구현 (Medium) — 3주차로 이월\n\n**다음 주 목표**\n- Azure 타임아웃 원인 해결\n- RAG 정확도 개선\n- Todo API 비즈니스 로직 구현",
+      "progress_rate": 45,
+      "created_at": "2026-05-16T18:00:00Z"
+    }
+  ],
+
+  "monthly_reports": [
+    {
+      "id": "k0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "month_start": "2026-05-01",
+      "month_end": "2026-05-31",
+      "content": "## 5월 월간 보고서 (중간)\n\n**진행률**: 45% (2주차 기준)\n\n**완료된 마일스톤**\n- 환경 세팅 완료\n- API 전체 구조 완성\n- 프론트 레이아웃 완성\n\n**진행 중인 이슈**\n- Azure OpenAI 타임아웃 해결 필요\n- RAG 정확도 개선 필요\n\n**6월 목표**\n- Todo/이슈 기능 완성\n- Dashboard 완성\n- AI Assistant 구현",
+      "progress_rate": 45,
+      "created_at": "2026-05-14T18:00:00Z"
+    }
+  ],
+
+  "handoff_reports": [
+    {
+      "id": "l0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "created_by": "b0000000-0000-0000-0000-000000000001",
+      "title": "OpsRadar MVP 현황 인수인계 문서 (2주차)",
+      "content": "## 현재 진행 상태\n\n**완료된 작업**\n- GitHub dev 브랜치 구조 확정\n- PostgreSQL + FAISS 환경 세팅\n- 전체 API 엔드포인트 껍데기 완성\n- 프론트 사이드바 + 업로드 UI 완성\n\n**진행 중인 작업**\n- Azure OpenAI 타임아웃 이슈 해결 (이성우)\n- RAG 검색 정확도 개선 (이성우)\n- Todo API 비즈니스 로직 (김성호)\n\n**Blocked 상태**\n- Dashboard 집계 API — Todo/이슈 데이터 쌓인 후 구현 가능\n\n**주요 참고 문서**\n- 노션: DB 명세서, API 명세서, Use Case 정의서\n- GitHub: yeni0224/teamAZAG dev 브랜치",
+      "handoff_score": 72,
+      "missing_items_json": [
+        "로그인/인증 미구현",
+        "Dashboard 집계 API 미완성",
+        "AI Assistant RAG 미완성"
+      ],
+      "created_at": "2026-05-14T17:00:00Z"
+    }
+  ],
+
+  "chat_messages": [
+    {
+      "id": "m0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000001",
+      "role": "user",
+      "content": "현재 가장 위험한 이슈는?",
+      "sources_json": null,
+      "created_at": "2026-05-14T13:00:00Z"
+    },
+    {
+      "id": "m0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000001",
+      "role": "assistant",
+      "content": "현재 High Risk 이슈는 2건입니다. 1) Azure OpenAI API 타임아웃 이슈 — 응답 지연 5초 초과가 빈발하고 있으며 이성우님이 분석 중입니다. 2) RAG 검색 정확도 Blocked — 관련 없는 청크가 검색 결과에 혼입되는 문제로 아직 담당자 미지정 상태입니다.",
+      "sources_json": ["issue_log_20260514_azure_timeout.txt", "chat_logs_20260514_ai_pipeline.txt"],
+      "created_at": "2026-05-14T13:00:05Z"
+    },
+    {
+      "id": "m0000000-0000-0000-0000-000000000003",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000001",
+      "role": "user",
+      "content": "이번주 미완료 Todo 알려줘",
+      "sources_json": null,
+      "created_at": "2026-05-14T13:01:00Z"
+    },
+    {
+      "id": "m0000000-0000-0000-0000-000000000004",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000001",
+      "role": "assistant",
+      "content": "이번 주 미완료 Todo는 총 4건입니다. 1) [High] Azure OpenAI API 타임아웃 원인 분석 및 재시도 로직 구현 — 이성우 (진행 중). 2) [High] RAG 검색 정확도 개선 — 이성우 (대기). 3) [High] todos API 비즈니스 로직 구현 — 김성호 (진행 중). 4) [Medium] 3주차 팀 미팅 자료 준비 — 김희진 (대기).",
+      "sources_json": ["meeting_notes_20260512_week2.pdf", "chat_logs_20260514_ai_pipeline.txt"],
+      "created_at": "2026-05-14T13:01:05Z"
+    },
+    {
+      "id": "m0000000-0000-0000-0000-000000000005",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000004",
+      "role": "user",
+      "content": "Blocked 상태 작업 알려줘",
+      "sources_json": null,
+      "created_at": "2026-05-14T15:00:00Z"
+    },
+    {
+      "id": "m0000000-0000-0000-0000-000000000006",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "user_id": "b0000000-0000-0000-0000-000000000004",
+      "role": "assistant",
+      "content": "Blocked 상태 작업은 2건입니다. 1) RAG 검색 정확도 개선 — 임베딩 모델 재검토 필요로 진행 불가 상태. 2) Dashboard 집계 API — Todo/이슈 데이터가 충분히 쌓인 후 구현 가능하여 현재 대기 중.",
+      "sources_json": ["chat_logs_20260514_ai_pipeline.txt", "meeting_notes_20260512_week2.pdf"],
+      "created_at": "2026-05-14T15:00:05Z"
+    }
+  ],
+
+  "ai_summaries": [
+    {
+      "id": "n0000000-0000-0000-0000-000000000001",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "document_id": "e0000000-0000-0000-0000-000000000003",
+      "summary_type": "weekly",
+      "summary": "2주차 운영 요약: API 껍데기 전체 완성. 프론트 레이아웃 완성. Azure OpenAI 타임아웃 이슈 High 발생 — 이성우 분석 중. RAG 검색 정확도 Blocked 상태. Dashboard API 3주차 이월.",
+      "extracted_json": {
+        "todos": ["Azure 타임아웃 재시도 로직", "RAG 정확도 개선", "todos API 로직 구현"],
+        "issues": ["Azure timeout High", "RAG 정확도 Blocked"],
+        "keywords": ["FAISS", "RAG", "Azure OpenAI", "Dashboard"]
+      },
+      "created_at": "2026-05-12T19:00:00Z"
+    },
+    {
+      "id": "n0000000-0000-0000-0000-000000000002",
+      "project_id": "c0000000-0000-0000-0000-000000000001",
+      "document_id": "e0000000-0000-0000-0000-000000000005",
+      "summary_type": "weekly",
+      "summary": "Azure OpenAI API 타임아웃 이슈 분석: 오전 기준 30% 발생률. 5초 초과 지연. 원인 추정: 토큰 한도 또는 리전 부하. 재시도 로직 추가 및 배치 사이즈 조정 권고.",
+      "extracted_json": {
+        "todos": ["재시도 로직 구현", "배치 사이즈 조정"],
+        "issues": ["Azure timeout"],
+        "risk_level": "high"
+      },
+      "created_at": "2026-05-14T12:00:00Z"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 FAISS_DIR = os.getenv("FAISS_DIR", "./faiss_db")
 DEFAULT_TOP_K = 3
+SCORE_THRESHOLD = 0.41  # 유사도 임계값 — 이 미만은 관련 없음으로 판단
 
 
 def _get_client() -> AzureOpenAI:
@@ -119,9 +120,15 @@ def retrieve(
         if document_id and metadata.get("document_id") != document_id:
             continue
 
+        score = round(float(1 / (1 + dist)), 4)
+
+        # 임계값 미만은 관련 없음으로 판단하고 건너뜀
+        if score < SCORE_THRESHOLD:
+            continue
+
         output.append({
             "text": texts[idx],
-            "score": round(float(1 / (1 + dist)), 4),
+            "score": score,
             "metadata": metadata,
             # 편의 접근용 (summarizer에서 바로 쓸 수 있도록)
             "source": metadata.get("source", ""),
@@ -134,9 +141,12 @@ def retrieve(
         if len(output) >= top_k:
             break
 
-    print(f"[retriever] {len(output)}개 청크 검색 완료")
-    for i, r in enumerate(output):
-        print(f"  #{i+1} 유사도: {r['score']} | 출처: {r['source']}")
+    if not output:
+        print(f"[retriever] 관련 문서를 찾을 수 없습니다. (임계값: {SCORE_THRESHOLD} 미만)")
+    else:
+        print(f"[retriever] {len(output)}개 청크 검색 완료")
+        for i, r in enumerate(output):
+            print(f"  #{i+1} 유사도: {r['score']} | 출처: {r['source']}")
 
     return output
 

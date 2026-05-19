@@ -13,8 +13,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 700  # report 유형 기본값 (멘토 권장 500~800 중간값)
+CHUNK_OVERLAP = 100  # 14% 겹침 (멘토 권장 10~20%)
 SEPARATORS = ["\n\n", "\n", ". ", ", ", " ", ""]
 
 
