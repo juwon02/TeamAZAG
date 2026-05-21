@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.api import api_router
 from app.core.config import settings
 from app.core.database import engine, Base
-import app.models  # ← 추가
+from app.models import document, todo, issue  # ← 이렇게 바꾸기
 
 app = FastAPI(
     title="OpsRadar API",
@@ -21,13 +21,10 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-
 @app.on_event("startup")
 async def startup():
-    """서버 시작할 때 DB 테이블 자동 생성"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
 
 @app.get("/")
 def health_check():
