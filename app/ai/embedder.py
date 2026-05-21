@@ -143,10 +143,25 @@ if __name__ == "__main__":
         {"file_path": "dummy/documents/meeting_2026_05_11_final.txt",        "document_id": 4,  "doc_type": "meeting"},
         {"file_path": "dummy/documents/meeting_2026_05_13_week2_check.txt",  "document_id": 5,  "doc_type": "meeting"},
         {"file_path": "dummy/documents/report_2026_05_13_sungwoo_week2.txt", "document_id": 6,  "doc_type": "report"},
+        {"file_path": "dummy/documents/project_status_2026_05_14.txt",       "document_id": 11, "doc_type": "handover"},
         {"file_path": "dummy/documents/email_2026_05_08_12.txt",             "document_id": 7,  "doc_type": "email"},
         {"file_path": "dummy/documents/chat_2026_05_11_13.txt",              "document_id": 8,  "doc_type": "chat"},
         {"file_path": "dummy/documents/tasks_2026_05_week2.csv",             "document_id": 9,  "doc_type": "csv"},
         {"file_path": "dummy/documents/handover_2026_05_13.txt",             "document_id": 10, "doc_type": "handover"},
+        # 25002500 HeeJin Bc0fB9ac B354Bbf8 B370C774D130 25002500
+        {"file_path": "dummy_data/sample_docs/meeting_notes_20260505_kickoff.txt",   "document_id": 12, "doc_type": "meeting"},
+        {"file_path": "dummy_data/sample_docs/meeting_notes_20260512_week2.txt",     "document_id": 13, "doc_type": "meeting"},
+        {"file_path": "dummy_data/sample_docs/chat_logs_20260512_backend.txt",       "document_id": 14, "doc_type": "chat"},
+        {"file_path": "dummy_data/sample_docs/chat_logs_20260514_ai_pipeline.txt",   "document_id": 15, "doc_type": "chat"},
+        {"file_path": "dummy_data/sample_docs/issue_log_20260514_azure_timeout.txt", "document_id": 16, "doc_type": "report"},
+        # ── 3주차 신규 더미 데이터 ──
+        {"file_path": "dummy/documents/report_weekly_2026_05_17.txt",        "document_id": 17, "doc_type": "handover"},
+        {"file_path": "dummy/documents/report_monthly_2026_05.txt",           "document_id": 18, "doc_type": "handover"},
+        {"file_path": "dummy/documents/handover_onboarding_2026_05_17.txt",   "document_id": 19, "doc_type": "handover"},
+        {"file_path": "dummy/documents/chat_2026_05_17_dashboard.txt",        "document_id": 20, "doc_type": "chat"},
+        {"file_path": "dummy/documents/tasks_2026_05_week3.csv",              "document_id": 21, "doc_type": "csv"},
+        {"file_path": "dummy/documents/meeting_2026_05_19_week3_start.txt",   "document_id": 22, "doc_type": "meeting"},
+        {"file_path": "dummy/documents/calendar_2026_05.txt",                 "document_id": 23, "doc_type": "handover"},
     ]
 
     print("=" * 50)
