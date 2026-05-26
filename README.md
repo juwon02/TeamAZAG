@@ -1,5 +1,2 @@
-# Project
-"h"
-commit yeni
-commit SH
+good
 hj
