@@ -1,16 +1,15 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 
-class DocumentUploadResponse(BaseModel):
-    status: str
-    document_id: str
+class DocumentResponse(BaseModel):
+    id: str
     file_name: str
-    file_type: str
+    file_type: Optional[str]
     analysis_status: str
-
-
-class DocumentStatusResponse(BaseModel):
-    document_id: str
-    analysis_status: str  # parsing | embedding | completed | failed
     progress: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

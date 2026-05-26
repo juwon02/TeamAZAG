@@ -1,8 +1,10 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import documents, todos, issues, dashboard, reports, knowledge, chat
+from app.api.v1.endpoints import todos, issues, documents, dashboard, reports, knowledge, chat, calendar
+
 
 api_router = APIRouter()
 
+api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(documents.router,  prefix="/documents",  tags=["documents"])
 api_router.include_router(todos.router,      prefix="/todos",      tags=["todos"])
 api_router.include_router(issues.router,     prefix="/issues",     tags=["issues"])

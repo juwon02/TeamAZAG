@@ -1948,7 +1948,7 @@ window.addEventListener('load', () => {
 // ── Todo API 연동 ──
 async function loadTodosFromAPI() {
   try {
-    const res = await fetch(`${API}/todos/`);
+    const res = await fetch(`${API}/todos`);
     const data = await res.json();
 
     // API 데이터를 HTML 형식에 맞게 변환
@@ -2025,7 +2025,7 @@ window.saveManual = async function() {
   const priority = document.getElementById('manualPriority').value;
 
   try {
-    const res = await fetch(`${API}/todos/`, {
+    const res = await fetch(`${API}/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, assignee, priority })
@@ -2063,7 +2063,7 @@ window.addEventListener('load', () => {
 
 async function loadIssuesFromAPI() {
   try {
-    const res = await fetch(`${API}/issues/`);
+    const res = await fetch(`${API}/issues`);
     const data = await res.json();
 
     const apiIssues = data.issues.map(i => ({
@@ -2133,7 +2133,7 @@ async function resolveIssueAPI(issueId) {
 // ── 이슈에서 Todo 생성 API 연동
 async function createTodoFromIssueAPI(issue) {
   try {
-    const res = await fetch(`${API}/todos/`, {
+    const res = await fetch(`${API}/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2156,16 +2156,21 @@ window.addEventListener('load', () => {
   loadIssuesFromAPI();  // ← 추가
 });
 
-// ── Calendar API 연동
 async function loadCalendarFromAPI() {
   try {
-    const res = await fetch(`${API}/calendar/`);
+    const res = await fetch(`${API}/calendar`);
     const data = await res.json();
 
-    // API 데이터를 캘린더 형식에 맞게 추가
+    if (!data.events || !data.events.length) {
+      console.log('✅ Calendar 0건 로드됨');
+      return;
+    }
+
     data.events.forEach(e => {
       const day = parseInt(e.event_date.split('-')[2]);
-      const existing = G.calEvents.find(c => c.d === day);
+      // G.calEvents 없으면 G.newCalEvents 사용
+      const calArr = G.calEvents || G.newCalEvents || [];
+      const existing = calArr.find(c => c.d === day);
       const tag = {
         t: e.person ? `${e.person} ${e.title}` : e.title,
         c: e.event_type === 'absence' ? 'ct-gray' :
@@ -2175,7 +2180,7 @@ async function loadCalendarFromAPI() {
       if (existing) {
         existing.tags.push(tag);
       } else {
-        G.calEvents.push({ d: day, tags: [tag] });
+        if (G.calEvents) G.calEvents.push({ d: day, tags: [tag] });
       }
     });
 
