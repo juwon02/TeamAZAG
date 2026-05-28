@@ -28,6 +28,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     pass  # DB 연결 임시 비활성화
     # async with engine.begin() as conn:
     #     await conn.run_sync(Base.metadata.create_all)

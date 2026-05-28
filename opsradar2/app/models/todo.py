@@ -19,3 +19,4 @@ class Todo(Base):
     document_id = Column(String(36), ForeignKey("documents.id"), nullable=True)
     linked_issue_id = Column(String(36), ForeignKey("issues.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+  
