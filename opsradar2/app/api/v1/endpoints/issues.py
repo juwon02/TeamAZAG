@@ -1,32 +1,46 @@
-"""
-UC-03 이슈 로그
-담당: 김성호 (백엔드) + 이성우 (리스크 탐지)
-"""
-from fastapi import APIRouter
+"""Issue API."""
+
 from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.repositories.issue_repository import IssueRepository
+from app.services.issue_service import IssueService
 
 router = APIRouter()
 
 
 @router.get("")
 async def get_issues(
-    status: Optional[str] = None,      # open | in_progress | resolved
-    risk_level: Optional[str] = None,  # high | medium | low
+    status: Optional[str] = None,
+    risk_level: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
 ):
-    """이슈 목록 조회 (UC-03)"""
-    # TODO: 김성호 — issues 테이블 조회
-    return {"issues": []}
+    service = IssueService(IssueRepository(db))
+    normalized_status = None if status in (None, "all") else status
+    return {"issues": await service.list_issues(status=normalized_status, risk_level=risk_level)}
 
 
 @router.patch("/{issue_id}")
-async def update_issue(issue_id: str):
-    """이슈 상태·담당자 수정 (UC-03)"""
-    # TODO: 김성호 — issues 테이블 update
+async def update_issue(issue_id: str, body: dict, db: AsyncSession = Depends(get_db)):
+    service = IssueService(IssueRepository(db))
+    updated = await service.update_issue(issue_id, body)
+    if not updated:
+        raise HTTPException(404, "issue not found")
+    return {"status": "success", "issue_id": issue_id}
+
+
+@router.patch("/{issue_id}/resolve")
+async def resolve_issue(issue_id: str, db: AsyncSession = Depends(get_db)):
+    service = IssueService(IssueRepository(db))
+    updated = await service.resolve_issue(issue_id)
+    if not updated:
+        raise HTTPException(404, "issue not found")
     return {"status": "success", "issue_id": issue_id}
 
 
 @router.post("/{issue_id}/todos")
 async def create_todo_from_issue(issue_id: str):
-    """이슈 → 대응 Todo 생성 (UC-03 → UC-02 연동)"""
-    # TODO: 김성호 — todos 테이블 insert (linked_issue_id 포함)
-    return {"status": "success", "todo_id": "todo_001", "linked_issue_id": issue_id}
+    return {"status": "not_implemented", "linked_issue_id": issue_id}

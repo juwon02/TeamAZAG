@@ -1,22 +1,30 @@
-from pydantic_settings import BaseSettings
+"""Application settings.
+
+Keep this lightweight so local harness runs do not require extra settings
+packages before the API can boot.
+"""
+
+import os
+from dataclasses import dataclass
+
+from dotenv import load_dotenv
 
 
-class Settings(BaseSettings):
-    # DB
-    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/opsradar"
+load_dotenv()
 
-    # AI Provider (azure | gemini)
-    AI_PROVIDER: str = "gemini"
-    GEMINI_API_KEY: str = ""
-    AZURE_OPENAI_API_KEY: str = ""
-    AZURE_OPENAI_ENDPOINT: str = ""
-    AZURE_OPENAI_DEPLOYMENT: str = ""
 
-    # Vector DB
-    FAISS_INDEX_PATH: str = "data/faiss/index.faiss"
-
-    class Config:
-        env_file = ".env"
+@dataclass(frozen=True)
+class Settings:
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://user:password@localhost:5432/opsradar",
+    )
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "disabled")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
+    AZURE_OPENAI_ENDPOINT: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+    AZURE_OPENAI_DEPLOYMENT: str = os.getenv("AZURE_OPENAI_DEPLOYMENT", "")
+    FAISS_INDEX_PATH: str = os.getenv("FAISS_INDEX_PATH", "data/faiss/index.faiss")
 
 
 settings = Settings()
