@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpsRadar — 통합 인터랙티브 프로토타입</title>
+<title>OpsRadar AI — Clean Version</title>
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -249,10 +249,86 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes newItem{from{background:rgba(66,99,235,.12);transform:translateX(-4px)}to{background:transparent;transform:translateX(0)}}
+@keyframes slideUpIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseRing{0%{transform:scale(1);opacity:1}70%{transform:scale(1.5);opacity:0}100%{transform:scale(1.5);opacity:0}}
 .fade-up{animation:fadeUp .25s ease}
 .slide-up{animation:slideUp .25s ease}
+
+/* ── 개선 1: 플로팅 AI 버튼 ── */
+.float-ai{position:fixed;bottom:28px;right:28px;z-index:800;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.float-ai-btn{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(66,99,235,.35);transition:all .15s;position:relative}
+.float-ai-btn:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(66,99,235,.45)}
+.float-ai-btn i{font-size:20px;color:#fff}
+.float-ai-btn::before{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:pulseRing 2s ease infinite}
+.float-ai-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;width:260px;box-shadow:0 8px 32px rgba(0,0,0,.12);display:none;animation:slideUpIn .2s ease}
+.float-ai-panel.show{display:block}
+.float-ai-panel-hd{display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;font-weight:500;color:var(--accent)}
+.float-sq{font-size:10px;padding:4px 9px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);cursor:pointer;background:var(--surface2);margin-bottom:5px;width:100%;text-align:left;transition:all .12s}
+.float-sq:hover{border-color:var(--accent);color:var(--accent)}
+.float-input-row{display:flex;gap:5px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.float-input{flex:1;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 8px;font-size:11px;color:var(--text);font-family:var(--font);outline:none}
+.float-input:focus{border-color:var(--accent)}
+.float-send{background:var(--accent);border:none;border-radius:var(--radius-sm);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0}
+
+/* ── 개선 2: 알림 센터 ── */
+.notif-btn{position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);transition:background .12s}
+.notif-btn:hover{background:var(--surface2)}
+.notif-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface)}
+.notif-panel{position:fixed;top:52px;right:12px;width:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:700;display:none;animation:slideUpIn .2s ease;max-height:380px;overflow-y:auto}
+.notif-panel.show{display:block}
+.notif-hd{padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;justify-content:space-between}
+.notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--surface2)}
+.notif-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.ni-success{background:var(--success-soft);color:var(--success)}
+.ni-warn{background:var(--warn-soft);color:var(--warn)}
+.ni-info{background:var(--accent-soft);color:var(--accent)}
+.notif-body{flex:1}
+.notif-msg{font-size:11px;color:var(--text);line-height:1.5}
+.notif-time{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+
+/* ── 개선 3: Todo 카드뷰 ── */
+.todo-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:14px}
+.todo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all .15s}
+.todo-card:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.todo-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.todo-card-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px;line-height:1.4}
+.todo-card-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.todo-card-src{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.todo-card-actions{display:flex;gap:4px}
+.view-toggle{display:flex;gap:2px;padding:2px;background:var(--surface2);border-radius:var(--radius-sm)}
+.vt-btn{padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;color:var(--text3);transition:all .12s}
+.vt-btn.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* ── 개선 4: 온보딩 가이드 ── */
+.onboarding-guide{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;text-align:center;margin:20px}
+.onboarding-guide h3{font-size:16px;font-weight:500;color:var(--text);margin-bottom:8px}
+.onboarding-guide p{font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.7}
+.og-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;text-align:left}
+.og-step{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text2)}
+.og-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+
+/* ── 개선 5: 화면 간 컨텍스트 링크 배너 ── */
+.ctx-banner{background:var(--accent-soft);border-bottom:1px solid rgba(66,99,235,.12);padding:7px 16px;font-size:11px;color:var(--accent);display:none;align-items:center;gap:8px;flex-shrink:0}
+.ctx-banner.show{display:flex}
+.ctx-banner i{font-size:13px;flex-shrink:0}
+
+/* ── 개선 6: 이슈 카드 빠른 Todo 버튼 ── */
+.issue-quick-todo{font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);cursor:pointer;background:var(--accent-soft);white-space:nowrap;transition:all .12s}
+.issue-quick-todo:hover{background:var(--accent);color:#fff}
 </style>
-</head>
+
+<style>
+/* Handover panel must sit above floating skin switcher so action buttons remain clickable */
+.handoff-slide-panel{z-index:1700!important}
+</style>
+<style>
+body[data-theme="dark"]{--bg:#0f1218;--panel:#171b24;--text:#ffffff}
+body[data-theme="light"]{--bg:#f6f7fb;--panel:#ffffff;--text:#111827}
+.settings-content{max-width:980px;width:100%;gap:16px}.settings-panel{background:var(--surface);border:1px solid var(--border-primary,var(--border));border-radius:12px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.12)}.settings-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}.settings-eyebrow{font-size:10px;font-weight:850;letter-spacing:.12em;color:var(--accent);margin-bottom:5px}.settings-panel h3{font-size:16px;line-height:1.3;color:var(--text);font-weight:850}.settings-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.settings-info-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px}.settings-info-card span{display:block;font-size:11px;color:var(--text3);margin-bottom:8px}.settings-info-card strong{display:block;font-size:18px;color:var(--text);font-weight:850}.settings-current-theme{font-size:11px;font-family:var(--mono);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:5px 10px}.settings-theme-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.settings-theme-option{border:1px solid var(--border);background:var(--surface2);color:var(--text2);border-radius:10px;padding:16px;text-align:left;cursor:pointer;display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:4px;align-items:center;font-family:var(--font);transition:all .15s}.settings-theme-option i{font-size:20px;color:var(--accent)}.settings-theme-option span{font-size:13px;font-weight:850;color:var(--text)}.settings-theme-option small{grid-column:2;color:var(--text3);font-size:11px;line-height:1.5}.settings-theme-option.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 16%,transparent)}.settings-note{margin-top:12px;font-size:11px;color:var(--text3);line-height:1.6}.danger-zone{border-color:rgba(224,62,62,.22)}.settings-logout-row{display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--danger-soft);border:1px solid rgba(224,62,62,.18);border-radius:10px;padding:14px}.settings-logout-row strong{display:block;font-size:13px;color:var(--text);margin-bottom:4px}.settings-logout-row p{font-size:11px;color:var(--text2);line-height:1.5}.settings-logout-btn{border:1px solid var(--danger);background:var(--danger);color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}@media(max-width:760px){.settings-info-grid,.settings-theme-options{grid-template-columns:1fr}.settings-logout-row{align-items:flex-start;flex-direction:column}.settings-logout-btn{width:100%;justify-content:center}}
+body[data-skin="light"] .settings-panel{box-shadow:0 12px 34px rgba(31,45,70,.07)}
+</style></head>
 <body>
 <div style="display:flex;flex:1;overflow:hidden">
 
@@ -280,12 +356,14 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
     <div class="sb-item" id="nav-reports" onclick="nav('reports')"><i class="ti ti-report"></i> 보고서</div>
     <div class="sb-section">AI</div>
     <div class="sb-item" id="nav-chat" onclick="nav('chat')"><i class="ti ti-message-dots"></i> AI Assistant</div>
+    <div class="sb-section">계정</div>
+    <div class="sb-item" id="nav-settings" onclick="nav('settings')"><i class="ti ti-settings"></i> 설정</div>
   </div>
   <div class="sb-footer">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="sb-avatar">희진</div>
       <div>
-        <div style="font-size:11px;color:var(--text);font-weight:500">김희진</div>
+        <div style="font-size:11px;color:var(--text);font-weight:500">관리자</div>
         <div style="font-size:10px;color:var(--text3)">PM · 팀장</div>
       </div>
     </div>
@@ -296,101 +374,148 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 
 <!-- ══ DASHBOARD ══ -->
 <div class="screen active" id="s-dashboard">
-  <div class="topbar">
-    <div class="topbar-title">Dashboard — 운영 브리핑</div>
-    <div style="display:flex;gap:8px"><div class="chip">2026-05-20 (화)</div></div>
+  <div class="topbar ops-db-topbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="topbar-title">Dashboard</div>
+      <div class="ops-role-switch">
+        <div id="db-tab-pm" class="ops-role-tab active" onclick="switchDbRole('pm')"><i class="ti ti-crown"></i> 관리자</div>
+        <div id="db-tab-member" class="ops-role-tab" onclick="switchDbRole('member')"><i class="ti ti-user"></i> 팀원</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="notif-btn" onclick="toggleNotif()" title="알림 센터">
+        <i class="ti ti-bell" style="font-size:18px;color:var(--text2)"></i>
+        <div class="notif-dot" id="notifDot"></div>
+      </div>
+      <div class="chip" id="todayDate" data-current-date="long">오늘 날짜</div>
+    </div>
   </div>
-  <div class="content">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
-      <div style="background:var(--accent-soft);border-bottom:1px solid rgba(66,99,235,.12);padding:10px 16px;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-sparkles" style="font-size:14px;color:var(--accent)"></i>
-        <span style="font-size:11px;font-weight:500;color:var(--accent)">AI 운영 추론 엔진</span>
-        <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:var(--mono)">최근 3일 데이터 기반</span>
-      </div>
-      <div style="padding:16px 20px;display:flex;align-items:stretch;gap:20px;min-height:180px;overflow:auto">
-        <div style="flex:1;min-width:220px">
-          <div style="font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">추론 근거</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--danger-soft);border-radius:var(--radius-sm)">
-              <div style="display:flex;gap:2px;flex-shrink:0"><div style="width:5px;height:10px;background:var(--danger);border-radius:1px;opacity:.4"></div><div style="width:5px;height:14px;background:var(--danger);border-radius:1px;opacity:.7"></div><div style="width:5px;height:18px;background:var(--danger);border-radius:1px"></div></div>
-              <div style="font-size:11px;color:var(--text)">추론 근거 1 — 데이터 없음</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--warn-soft);border-radius:var(--radius-sm)">
-              <div style="display:flex;gap:2px;flex-shrink:0"><div style="width:5px;height:14px;background:var(--warn);border-radius:1px"></div><div style="width:5px;height:14px;background:var(--warn);border-radius:1px"></div><div style="width:5px;height:14px;background:var(--warn);border-radius:1px"></div></div>
-              <div style="font-size:11px;color:var(--text)">추론 근거 2 — 데이터 없음</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--warn-soft);border-radius:var(--radius-sm)">
-              <div style="display:flex;gap:2px;flex-shrink:0"><div style="width:5px;height:10px;background:var(--warn);border-radius:1px;opacity:.5"></div><div style="width:5px;height:10px;background:var(--warn);border-radius:1px;opacity:.5"></div><div style="width:5px;height:16px;background:var(--warn);border-radius:1px"></div></div>
-              <div style="font-size:11px;color:var(--text)">추론 근거 3 — 데이터 없음</div>
-            </div>
+
+  <div class="content ops-dashboard-content">
+    <div id="db-admin-view" class="ops-dashboard-view active">
+      <section class="ops-ai-summary-card">
+        <div class="ops-card-header">
+          <div class="ops-card-title"><i class="ti ti-sparkles"></i> AI 운영 판단 요약</div>
+          <span class="ops-updated"><i class="ti ti-clock"></i> 마지막 업데이트 15분 전</span>
+        </div>
+        <div class="ops-ai-body">
+          <p>운영 로그와 Todo 데이터가 연결되면 AI가 현재 운영 상태, 위험 요인, 우선 실행 항목을 요약합니다.</p>
+          <div class="ops-evidence-chips">
+            <span class="ops-chip blue">운영 데이터 대기</span>
+            <span class="ops-chip warn">Blocked Todo 0건</span>
+            <span class="ops-chip green">승인 대기 0건</span>
           </div>
         </div>
-        <div style="display:flex;align-items:center;color:var(--text3);font-size:22px;flex-shrink:0;padding:0 4px">→</div>
-        <div style="flex:1;min-width:220px">
-          <div style="font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">추론 결과</div>
-          <div style="background:var(--danger-soft);border:1px solid rgba(224,62,62,.15);border-radius:var(--radius-sm);padding:14px 16px">
-            <div style="font-size:14px;font-weight:700;color:var(--danger);margin-bottom:8px">운영 리스크 상승 판단</div>
-            <div style="font-size:11px;color:var(--text2);line-height:1.8">운영 데이터 업로드 후 AI가 자동으로 추론 결과를 생성합니다.</div>
-          </div>
+      </section>
+
+      <section>
+        <div class="ops-section-heading">
+          <div><i class="ti ti-alert-triangle"></i> High Risk 이슈</div>
+          <button class="ops-link-btn" onclick="nav('issues')">전체 이슈 보기 <i class="ti ti-arrow-right"></i></button>
         </div>
-      </div>
+        <div class="ops-risk-grid">
+          <article class="ops-risk-card">
+            <div class="ops-risk-card-top"><h3>Risk 데이터 없음</h3><span class="badge b-accent">대기</span></div>
+            <p>운영 로그 분석 후 High Risk 이슈가 이 영역에 표시됩니다.</p>
+            <div class="ops-risk-meta"><span>Blocked 0</span><span>대기 중</span></div>
+            <div class="ops-domino"><strong>도미노 영향</strong><span>분석 데이터 연결 후 영향 흐름이 표시됩니다.</span></div>
+            <div class="ops-card-actions"><button onclick="nav('todo')">대응 Todo 생성</button><button onclick="nav('issues')">상세 보기</button></div>
+          </article>
+          <article class="ops-risk-card">
+            <div class="ops-risk-card-top"><h3>Risk 데이터 없음</h3><span class="badge b-accent">대기</span></div>
+            <p>확인된 운영 리스크가 아직 없습니다.</p>
+            <div class="ops-risk-meta"><span>Blocked 0</span><span>대기 중</span></div>
+            <div class="ops-domino"><strong>도미노 영향</strong><span>분석 데이터 연결 후 영향 흐름이 표시됩니다.</span></div>
+            <div class="ops-card-actions"><button onclick="nav('todo')">담당자 지정</button><button onclick="nav('issues')">상세 보기</button></div>
+          </article>
+          <article class="ops-risk-card">
+            <div class="ops-risk-card-top"><h3>Risk 데이터 없음</h3><span class="badge b-accent">대기</span></div>
+            <p>확인된 운영 리스크가 아직 없습니다.</p>
+            <div class="ops-risk-meta"><span>Blocked 0</span><span>대기 중</span></div>
+            <div class="ops-domino"><strong>도미노 영향</strong><span>분석 데이터 연결 후 영향 흐름이 표시됩니다.</span></div>
+            <div class="ops-card-actions"><button onclick="nav('todo')">대응 Todo 생성</button><button onclick="nav('issues')">상세 보기</button></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="ops-bottom-grid">
+        <div class="ops-panel">
+          <div class="ops-panel-title">Todo 실행 현황</div>
+          <div class="ops-stat-row">
+            <div><span class="ops-stat-num success">0</span><span class="ops-stat-label">완료</span></div>
+            <div><span class="ops-stat-num blue">0</span><span class="ops-stat-label">진행중</span></div>
+            <div><span class="ops-stat-num warn" id="db-blocked">0</span><span class="ops-stat-label">Blocked</span></div>
+          </div>
+          <div class="ops-progress-stack">
+            <div style="width:0%;background:var(--success)" title="완료"></div>
+            <div style="width:0%;background:var(--accent-blue)" title="진행중"></div>
+            <div id="db-todo-bar" style="width:0%;background:var(--warning)" title="Blocked"></div>
+          </div>
+          <div class="ops-muted-line"><span id="db-todo-rate">0 / 0</span> 완료, 운영 데이터 연결 대기 중</div>
+        </div>
+        <div class="ops-panel">
+          <div class="ops-panel-title">승인 대기</div>
+          <div class="ops-approval-list">`r`n            <div class="ops-approval-item" onclick="nav('todo')"><div><strong>승인 대기 항목 없음</strong><span>AI 생성 Todo 승인 요청이 생성되면 표시됩니다.</span></div><i class="ti ti-arrow-right"></i></div>`r`n          </div>`r`n          <div class="ops-muted-line"><span id="db-pending">0</span>건 승인 대기 중</div>
+        </div>
+      </section>
     </div>
-    <div class="two-col" style="align-items:start">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="font-size:11px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px"><i class="ti ti-urgent" style="font-size:14px;color:var(--danger)"></i> 지금 당장 봐야 할 것</div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:var(--radius);padding:12px 14px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span class="badge b-danger">High · 3일째</span><span style="font-size:11px;font-weight:500;color:var(--text)">Azure timeout 미해결</span></div>
-          <div style="font-size:10px;color:var(--text2);line-height:1.7;padding:8px 10px;background:var(--danger-soft);border-radius:var(--radius-sm)">
-            <div style="color:var(--danger);font-weight:500;margin-bottom:4px">도미노 영향</div>
-            <div>→ 임베딩 실패 → Todo 추출 불가</div><div>→ Dashboard 데이터 공백</div>
-            <div style="color:var(--danger);font-weight:500">→ 4주차 시연 직접 위협</div>
-          </div>
-          <div style="margin-top:8px"><div class="tbtn primary" style="font-size:10px;padding:4px 10px" onclick="nav('issues')"><i class="ti ti-arrow-right"></i> 이슈 확인</div></div>
+
+    <div id="db-member-view" class="ops-dashboard-view">
+      <section class="ops-ai-summary-card member">
+        <div class="ops-card-header">
+          <div class="ops-card-title"><i class="ti ti-user-check"></i> 오늘 내 업무 요약</div>
+          <span class="ops-updated"><i class="ti ti-clock"></i> 오전 스탠드업 기준</span>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:var(--radius);padding:12px 14px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span class="badge b-danger">High · Blocked</span><span style="font-size:11px;font-weight:500;color:var(--text)">RAG 정확도 미해결</span></div>
-          <div style="font-size:10px;color:var(--text2);line-height:1.7;padding:8px 10px;background:var(--danger-soft);border-radius:var(--radius-sm)">
-            <div style="color:var(--danger);font-weight:500;margin-bottom:4px">도미노 영향</div>
-            <div>→ AI 답변 신뢰도 하락</div><div>→ AI Assistant 시연 불가</div>
-            <div style="color:var(--danger);font-weight:500">→ UC-07 핵심 기능 증명 실패</div>
-          </div>
-          <div style="margin-top:8px"><div class="tbtn primary" style="font-size:10px;padding:4px 10px" onclick="nav('issues')"><i class="ti ti-arrow-right"></i> 이슈 확인</div></div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="font-size:11px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px"><i class="ti ti-activity" style="font-size:14px;color:var(--text2)"></i> 운영 현황 스냅샷</div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--text2)">Todo 진행률</span><span style="font-weight:500;font-family:var(--mono)" id="db-todo-rate">— / —</span></div>
-          <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:67%;background:var(--success);border-radius:3px" id="db-todo-bar"></div></div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px">API 연동 후 자동 집계</div>
-          <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;font-size:11px"><span style="color:var(--text2);display:flex;align-items:center;gap:5px"><div class="tl-dot d-warn"></div> Blocked</span><div style="text-align:right"><div style="font-weight:500;color:var(--warn);font-family:var(--mono)" id="db-blocked">—</div><div style="font-size:10px;color:var(--text3)">데이터 없음</div></div></div>
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;font-size:11px"><span style="color:var(--text2);display:flex;align-items:center;gap:5px"><div class="tl-dot d-info"></div> 승인 대기</span><div style="text-align:right"><div style="font-weight:500;color:var(--accent);font-family:var(--mono)" id="db-pending">—</div><div style="font-size:10px;color:var(--text3)">데이터 없음</div></div></div>
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;font-size:11px"><span style="color:var(--text2);display:flex;align-items:center;gap:5px"><div class="tl-dot d-danger"></div> 신규 Risk</span><div style="text-align:right"><div style="font-weight:500;color:var(--danger);font-family:var(--mono)">—</div><div style="font-size:10px;color:var(--text3)">데이터 없음</div></div></div>
+        <div class="ops-ai-body">
+          <p>내 Todo와 일정 데이터가 연결되면 오늘 우선 작업, 관련 이슈, 필요한 브리핑이 표시됩니다.</p>
+          <div class="ops-evidence-chips">
+            <span class="ops-chip blue">내 Todo 5건</span>
+            <span class="ops-chip warn">Blocked 0건</span>
+            <span class="ops-chip green">오늘 일정 2건</span>
           </div>
         </div>
-        <div style="background:var(--warn-soft);border:1px solid rgba(196,124,0,.15);border-radius:var(--radius);padding:12px 14px">
-          <div style="font-size:10px;font-weight:500;color:var(--warn);margin-bottom:8px;display:flex;align-items:center;gap:5px"><i class="ti ti-clock" style="font-size:12px"></i> 이번 주 마감 압박</div>
-          <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
-            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text2)">마감 항목</span><span class="badge b-warn">—</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text2)">마감 항목</span><span class="badge b-warn">—</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;border-top:1px solid rgba(196,124,0,.15)"><span style="color:var(--danger);font-weight:500">마감 4건 집중</span><span style="color:var(--danger);font-size:10px;font-weight:500">금 5/22</span></div>
+      </section>
+
+      <section class="ops-member-grid">
+        <div class="ops-panel">
+          <div class="ops-panel-title">오늘 우선 작업</div>
+          <div class="ops-task-list">
+            <div class="ops-task-item high"><span>P0</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
+            <div class="ops-task-item"><span>P1</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
+            <div class="ops-task-item"><span>P1</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-hd"><div class="card-hd-l"><i class="ti ti-bolt"></i> 빠른 이동</div></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-        <div class="tbtn" style="flex-direction:column;align-items:flex-start;padding:12px 14px;height:auto;gap:4px;border-left:3px solid var(--danger)" onclick="nav('issues')"><i class="ti ti-alert-triangle" style="font-size:16px;color:var(--danger)"></i><div style="font-size:11px;font-weight:500;color:var(--text)">이슈 확인</div><div style="font-size:10px;color:var(--danger);font-weight:500">이슈 없음</div></div>
-        <div class="tbtn" style="flex-direction:column;align-items:flex-start;padding:12px 14px;height:auto;gap:4px;border-left:3px solid var(--accent)" onclick="nav('todo')"><i class="ti ti-checkbox" style="font-size:16px;color:var(--accent)"></i><div style="font-size:11px;font-weight:500;color:var(--text)">Todo 승인</div><div style="font-size:10px;color:var(--accent);font-weight:500">대기 없음</div></div>
-        <div class="tbtn" style="flex-direction:column;align-items:flex-start;padding:12px 14px;height:auto;gap:4px;border-left:3px solid var(--success)" onclick="nav('analysis')"><i class="ti ti-file-analysis" style="font-size:16px;color:var(--success)"></i><div style="font-size:11px;font-weight:500;color:var(--text)">파일 분석</div><div style="font-size:10px;color:var(--text3)">마지막 업로드 2일 전</div></div>
-        <div class="tbtn" style="flex-direction:column;align-items:flex-start;padding:12px 14px;height:auto;gap:4px;border-left:3px solid var(--warn)" onclick="nav('calendar')"><i class="ti ti-calendar" style="font-size:16px;color:var(--warn)"></i><div style="font-size:11px;font-weight:500;color:var(--text)">캘린더</div><div style="font-size:10px;color:var(--warn);font-weight:500">일정 없음</div></div>
-      </div>
+        <div class="ops-panel">
+          <div class="ops-panel-title">내 관련 이슈</div>
+          <div class="ops-issue-mini danger"><div><strong>Risk 데이터 없음</strong><span>관련 이슈 없음</span></div><button onclick="nav('issues')">보기</button></div>
+          <div class="ops-issue-mini warn"><div><strong>Risk 데이터 없음</strong><span>관련 이슈 없음</span></div><button onclick="nav('issues')">보기</button></div>
+        </div>
+      </section>
+
+      <section class="ops-bottom-grid">
+        <div class="ops-panel">
+          <div class="ops-panel-title">내 Todo 진행 현황</div>
+          <div class="ops-stat-row compact">
+            <div><span class="ops-stat-num success">2</span><span class="ops-stat-label">완료</span></div>
+            <div><span class="ops-stat-num blue">2</span><span class="ops-stat-label">진행중</span></div>
+            <div><span class="ops-stat-num warn">1</span><span class="ops-stat-label">Blocked</span></div>
+          </div>
+          <div class="ops-progress-stack"><div style="width:40%;background:var(--success)"></div><div style="width:40%;background:var(--accent-blue)"></div><div style="width:20%;background:var(--warning)"></div></div>
+          <button class="ops-wide-btn" onclick="nav('todo')">내 Todo 확인</button>
+        </div>
+        <div class="ops-panel">
+          <div class="ops-panel-title">내 일정 / 필요한 브리핑</div>
+          <div class="ops-brief-list">
+            <div><i class="ti ti-calendar-event"></i><span>등록된 일정 없음</span></div>
+            <div><i class="ti ti-message-report"></i><span>필요한 브리핑 없음</span></div>
+            <div><i class="ti ti-file-text"></i><span>필요한 브리핑 없음</span></div>
+          </div>
+          <button class="ops-wide-btn" onclick="nav('knowledge')">내 브리핑 보기</button>
+        </div>
+      </section>
     </div>
   </div>
 </div>
-
 <!-- ══ 운영 로그 분석 ══ -->
 <div class="screen" id="s-analysis">
   <div class="topbar">
@@ -402,7 +527,7 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
         <span>→</span><span id="s3lbl">③ 결과</span>
       </div>
     </div>
-    <div style="display:flex;gap:8px"><div class="tbtn" onclick="toggleHistory()"><i class="ti ti-history"></i> 업로드 이력</div><div class="chip">2026-05-20</div></div>
+    <div style="display:flex;gap:8px"><div class="tbtn" onclick="toggleHistory()"><i class="ti ti-history"></i> 업로드 이력</div><div class="chip" data-current-date="short">오늘 날짜</div></div>
   </div>
   <div class="content">
     <div style="background:var(--accent-soft);border:1px solid rgba(66,99,235,.12);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:8px" id="analysisGuide">
@@ -447,6 +572,20 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
       </div>
       <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:6px">출처 기반 추출 근거</div>
       <div class="chunk-box"><div class="chunk-meta"><i class="ti ti-file-text" style="font-size:11px;color:var(--accent)"></i><span id="rChunkMeta"></span></div><div id="rChunkContent"></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+        <div style="display:flex;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;align-items:flex-start">
+          <i class="ti ti-file-description" style="font-size:13px;color:var(--accent);flex-shrink:0;margin-top:1px"></i>
+          <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">출처 문서</div><div id="rSrcDoc" style="color:var(--text)">—</div></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;align-items:flex-start">
+          <i class="ti ti-list-search" style="font-size:13px;color:var(--accent);flex-shrink:0;margin-top:1px"></i>
+          <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">관련 구간</div><div id="rSrcRange" style="color:var(--text)">—</div></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;align-items:flex-start">
+          <i class="ti ti-brain" style="font-size:13px;color:var(--accent);flex-shrink:0;margin-top:1px"></i>
+          <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">AI 판단 근거</div><div id="rSrcReason" style="color:var(--text)">—</div></div>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         <div class="tbtn" onclick="nav('todo')" style="color:var(--accent)"><i class="ti ti-checkbox"></i> Todo 확인</div>
         <div class="tbtn" onclick="nav('issues')" style="color:var(--danger)"><i class="ti ti-alert-triangle"></i> 이슈 확인</div>
@@ -467,27 +606,58 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
       <div class="topbar-title">Todo 관리</div>
       <span id="todoFromIssueBanner" style="display:none;font-size:10px;padding:3px 8px;border-radius:10px;background:var(--success-soft);color:var(--success);border:1px solid rgba(26,158,106,.2)">이슈에서 생성된 Todo 있음</span>
     </div>
-    <div style="display:flex;gap:8px">
-      <div style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text2)">승인 대기 <span style="font-weight:600;color:var(--warn);font-family:var(--mono)" id="pendingCount">5</span>건</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="view-toggle">
+        <div class="vt-btn active" id="vt-table" onclick="switchTodoView('table')" title="테이블 뷰"><i class="ti ti-table" style="font-size:13px"></i></div>
+        <div class="vt-btn" id="vt-card" onclick="switchTodoView('card')" title="카드 뷰"><i class="ti ti-layout-grid" style="font-size:13px"></i></div>
+      </div>
+      <div style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text2)">승인 대기 <span style="font-weight:600;color:var(--warn);font-family:var(--mono)" id="pendingCount">0</span>건</div>
       <div class="tbtn" onclick="bulkApprove()"><i class="ti ti-checks"></i> 전체 승인</div>
       <div class="tbtn primary" onclick="openManualModal()"><i class="ti ti-plus"></i> 수동 등록</div>
     </div>
   </div>
+  <!-- 컨텍스트 배너 -->
+  <div class="ctx-banner" id="todoctxBanner">
+    <i class="ti ti-link"></i>
+    <span id="todoctxText">이슈에서 연결된 Todo가 최상단에 표시됩니다.</span>
+    <div class="tbtn" onclick="nav('issues')" style="margin-left:auto;font-size:10px;padding:3px 8px;color:var(--accent);border-color:var(--accent)">← 이슈 로그로</div>
+  </div>
   <div class="tabs" id="todoTabs">
-    <div class="tab active" onclick="switchTodoTab('ai')">AI 제안 <span class="badge b-warn" id="t-ai-cnt">5</span></div>
-    <div class="tab" onclick="switchTodoTab('inprogress')">진행 Todo <span class="badge b-gray" id="t-in-cnt">2</span></div>
-    <div class="tab" onclick="switchTodoTab('done')">완료 <span class="badge b-gray" id="t-done-cnt">1</span></div>
+    <div class="tab active" onclick="switchTodoTab('ai')">AI 제안 <span class="badge b-warn" id="t-ai-cnt">0</span></div>
+    <div class="tab" onclick="switchTodoTab('inprogress')">진행 Todo <span class="badge b-gray" id="t-in-cnt">0</span></div>
+    <div class="tab" onclick="switchTodoTab('done')">완료 <span class="badge b-gray" id="t-done-cnt">0</span></div>
   </div>
   <div style="background:var(--accent-soft);border-bottom:1px solid rgba(66,99,235,.12);padding:8px 16px;font-size:11px;color:var(--accent);display:flex;align-items:center;gap:6px;flex-shrink:0" id="todoAINotice">
     <i class="ti ti-sparkles" style="font-size:13px"></i> AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.
   </div>
   <div class="body-wrap">
-    <div class="table-area">
+    <!-- 테이블 뷰 -->
+    <div id="todoTableView" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
       <table class="todo-table">
         <thead><tr><th style="width:28px"><input type="checkbox" id="chkAll" onchange="toggleAllChk(this)" style="accent-color:var(--accent)"></th><th>Todo</th><th style="width:100px">근거</th><th style="width:52px;text-align:center">우선순위</th><th style="width:48px;text-align:center">신뢰도</th><th style="width:72px;text-align:center">상태</th><th style="width:130px">액션</th></tr></thead>
         <tbody id="todoBody"></tbody>
       </table>
-      <div id="todoEmpty" style="display:none;padding:40px;text-align:center;color:var(--text3);font-size:12px"><i class="ti ti-checkbox" style="font-size:28px;display:block;margin-bottom:8px"></i>이 탭에 항목이 없습니다.</div>
+      <!-- 온보딩 가이드 (데이터 없을 때) -->
+      <div id="todoEmpty" style="display:none;flex:1">
+        <div class="onboarding-guide">
+          <i class="ti ti-checkbox" style="font-size:36px;color:var(--text3);display:block;margin-bottom:12px"></i>
+          <h3>아직 Todo가 없습니다</h3>
+          <p>운영 로그 파일을 업로드하면 AI가 자동으로 Todo를 추출합니다.<br>수동으로 직접 등록할 수도 있습니다.</p>
+          <div class="og-steps">
+            <div class="og-step"><div class="og-num">1</div>운영 로그 분석 화면에서 파일 업로드</div>
+            <div class="og-step"><div class="og-num">2</div>AI 분석 완료 후 Todo 자동 추출</div>
+            <div class="og-step"><div class="og-num">3</div>여기서 확인 후 승인 또는 반려</div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <div class="tbtn primary" onclick="nav('analysis')"><i class="ti ti-file-analysis"></i> 파일 업로드하러 가기</div>
+            <div class="tbtn" onclick="openManualModal()"><i class="ti ti-plus"></i> 수동 등록</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 카드 뷰 -->
+    <div id="todoCardView" style="display:none;flex:1;overflow-y:auto">
+      <div class="todo-card-grid" id="todoCardGrid"></div>
     </div>
     <div class="detail-panel">
       <div class="detail-empty" id="todoDetailEmpty"><i class="ti ti-hand-click"></i><span>Todo를 클릭하면<br>상세 내용이 표시됩니다</span></div>
@@ -500,15 +670,23 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 <div class="screen" id="s-issues">
   <div class="topbar">
     <div class="topbar-title">이슈 로그</div>
-    <div style="display:flex;gap:8px"><div class="tbtn primary"><i class="ti ti-plus"></i> 수동 등록</div><div class="chip">2026-05-20</div></div>
+    <div style="display:flex;gap:8px"><div class="tbtn primary"><i class="ti ti-plus"></i> 수동 등록</div><div class="chip" data-current-date="short">오늘 날짜</div></div>
+  </div>
+  <!-- 컨텍스트 배너 -->
+  <div class="ctx-banner" id="issuectxBanner">
+    <i class="ti ti-circle-check"></i>
+    <span id="issuectxText">Todo가 생성되었습니다. Todo 화면에서 확인하세요.</span>
+    <div class="tbtn" onclick="nav('todo')" style="margin-left:auto;font-size:10px;padding:3px 8px;color:var(--success);border-color:var(--success)">Todo 확인 →</div>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="switchIssueTab('confirmed')">확정 이슈 <span class="badge b-danger" id="i-conf-cnt">3</span></div>
-    <div class="tab" onclick="switchIssueTab('candidate')">이슈 후보 <span class="badge b-warn" id="i-cand-cnt">2</span></div>
-    <div class="tab" onclick="switchIssueTab('resolved')">Resolved <span class="badge b-gray">1</span></div>
+    <div class="tab active" onclick="switchIssueTab('confirmed')">확정 이슈 <span class="badge b-danger" id="i-conf-cnt">0</span></div>
+    <div class="tab" onclick="switchIssueTab('candidate')">이슈 후보 <span class="badge b-warn" id="i-cand-cnt">0</span></div>
+    <div class="tab" onclick="switchIssueTab('resolved')">Resolved <span class="badge b-gray">0</span></div>
   </div>
   <div class="body-wrap">
-    <div class="issue-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px" id="issueList"></div>
+    <div class="issue-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px" id="issueList">
+      <!-- 온보딩 가이드 (데이터 없을 때 renderIssues에서 표시) -->
+    </div>
     <div class="detail-panel">
       <div class="detail-empty" id="issueDetailEmpty"><i class="ti ti-hand-click"></i><span>이슈를 클릭하면<br>상세 내용이 표시됩니다</span></div>
       <div id="issueDetailContent" style="display:none;padding:14px;overflow-y:auto;flex:1"></div>
@@ -524,7 +702,37 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
       <div class="topbar-title">캘린더 — 운영 리스크 예측</div>
       <span id="calUpdatedBadge" class="badge b-success" style="display:none">방금 업데이트됨</span>
     </div>
-    <div style="display:flex;gap:8px"><div class="tbtn">← 4월</div><div class="chip">2026년 5월</div><div class="tbtn">6월 →</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+        <div class="tbtn primary" onclick="openAISuggestModal()" style="gap:5px">
+          <i class="ti ti-sparkles"></i> AI 추천 일정 생성
+        </div>
+        <div class="tbtn">← 4월</div><div class="chip">2026년 5월</div><div class="tbtn">6월 →</div>
+      </div>
+  </div>
+  <!-- AI 추천 일정 모달 -->
+  <div class="modal-overlay" id="aiSuggestModal">
+    <div class="modal slide-up" style="width:400px">
+      <div class="modal-title">AI 추천 일정 생성</div>
+      <div class="modal-sub">운영 데이터 기반으로 AI가 추천하는 일정을 선택하세요.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+        <div style="background:var(--danger-soft);border:1px solid rgba(224,62,62,.12);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;transition:all .15s" onclick="addAISuggestEvent('긴급 대응 회의','High Risk 이슈 기반')">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="badge b-danger">High Risk 기반</span></div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px">High Risk 이슈 대응 회의 생성</div>
+          <div style="font-size:10px;color:var(--text3)">현재 미해결 이슈를 기반으로 긴급 대응 회의를 추천합니다.</div>
+        </div>
+        <div style="background:var(--accent-soft);border:1px solid rgba(66,99,235,.12);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;transition:all .15s" onclick="addAISuggestEvent('Todo 마감 점검','Todo 마감 집중 기반')">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="badge b-accent">마감 집중 기반</span></div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px">Todo 마감 일정 추가</div>
+          <div style="font-size:10px;color:var(--text3)">이번 주 마감 집중 구간에 점검 일정을 자동 추가합니다.</div>
+        </div>
+        <div style="background:var(--warn-soft);border:1px solid rgba(196,124,0,.12);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;transition:all .15s" onclick="addAISuggestEvent('인수인계 미팅','부재자 인수인계 기반')">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="badge b-warn">부재 기반</span></div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px">부재자 인수인계 일정 생성</div>
+          <div style="font-size:10px;color:var(--text3)">팀원 부재 전 인수인계 미팅을 자동으로 추천합니다.</div>
+        </div>
+      </div>
+      <div class="modal-actions"><div class="tbtn" onclick="closeModal('aiSuggestModal')">닫기</div></div>
+    </div>
   </div>
   <div id="calEventBanner" style="display:none;background:var(--success-soft);border-bottom:1px solid rgba(26,158,106,.15);padding:10px 16px;font-size:11px;color:var(--success);display:flex;align-items:center;gap:8px;flex-shrink:0">
     <i class="ti ti-calendar-plus" style="font-size:16px"></i><span id="calBannerText"></span>
@@ -551,8 +759,8 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
         <div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:2px">5/21~22 (목~금)</div><div style="color:var(--text)">마감 4건 + 부재 겹침</div><span class="badge b-danger" style="margin-top:4px;display:inline-block">최고 위험</span></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:5px"><i class="ti ti-user-off" style="font-size:13px;color:var(--text2)"></i> 부재 현황</div>
         <div id="calAbsenceList">
-          <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/19 이성우</div><div style="color:var(--text)">출장 — RAG 공백</div></div>
-          <div style="padding:6px 0;font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/21 김희진</div><div style="color:var(--text)">부산 출장 — PR 지연</div></div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/19 담당자 A</div><div style="color:var(--text)">외부 일정 — 업무 공백</div></div>
+          <div style="padding:6px 0;font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/21 관리자</div><div style="color:var(--text)">외부 일정 — 업무 지연</div></div>
         </div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:5px"><i class="ti ti-flag" style="font-size:13px;color:var(--text2)"></i> 마일스톤</div>
         <div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:11px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/29</div><div style="color:var(--text)">4주차 시연</div><span class="badge b-accent" style="margin-top:4px;display:inline-block">—</span></div>
@@ -563,12 +771,12 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
         <div class="mini-log" id="miniLog">
           <div style="font-size:10px;color:var(--text3);line-height:1.5">누락된 일정을 말로 알려주세요.</div>
           <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">
-            <div class="sq" style="font-size:9px;padding:2px 6px" onclick="miniChat('이성우 5/26 부재야')">이성우 5/26 부재</div>
+            <div class="sq" style="font-size:9px;padding:2px 6px" onclick="miniChat('담당자 A 5/26 부재')">담당자 A 5/26 부재</div>
             <div class="sq" style="font-size:9px;padding:2px 6px" onclick="miniChat('6/3 팀 회의')">6/3 팀 회의</div>
           </div>
         </div>
         <div class="mini-input-row">
-          <input class="mini-input" id="miniInput" placeholder="예: 박주원 5/28 부재야" onkeydown="if(event.key==='Enter')miniChat()">
+          <input class="mini-input" id="miniInput" placeholder="예: 담당자 A 5/28 부재" onkeydown="if(event.key==='Enter')miniChat()">
           <button class="mini-send" onclick="miniChat()"><i class="ti ti-send" style="font-size:12px"></i></button>
         </div>
       </div>
@@ -597,6 +805,26 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 
     <!-- 좌측: 컨텍스트 패널 -->
     <div style="width:220px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:16px;height:100%">
+      <!-- Dashboard vs 인수인계 차이 안내 -->
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px">
+        <div style="font-weight:500;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-transfer" style="font-size:12px;color:var(--accent)"></i> 인수인계란?</div>
+        <div style="color:var(--text3);line-height:1.7;font-size:10px">
+          <div style="margin-bottom:4px">· 왜 이렇게 되었는가</div>
+          <div style="margin-bottom:4px">· 무엇을 조심해야 하는가</div>
+          <div>· 다음 담당자가 알아야 할 것</div>
+        </div>
+      </div>
+      <!-- AI 생성 미리보기 카드 -->
+      <div style="background:var(--accent-soft);border:1px solid rgba(66,99,235,.15);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px">
+        <div style="font-weight:500;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px"><i class="ti ti-sparkles" style="font-size:12px"></i> AI 생성 미리보기</div>
+        <div style="display:flex;flex-direction:column;gap:5px;font-size:10px;color:var(--text2)">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>현재 진행 중인 업무</div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--danger);flex-shrink:0"></div>미해결 이슈</div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--warn);flex-shrink:0"></div>다음 담당자 주의사항</div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--success);flex-shrink:0"></div>참고 문서 링크</div>
+        </div>
+        <div class="tbtn primary" style="font-size:10px;padding:5px 0;width:100%;justify-content:center;margin-top:8px"><i class="ti ti-wand"></i> 문서 생성 미리보기</div>
+      </div>
       <div id="knowledgeContextPanel"></div>
     </div>
 
@@ -648,16 +876,16 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 
 <!-- ══ 보고서 ══ -->
 <div class="screen" id="s-reports">
-  <div class="topbar"><div class="topbar-title">보고서 생성</div><div style="display:flex;gap:8px"><div style="display:flex;gap:4px"><div class="tbtn" style="background:var(--accent);color:#fff;border-color:var(--accent)">주간</div><div class="tbtn">월간</div></div><div class="tbtn primary"><i class="ti ti-wand"></i> AI 초안 생성</div></div></div>
+  <div class="topbar"><div class="topbar-title">보고서 생성</div><div style="display:flex;gap:8px"><div style="display:flex;gap:4px"><div class="tbtn">주간</div><div class="tbtn">월간</div></div><div class="tbtn primary"><i class="ti ti-wand"></i> AI 초안 생성</div></div></div>
   <div class="content">
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
       <div style="display:flex;align-items:center;gap:3px;padding:7px 10px;border-bottom:1px solid var(--border);background:var(--surface2)">
         <div class="tbtn" style="font-weight:700;padding:3px 8px">B</div><div class="tbtn" style="font-style:italic;padding:3px 8px">I</div><div class="tbtn" style="padding:3px 8px">H1</div><div class="tbtn" style="padding:3px 8px">H2</div><div style="width:1px;height:16px;background:var(--border2);margin:0 4px"></div><div class="tbtn" style="padding:3px 8px"><i class="ti ti-list" style="font-size:12px"></i></div><div style="flex:1"></div><span style="font-size:10px;color:var(--text3)">AI 초안 · 직접 편집 가능</span>
       </div>
       <div contenteditable="true" style="padding:14px 16px;font-size:12px;line-height:1.8;color:var(--text2);min-height:160px;outline:none">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">5월 2주차 운영 보고서</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">운영 보고서 초안</div>
         <p style="margin-bottom:8px">운영 로그 업로드 후 AI가 보고서 초안을 자동으로 생성합니다.</p>
-        <ul style="padding-left:16px"><li>Todo 현황 — API 연동 후 자동 집계</li><li>Blocked 현황 — API 연동 후 자동 집계</li><li style="color:var(--danger)">High Risk 이슈 2건 — 즉시 조치 필요</li></ul>
+        <ul style="padding-left:16px"><li>완료된 업무 — 데이터 연결 후 표시</li><li>진행 중인 업무 — 데이터 연결 후 표시</li><li>리스크 관리 — 데이터 연결 후 표시</li></ul>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><div class="tbtn"><i class="ti ti-share"></i> 공유</div><div class="tbtn primary"><i class="ti ti-device-floppy"></i> 저장</div></div>
@@ -670,7 +898,7 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
     <div class="topbar-title">AI Assistant</div>
     <div style="display:flex;gap:8px;align-items:center">
       <span class="badge b-success" style="display:flex;align-items:center;gap:4px"><i class="ti ti-circle-filled" style="font-size:8px"></i> RAG 연결됨</span>
-      <span style="font-size:10px;color:var(--text3)">운영 데이터 기반 + 범용 답변 + 일정 등록</span>
+      <span style="font-size:10px;color:var(--text3)">운영 데이터 기반 질의응답 · 일정 등록 · 근거 문서 연결</span>
     </div>
   </div>
   <div class="chat-area" id="chatArea">
@@ -679,8 +907,8 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <div class="sq" onclick="sendMsg('현재 가장 위험한 이슈는?')">현재 가장 위험한 이슈는?</div>
       <div class="sq" onclick="sendMsg('이번주 미완료 Todo 알려줘')">이번주 미완료 Todo</div>
-      <div class="sq" onclick="sendMsg('이성우 5/26 부재야')">이성우 5/26 부재야</div>
-      <div class="sq" onclick="sendMsg('박주원 다음주 화요일 출장이야')">박주원 다음주 화요일 출장</div>
+      <div class="sq" onclick="sendMsg('담당자 A 5/26 부재')">담당자 A 5/26 부재</div>
+      <div class="sq" onclick="sendMsg('담당자 A 다음주 화요일 외부 일정')">담당자 A 다음주 화요일 외부 일정</div>
     </div></div></div>
   </div>
   <div class="chat-input-bar">
@@ -689,6 +917,78 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
   </div>
 </div>
 
+
+<!-- ══ 설정 ══ -->
+<div class="screen" id="s-settings">
+  <div class="topbar">
+    <div class="topbar-title">설정</div>
+    <span class="badge b-accent">Front-end only</span>
+  </div>
+  <div class="content settings-content">
+    <section class="settings-panel">
+      <div class="settings-panel-head">
+        <div>
+          <div class="settings-eyebrow">ACCOUNT</div>
+          <h3>계정 정보</h3>
+        </div>
+        <span class="badge b-success" id="settingsLoginStatus">로그인됨</span>
+      </div>
+      <div class="settings-info-grid">
+        <div class="settings-info-card">
+          <span>사용자</span>
+          <strong id="settingsUserName">관리자</strong>
+        </div>
+        <div class="settings-info-card">
+          <span>역할</span>
+          <strong id="settingsUserRole">Admin</strong>
+        </div>
+        <div class="settings-info-card">
+          <span>상태</span>
+          <strong id="settingsUserState">로그인됨</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel-head">
+        <div>
+          <div class="settings-eyebrow">THEME</div>
+          <h3>테마 설정</h3>
+        </div>
+        <span class="settings-current-theme" id="settingsThemeLabel">Dark</span>
+      </div>
+      <div class="settings-theme-options">
+        <button type="button" class="settings-theme-option" data-theme-choice="dark" onclick="setOpsRadarTheme('dark')">
+          <i class="ti ti-moon"></i>
+          <span>다크 모드</span>
+          <small>기존 운영 관제형 다크 대시보드</small>
+        </button>
+        <button type="button" class="settings-theme-option" data-theme-choice="light" onclick="setOpsRadarTheme('light')">
+          <i class="ti ti-sun"></i>
+          <span>라이트 모드</span>
+          <small>밝은 배경의 프리미엄 SaaS 화면</small>
+        </button>
+      </div>
+      <div class="settings-note">선택한 테마는 브라우저 localStorage에 저장되며 새로고침 후에도 유지됩니다.</div>
+    </section>
+
+    <section class="settings-panel danger-zone">
+      <div class="settings-panel-head">
+        <div>
+          <div class="settings-eyebrow">SESSION</div>
+          <h3>로그인 관리</h3>
+        </div>
+      </div>
+      <div class="settings-logout-row">
+        <div>
+          <strong>현재 세션 종료</strong>
+          <p>프론트 localStorage의 access_token, role, user 정보를 제거합니다.</p>
+        </div>
+        <button type="button" class="settings-logout-btn" onclick="logout()"><i class="ti ti-logout"></i> 로그아웃</button>
+      </div>
+    </section>
+  </div>
+</div>
 </div><!-- /main -->
 </div>
 
@@ -699,13 +999,13 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
     <div class="modal-sub" id="tcModalSub"></div>
     <div style="background:var(--danger-soft);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px;color:var(--danger);margin-bottom:12px;display:flex;align-items:flex-start;gap:6px"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div id="tcModalFrom"></div></div>
     <div><div class="form-label">Todo 제목</div><input class="form-input" id="tcTitle" type="text"></div>
-    <div class="form-row"><div><div class="form-label">담당자</div><select class="form-input" id="tcAssignee"><option>이성우</option><option>김성호</option><option>김예은</option><option>박주원</option><option>김희진</option></select></div><div><div class="form-label">우선순위</div><select class="form-input" id="tcPriority"><option value="high">높음</option><option value="medium">중간</option><option value="low">낮음</option></select></div></div>
+    <div class="form-row"><div><div class="form-label">담당자</div><select class="form-input" id="tcAssignee"><option>담당자 A</option><option>담당자 B</option><option>담당자 C</option><option>담당자 D</option><option>관리자</option></select></div><div><div class="form-label">우선순위</div><select class="form-input" id="tcPriority"><option value="high">높음</option><option value="medium">중간</option><option value="low">낮음</option></select></div></div>
     <div style="margin-top:8px"><div class="form-label">마감일</div><input class="form-input" id="tcDue" type="date" value="2026-05-23"></div>
     <div class="modal-actions"><div class="tbtn" onclick="closeModal('todoCreateModal')">취소</div><div class="tbtn primary" onclick="confirmTodoCreate()"><i class="ti ti-plus"></i> Todo 생성 및 이동</div></div>
   </div>
 </div>
-<div class="modal-overlay" id="calModal">
-  <div class="modal slide-up" style="min-width:340px;max-width:420px">
+<div class="modal-overlay" id="calModal" onclick="if(event.target===this){closeModal('calModal');G.selectedCalDay=null;renderCalendar()}">
+  <div class="modal slide-up" style="min-width:340px;max-width:420px" onclick="event.stopPropagation()">
     <div class="modal-title" style="display:flex;align-items:center;gap:8px">
       <i class="ti ti-calendar" style="font-size:16px;color:var(--accent)"></i>
       <span id="calModalDate">날짜</span> 일정 관리
@@ -750,7 +1050,7 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
   <div class="modal slide-up">
     <div class="modal-title">Todo 수정</div>
     <div style="margin-bottom:8px"><div class="form-label">제목</div><input class="form-input" id="editTitle" type="text"></div>
-    <div><div class="form-label">담당자</div><select class="form-input" id="editAssignee"><option>이성우</option><option>김성호</option><option>김예은</option><option>박주원</option><option>김희진</option></select></div>
+    <div><div class="form-label">담당자</div><select class="form-input" id="editAssignee"><option>담당자 A</option><option>담당자 B</option><option>담당자 C</option><option>담당자 D</option><option>관리자</option></select></div>
     <div class="modal-actions"><div class="tbtn" onclick="closeModal('editModal')">취소</div><div class="tbtn primary" onclick="saveEdit()">저장</div></div>
   </div>
 </div>
@@ -758,7 +1058,7 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
   <div class="modal slide-up">
     <div class="modal-title">Todo 수동 등록</div>
     <div style="margin-bottom:8px"><div class="form-label">Todo 내용</div><textarea class="form-input" id="manualTitle" rows="3" style="resize:vertical" placeholder="Todo 내용을 입력하세요"></textarea></div>
-    <div class="form-row"><div><div class="form-label">담당자</div><select class="form-input" id="manualAssignee"><option>이성우</option><option>김성호</option><option>김예은</option><option>박주원</option><option>김희진</option></select></div><div><div class="form-label">우선순위</div><select class="form-input" id="manualPriority"><option value="high">높음</option><option value="medium" selected>중간</option><option value="low">낮음</option></select></div></div>
+    <div class="form-row"><div><div class="form-label">담당자</div><select class="form-input" id="manualAssignee"><option>담당자 A</option><option>담당자 B</option><option>담당자 C</option><option>담당자 D</option><option>관리자</option></select></div><div><div class="form-label">우선순위</div><select class="form-input" id="manualPriority"><option value="high">높음</option><option value="medium" selected>중간</option><option value="low">낮음</option></select></div></div>
     <div class="modal-actions"><div class="tbtn" onclick="closeModal('manualModal')">취소</div><div class="tbtn primary" onclick="saveManual()">등록</div></div>
   </div>
 </div>
@@ -780,7 +1080,1539 @@ input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .ki-item.open .ki-arrow{transform:rotate(180deg)}
 </style>
 
-<script>
+<style>
+/* OpsRadar UX2 designed override: visual-only layer */
+:root{
+  --bg:#070b14;
+  --surface:#0f172a;
+  --surface2:#151f33;
+  --border:rgba(148,163,184,.16);
+  --border2:rgba(148,163,184,.28);
+  --text:#e6edf7;
+  --text2:#a5b4cf;
+  --text3:#6f7d98;
+  --accent:#6d8cff;
+  --accent-soft:rgba(109,140,255,.14);
+  --danger:#ff5f73;
+  --danger-soft:rgba(255,95,115,.14);
+  --warn:#f6b34b;
+  --warn-soft:rgba(246,179,75,.14);
+  --success:#37d399;
+  --success-soft:rgba(55,211,153,.13);
+  --sb-w:224px;
+  --radius:14px;
+  --radius-sm:9px;
+}
+html{background:var(--bg)}
+body{
+  background:
+    radial-gradient(circle at 16% -12%,rgba(79,110,255,.26),transparent 34%),
+    radial-gradient(circle at 86% 0,rgba(139,92,246,.18),transparent 30%),
+    linear-gradient(180deg,#080d18 0%,#0b1020 52%,#080b13 100%);
+  color:var(--text);
+  letter-spacing:0;
+}
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(148,163,184,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.045) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 78%);
+}
+.sidebar{
+  background:linear-gradient(180deg,rgba(10,16,29,.96),rgba(7,11,20,.94));
+  border-right:1px solid rgba(148,163,184,.18);
+  box-shadow:18px 0 46px rgba(0,0,0,.28);
+}
+.sb-logo{
+  padding:22px 18px 18px;
+  border-bottom:1px solid var(--border);
+}
+.sb-logo-name{
+  font-size:18px;
+  letter-spacing:-.02em;
+  color:#fff;
+}
+.sb-logo-name::before{
+  content:'';
+  display:inline-block;
+  width:10px;
+  height:10px;
+  margin-right:9px;
+  border-radius:3px;
+  background:linear-gradient(135deg,var(--accent),#9b7cff);
+  box-shadow:0 0 18px rgba(109,140,255,.7);
+  vertical-align:1px;
+}
+.sb-logo-tag{color:#7dd3fc;font-size:10px;letter-spacing:.08em}
+.sb-section{
+  color:#62718e;
+  padding:16px 18px 6px;
+  font-weight:700;
+  letter-spacing:.11em;
+}
+.sb-item{
+  margin:3px 10px;
+  padding:10px 12px;
+  border-left:0;
+  border-radius:10px;
+  color:var(--text2);
+  font-size:12px;
+  font-weight:500;
+}
+.sb-item i{font-size:16px;color:#7f8da8}
+.sb-item:hover{
+  background:rgba(255,255,255,.055);
+  color:#fff;
+}
+.sb-item:hover i{color:#c8d5ff}
+.sb-item.active{
+  background:linear-gradient(135deg,rgba(109,140,255,.24),rgba(139,92,246,.14));
+  color:#fff;
+  border-left:0;
+  box-shadow:inset 0 0 0 1px rgba(109,140,255,.30),0 10px 28px rgba(0,0,0,.22);
+}
+.sb-item.active i{color:#9db1ff}
+.sb-footer{
+  background:rgba(255,255,255,.025);
+  border-top:1px solid var(--border);
+  padding:14px 16px;
+}
+.sb-avatar{
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(109,140,255,.24),rgba(55,211,153,.12));
+  color:#fff;
+  border:1px solid rgba(109,140,255,.26);
+}
+.main{
+  background:rgba(7,11,20,.18);
+  position:relative;
+}
+.topbar{
+  min-height:58px;
+  padding:13px 22px;
+  background:rgba(11,17,31,.76);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 14px 38px rgba(0,0,0,.18);
+}
+.topbar-title{
+  font-size:15px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:-.01em;
+}
+.content{
+  padding:22px;
+  gap:16px;
+}
+.card,
+.issue-card,
+.kcard,
+.ki-item,
+.onboarding-guide{
+  background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,20,36,.96));
+  border:1px solid var(--border);
+  box-shadow:0 18px 50px rgba(0,0,0,.24);
+}
+.card{
+  padding:16px 18px;
+}
+.card-hd{margin-bottom:14px}
+.card-hd-l{
+  color:#f8fbff;
+  font-size:13px;
+  font-weight:750;
+}
+.card-hd-l i{color:#9db1ff}
+.chip{
+  background:rgba(255,255,255,.065);
+  border:1px solid var(--border2);
+  color:#cbd6ea;
+  border-radius:999px;
+  padding:5px 11px;
+}
+.tbtn,.ab,.sq{
+  background:rgba(255,255,255,.055);
+  border:1px solid var(--border);
+  color:#cbd6ea;
+  border-radius:9px;
+  box-shadow:none;
+}
+.tbtn:hover,.ab:hover,.sq:hover{
+  background:rgba(109,140,255,.13);
+  border-color:rgba(109,140,255,.42);
+  color:#fff;
+  transform:translateY(-1px);
+}
+.tbtn.primary,.ab-approve{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  border-color:rgba(157,177,255,.55);
+  color:white;
+  box-shadow:0 10px 24px rgba(109,140,255,.24);
+}
+.badge{
+  border-radius:999px;
+  padding:3px 8px;
+  letter-spacing:.01em;
+  border:1px solid transparent;
+}
+.b-danger,.ct-danger{
+  background:rgba(255,95,115,.15);
+  color:#ff8392;
+  border-color:rgba(255,95,115,.30);
+}
+.b-warn,.ct-warn{
+  background:rgba(246,179,75,.15);
+  color:#ffd08a;
+  border-color:rgba(246,179,75,.30);
+}
+.b-success,.ct-success{
+  background:rgba(55,211,153,.14);
+  color:#75e8bb;
+  border-color:rgba(55,211,153,.30);
+}
+.b-accent,.ct-info{
+  background:rgba(109,140,255,.15);
+  color:#a9bbff;
+  border-color:rgba(109,140,255,.30);
+}
+.b-gray,.ct-gray{
+  background:rgba(148,163,184,.10);
+  color:#9aa8c2;
+  border-color:var(--border);
+}
+.row,.tl-row,.history-row,.detail-item,.kb-item,.checklist-item{
+  border-bottom-color:rgba(148,163,184,.12);
+}
+.two-col{gap:16px}
+.three-col{gap:12px}
+.screen.active{animation:fadeUp .18s ease}
+.tabs{
+  background:rgba(11,17,31,.72);
+  border-bottom:1px solid var(--border);
+}
+.tab{
+  color:var(--text2);
+  padding:12px 15px;
+  font-weight:600;
+}
+.tab.active{
+  color:#fff;
+  border-bottom-color:var(--accent);
+}
+.upload-zone{
+  background:linear-gradient(180deg,rgba(109,140,255,.09),rgba(15,23,42,.92));
+  border:1.5px dashed rgba(125,211,252,.35);
+  border-radius:18px;
+  padding:38px 22px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.upload-zone:hover,.upload-zone.dragover{
+  border-color:#7dd3fc;
+  background:linear-gradient(180deg,rgba(109,140,255,.16),rgba(15,23,42,.96));
+}
+.upload-zone.done{
+  background:linear-gradient(180deg,rgba(55,211,153,.16),rgba(15,23,42,.96));
+  border-color:rgba(55,211,153,.56);
+}
+.file-row{
+  background:rgba(255,255,255,.045);
+  border-color:var(--border);
+  border-radius:10px;
+}
+.file-row.done{
+  background:rgba(55,211,153,.10);
+  border-color:rgba(55,211,153,.28);
+}
+.flow-step{padding:12px 0}
+.flow-step:not(:last-child)::after{
+  left:13px;
+  top:36px;
+  background:linear-gradient(var(--border2),rgba(109,140,255,.2));
+}
+.flow-icon{
+  width:28px;
+  height:28px;
+  box-shadow:0 0 0 4px rgba(255,255,255,.025);
+}
+.fi-wait{background:rgba(148,163,184,.09);color:#8793aa}
+.fi-active{background:rgba(109,140,255,.18);color:#a9bbff;border:1px solid rgba(109,140,255,.38)}
+.fi-done{background:rgba(55,211,153,.15);color:#75e8bb;border:1px solid rgba(55,211,153,.32)}
+.flow-title{font-size:12px;color:#f5f8ff;font-weight:700}
+.flow-sub{font-size:10.5px;color:var(--text3)}
+.chunk-box{
+  background:rgba(6,11,22,.62);
+  border:1px solid rgba(109,140,255,.18);
+  border-left:3px solid var(--accent);
+  border-radius:11px;
+  color:#b8c5dc;
+  line-height:1.75;
+}
+.chunk-meta{color:#7f8da8}
+.chunk-hl{
+  background:rgba(109,140,255,.18);
+  color:#c7d2fe;
+  border-radius:4px;
+  padding:1px 4px;
+}
+.todo-table th{
+  background:rgba(255,255,255,.035);
+  color:#7f8da8;
+  border-bottom-color:var(--border);
+}
+.todo-table td{border-bottom-color:rgba(148,163,184,.10)}
+.todo-row:hover{background:rgba(109,140,255,.08)}
+.todo-row.selected{
+  background:rgba(109,140,255,.16);
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+.todo-title{color:#f7faff;font-weight:650}
+.todo-src{color:#71809a}
+.detail-panel,.cal-side{
+  background:rgba(10,16,29,.92);
+  border-left:1px solid var(--border);
+}
+.detail-cell{
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(148,163,184,.12);
+}
+.detail-label,.detail-empty{color:#7f8da8}
+.detail-section{color:#fff;font-weight:750}
+.risk-box,.domino{
+  background:linear-gradient(180deg,rgba(255,95,115,.15),rgba(255,95,115,.08));
+  border:1px solid rgba(255,95,115,.22);
+  border-radius:11px;
+}
+.issue-card{
+  padding:16px;
+}
+.issue-card:hover{
+  border-color:rgba(109,140,255,.36);
+  box-shadow:0 22px 56px rgba(0,0,0,.30);
+  transform:translateY(-1px);
+}
+.issue-card.selected{
+  border-color:rgba(109,140,255,.62);
+  box-shadow:0 0 0 1px rgba(109,140,255,.35),0 22px 56px rgba(0,0,0,.30);
+}
+.issue-card.candidate{
+  border:1px dashed rgba(246,179,75,.54);
+  background:linear-gradient(180deg,rgba(246,179,75,.13),rgba(15,23,42,.96));
+}
+.issue-title{color:#fff;font-size:13px;font-weight:750}
+.issue-desc{color:#aebad0}
+.history-date,.tl-date{color:#71809a}
+.history-no-change{color:#ffd08a}
+.history-warn{color:#ff8392}
+.cal-grid{
+  gap:1px;
+  background:rgba(148,163,184,.14);
+  border:1px solid var(--border);
+  border-radius:16px;
+}
+.cal-dow{
+  background:rgba(255,255,255,.045);
+  padding:9px 0;
+  color:#8793aa;
+  font-weight:800;
+}
+.cal-cell{
+  background:rgba(15,23,42,.92);
+  min-height:82px;
+  padding:7px;
+}
+.cal-cell:hover{
+  background:rgba(109,140,255,.09);
+}
+.cal-cell.today{
+  background:linear-gradient(180deg,rgba(109,140,255,.19),rgba(15,23,42,.95));
+}
+.cal-cell.risk{
+  background:linear-gradient(180deg,rgba(255,95,115,.14),rgba(15,23,42,.95));
+}
+.cal-cell.cal-selected{
+  outline:2px solid rgba(109,140,255,.8);
+  background:rgba(109,140,255,.18)!important;
+}
+.cal-date{color:#d9e2f5;font-weight:800}
+.cal-tag{
+  padding:2px 6px;
+  border-radius:999px;
+  border:1px solid transparent;
+}
+.risk-dot{
+  width:7px;
+  height:7px;
+  top:6px;
+  right:6px;
+  box-shadow:0 0 0 5px rgba(255,95,115,.13);
+}
+.mini-chat-hd,.mini-input-row,.chat-input-bar{
+  background:rgba(9,14,25,.88);
+  border-color:var(--border);
+}
+.mini-bubble-ai,.bubble-ai{
+  background:linear-gradient(180deg,rgba(17,26,43,.98),rgba(13,20,36,.98));
+  border:1px solid rgba(109,140,255,.18);
+  color:#c8d3e6;
+}
+.mini-bubble-user,.bubble-user{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  color:#fff;
+}
+.chat-area{
+  padding:22px;
+  background:radial-gradient(circle at top right,rgba(109,140,255,.08),transparent 34%);
+}
+.msg-av{
+  width:34px;
+  height:34px;
+  border-radius:11px;
+}
+.av-ai{
+  background:rgba(109,140,255,.16);
+  color:#a9bbff;
+  border:1px solid rgba(109,140,255,.26);
+}
+.av-user{
+  background:rgba(255,255,255,.08);
+  color:#dbe5f7;
+  border:1px solid var(--border);
+}
+.bubble{
+  border-radius:14px;
+  padding:12px 14px;
+  font-size:12px;
+  line-height:1.78;
+}
+.src-tag{
+  color:#9db1ff;
+  background:rgba(109,140,255,.10);
+  border:1px solid rgba(109,140,255,.18);
+  border-radius:999px;
+  width:max-content;
+  padding:3px 8px;
+}
+.chat-input,.mini-input,.form-input{
+  background:rgba(255,255,255,.055);
+  border:1px solid var(--border);
+  color:#f6f8ff;
+  border-radius:11px;
+}
+.chat-input:focus,.mini-input:focus,.form-input:focus{
+  border-color:rgba(109,140,255,.62);
+  box-shadow:0 0 0 3px rgba(109,140,255,.12);
+}
+.send-btn,.mini-send,.float-ai-btn{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  box-shadow:0 12px 30px rgba(109,140,255,.25);
+}
+.confirm-card{
+  background:rgba(109,140,255,.09);
+  border:1px solid rgba(109,140,255,.22);
+  border-radius:12px;
+}
+.modal-overlay{
+  background:rgba(1,5,13,.72);
+  backdrop-filter:blur(8px);
+}
+.modal{
+  background:linear-gradient(180deg,#111a2b,#0d1424);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55);
+}
+.modal-title{font-size:15px;color:#fff;font-weight:800}
+.modal-sub,.form-label{color:#8793aa}
+.toast{
+  background:#101827;
+  border:1px solid rgba(109,140,255,.25);
+  border-radius:12px;
+  box-shadow:0 18px 50px rgba(0,0,0,.36);
+}
+.screen-transition{
+  background:rgba(7,11,20,.76);
+  backdrop-filter:blur(10px);
+}
+.tl-row{
+  padding:10px 0;
+}
+.tl-text{color:#e5ecfb;font-weight:600}
+.tl-dot{
+  width:7px;
+  height:7px;
+  box-shadow:0 0 0 4px rgba(255,255,255,.035);
+}
+.tl-risk{
+  background:rgba(255,95,115,.12);
+  border:1px solid rgba(255,95,115,.22);
+  color:#ff98a5;
+  border-radius:999px;
+}
+.domino-chain{
+  gap:6px;
+}
+.domino-item{
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(148,163,184,.10);
+  border-radius:10px;
+  padding:8px 10px;
+}
+.domino-lbl,.domino-final{color:#ff8392}
+.notif-btn{
+  background:rgba(255,255,255,.055)!important;
+  border:1px solid var(--border)!important;
+  border-radius:11px!important;
+}
+.notif-dot{
+  background:var(--danger)!important;
+  box-shadow:0 0 0 4px rgba(255,95,115,.16);
+}
+.notif-panel{
+  background:linear-gradient(180deg,#111a2b,#0d1424)!important;
+  border:1px solid var(--border)!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.45)!important;
+}
+.notif-item{
+  background:rgba(255,255,255,.045)!important;
+  border-color:var(--border)!important;
+}
+.vt-btn.active{
+  background:linear-gradient(135deg,rgba(109,140,255,.22),rgba(139,92,246,.14));
+  color:#fff;
+}
+.onboarding-guide{
+  margin:22px;
+  padding:32px 26px;
+}
+.onboarding-guide h3{color:#fff;font-weight:800}
+.onboarding-guide p{color:#aebad0}
+.og-step{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:11px;
+  color:#c8d3e6;
+}
+.og-num{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+}
+.ctx-banner{
+  background:rgba(109,140,255,.12);
+  border-bottom:1px solid rgba(109,140,255,.20);
+  color:#c7d2fe;
+}
+.issue-quick-todo{
+  border-color:rgba(109,140,255,.45);
+  color:#c7d2fe;
+  background:rgba(109,140,255,.12);
+  border-radius:999px;
+}
+.kflow-step{
+  background:rgba(255,255,255,.045);
+  border-color:var(--border);
+}
+.kflow-step.active{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+  border-color:rgba(157,177,255,.55);
+}
+.kflow-step.done{
+  background:rgba(55,211,153,.13);
+  border-color:rgba(55,211,153,.30);
+}
+.kcard-hd{
+  padding:16px 18px;
+}
+.kcard-hd:hover{background:rgba(109,140,255,.08)}
+.kcard-title{color:#fff;font-size:13px;font-weight:800}
+.kcard-sub,.kcard-arrow{color:#8793aa}
+.kcard-body{border-top-color:var(--border)}
+.kb-why,.kb-now,.kb-next{
+  border:1px solid transparent;
+  border-radius:12px;
+}
+.kb-why{border-color:rgba(246,179,75,.22)}
+.kb-now{border-color:rgba(255,95,115,.22)}
+.kb-next{border-color:rgba(55,211,153,.22)}
+.kstep:not(:last-child)::after{background:rgba(148,163,184,.18)}
+.kstep-circle{
+  background:#101827;
+  border-color:var(--border2);
+}
+.kstep-circle.active{
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+}
+.kstep-circle.done{
+  background:var(--success);
+}
+.cl-box{
+  background:rgba(255,255,255,.04);
+  border-color:var(--border2);
+}
+@media (max-width:1100px){
+  :root{--sb-w:210px}
+  .two-col,.three-col{grid-template-columns:1fr!important}
+  .detail-panel,.cal-side{width:220px}
+}
+@media (max-width:760px){
+  body{overflow:auto}
+  body>div[style*="display:flex"]{flex-direction:column;min-height:100vh}
+  .sidebar{width:100%;height:auto;max-height:260px}
+  .sb-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;max-height:190px}
+  .sb-section{grid-column:1/-1;padding:10px 8px 4px}
+  .main{min-height:70vh}
+  .topbar{align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .content{padding:14px}
+  .body-wrap{flex-direction:column;overflow:auto}
+  .detail-panel,.cal-side{width:100%;border-left:0;border-top:1px solid var(--border)}
+  .cal-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+<style>
+/* OpsRadar brighter override: visual-only layer */
+:root{
+  --bg:#e8eef8;
+  --surface:#ffffff;
+  --surface2:#f4f7fc;
+  --border:rgba(42,57,85,.12);
+  --border2:rgba(42,57,85,.22);
+  --text:#172033;
+  --text2:#526179;
+  --text3:#8a96aa;
+  --accent:#4f6dff;
+  --accent-soft:rgba(79,109,255,.10);
+  --danger:#e5485d;
+  --danger-soft:rgba(229,72,93,.10);
+  --warn:#b9780f;
+  --warn-soft:rgba(185,120,15,.11);
+  --success:#168a5e;
+  --success-soft:rgba(22,138,94,.10);
+}
+html{background:var(--bg)}
+body{
+  background:
+    radial-gradient(circle at 15% -10%,rgba(79,109,255,.20),transparent 34%),
+    radial-gradient(circle at 92% 0,rgba(124,58,237,.13),transparent 30%),
+    linear-gradient(180deg,#f3f6fb 0%,#e8eef8 48%,#edf2f9 100%);
+  color:var(--text);
+}
+body::before{
+  background-image:linear-gradient(rgba(42,57,85,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(42,57,85,.045) 1px,transparent 1px);
+  opacity:.8;
+}
+.sidebar{
+  background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(243,247,252,.92));
+  border-right:1px solid rgba(42,57,85,.13);
+  box-shadow:14px 0 42px rgba(42,57,85,.10);
+}
+.sb-logo{border-bottom:1px solid var(--border)}
+.sb-logo-name{color:#172033}
+.sb-logo-tag{color:#6172ff}
+.sb-section{color:#8a96aa}
+.sb-item{
+  color:#526179;
+}
+.sb-item i{color:#7d8aa0}
+.sb-item:hover{
+  background:rgba(79,109,255,.075);
+  color:#172033;
+}
+.sb-item:hover i{color:#4f6dff}
+.sb-item.active{
+  background:linear-gradient(135deg,rgba(79,109,255,.13),rgba(124,58,237,.09));
+  color:#21304f;
+  box-shadow:inset 0 0 0 1px rgba(79,109,255,.22),0 10px 26px rgba(79,109,255,.10);
+}
+.sb-item.active i{color:#4f6dff}
+.sb-footer{
+  background:rgba(79,109,255,.035);
+  border-top:1px solid var(--border);
+}
+.sb-avatar{
+  background:linear-gradient(135deg,rgba(79,109,255,.15),rgba(22,138,94,.10));
+  color:#3044a2;
+  border:1px solid rgba(79,109,255,.20);
+}
+.main{
+  background:rgba(255,255,255,.20);
+}
+.topbar{
+  background:rgba(255,255,255,.78);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 12px 34px rgba(42,57,85,.08);
+}
+.topbar-title,
+.card-hd-l,
+.issue-title,
+.kcard-title,
+.detail-section,
+.onboarding-guide h3,
+.modal-title{
+  color:#172033;
+}
+.card,
+.issue-card,
+.kcard,
+.ki-item,
+.onboarding-guide{
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,251,255,.96));
+  border:1px solid rgba(42,57,85,.12);
+  box-shadow:0 16px 42px rgba(42,57,85,.10);
+}
+.chip,.tbtn,.ab,.sq,.notif-btn{
+  background:rgba(255,255,255,.72)!important;
+  border-color:rgba(42,57,85,.15)!important;
+  color:#526179;
+}
+.tbtn:hover,.ab:hover,.sq:hover{
+  background:rgba(79,109,255,.09)!important;
+  border-color:rgba(79,109,255,.34)!important;
+  color:#21304f;
+}
+.tbtn.primary,.ab-approve,.send-btn,.mini-send,.float-ai-btn{
+  background:linear-gradient(135deg,#4f6dff,#7c3aed)!important;
+  color:white!important;
+  border-color:rgba(79,109,255,.34)!important;
+  box-shadow:0 12px 28px rgba(79,109,255,.18);
+}
+.b-danger,.ct-danger{
+  background:rgba(229,72,93,.10);
+  color:#c92f45;
+  border-color:rgba(229,72,93,.22);
+}
+.b-warn,.ct-warn{
+  background:rgba(185,120,15,.11);
+  color:#915b08;
+  border-color:rgba(185,120,15,.22);
+}
+.b-success,.ct-success{
+  background:rgba(22,138,94,.10);
+  color:#0f704b;
+  border-color:rgba(22,138,94,.22);
+}
+.b-accent,.ct-info{
+  background:rgba(79,109,255,.10);
+  color:#304fd6;
+  border-color:rgba(79,109,255,.22);
+}
+.upload-zone{
+  background:linear-gradient(180deg,rgba(79,109,255,.08),rgba(255,255,255,.88));
+  border-color:rgba(79,109,255,.30);
+}
+.upload-zone:hover,.upload-zone.dragover{
+  background:linear-gradient(180deg,rgba(79,109,255,.12),rgba(255,255,255,.94));
+  border-color:#4f6dff;
+}
+.chunk-box,
+.detail-cell,
+.file-row,
+.mini-bubble-ai,
+.bubble-ai,
+.confirm-card,
+.og-step,
+.domino-item{
+  background:rgba(244,247,252,.88);
+  border-color:rgba(42,57,85,.12);
+  color:#526179;
+}
+.chunk-meta,.detail-label,.detail-empty,.history-date,.tl-date,.kcard-sub,.kcard-arrow,.form-label,.modal-sub{
+  color:#8a96aa;
+}
+.chunk-hl{
+  background:rgba(79,109,255,.12);
+  color:#304fd6;
+}
+.todo-table th,
+.cal-dow,
+.tabs,
+.mini-chat-hd,
+.mini-input-row,
+.chat-input-bar{
+  background:rgba(244,247,252,.86);
+  color:#8a96aa;
+  border-color:var(--border);
+}
+.todo-row:hover{background:rgba(79,109,255,.055)}
+.todo-row.selected{
+  background:rgba(79,109,255,.10);
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+.todo-title,.tl-text{color:#172033}
+.detail-panel,.cal-side{
+  background:rgba(255,255,255,.92);
+}
+.risk-box,.domino{
+  background:rgba(229,72,93,.08);
+  border-color:rgba(229,72,93,.18);
+}
+.issue-card:hover{
+  box-shadow:0 20px 46px rgba(42,57,85,.13);
+}
+.issue-card.candidate{
+  background:linear-gradient(180deg,rgba(185,120,15,.09),rgba(255,255,255,.96));
+}
+.issue-desc,.onboarding-guide p,.kb-item{
+  color:#526179;
+}
+.cal-grid{
+  background:rgba(42,57,85,.10);
+  border-color:var(--border);
+}
+.cal-cell{
+  background:rgba(255,255,255,.92);
+}
+.cal-cell:hover{
+  background:rgba(79,109,255,.07);
+}
+.cal-cell.today{
+  background:linear-gradient(180deg,rgba(79,109,255,.12),rgba(255,255,255,.95));
+}
+.cal-cell.risk{
+  background:linear-gradient(180deg,rgba(229,72,93,.09),rgba(255,255,255,.95));
+}
+.cal-date{color:#172033}
+.chat-area{
+  background:radial-gradient(circle at top right,rgba(79,109,255,.08),transparent 36%);
+}
+.av-ai{
+  background:rgba(79,109,255,.10);
+  color:#304fd6;
+  border-color:rgba(79,109,255,.22);
+}
+.av-user{
+  background:rgba(42,57,85,.06);
+  color:#526179;
+  border-color:var(--border);
+}
+.bubble-user,.mini-bubble-user{
+  background:linear-gradient(135deg,#4f6dff,#7c3aed);
+}
+.src-tag{
+  background:rgba(79,109,255,.09);
+  border-color:rgba(79,109,255,.18);
+  color:#304fd6;
+}
+.chat-input,.mini-input,.form-input{
+  background:rgba(255,255,255,.82);
+  color:#172033;
+  border-color:rgba(42,57,85,.14);
+}
+.modal{
+  background:linear-gradient(180deg,#ffffff,#f7faff);
+  border-color:rgba(42,57,85,.14);
+  box-shadow:0 28px 90px rgba(42,57,85,.22);
+}
+.modal-overlay{
+  background:rgba(20,30,50,.42);
+}
+.toast{
+  background:#172033;
+  color:white;
+  border-color:rgba(79,109,255,.22);
+}
+.notif-panel{
+  background:linear-gradient(180deg,#ffffff,#f7faff)!important;
+  border-color:rgba(42,57,85,.14)!important;
+  box-shadow:0 22px 70px rgba(42,57,85,.18)!important;
+}
+.notif-item{
+  background:rgba(244,247,252,.92)!important;
+}
+.kflow-step,
+.kstep-circle,
+.cl-box{
+  background:rgba(255,255,255,.88);
+  border-color:rgba(42,57,85,.16);
+}
+.kcard-hd:hover{
+  background:rgba(79,109,255,.06);
+}
+.kb-why{background:rgba(185,120,15,.10)}
+.kb-now{background:rgba(229,72,93,.09)}
+.kb-next{background:rgba(22,138,94,.09)}
+</style>
+
+<style>
+/* Figma OpsRadar style reference override: CSS-only, preserves DOM and JS */
+:root{
+  --font-size:16px;
+  --font-family:'Inter','Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --bg-primary:#20242d;
+  --bg-secondary:#252a34;
+  --bg-tertiary:#2d3340;
+  --surface:#252a34;
+  --surface-elevated:#2d3340;
+  --text-primary:#f2f4f8;
+  --text-secondary:#a8b0bd;
+  --text-tertiary:#737c8c;
+  --border-primary:#3d4450;
+  --border-secondary:#4a5260;
+  --accent-blue:#586cf6;
+  --accent-blue-soft:rgba(88,108,246,.12);
+  --accent-purple:#8764f6;
+  --accent-purple-soft:rgba(135,100,246,.12);
+  --danger:#e75652;
+  --danger-soft:rgba(231,86,82,.12);
+  --warning:#d9a441;
+  --warning-soft:rgba(217,164,65,.12);
+  --success:#40b879;
+  --success-soft:rgba(64,184,121,.12);
+  --bg:var(--bg-primary);
+  --surface2:var(--bg-tertiary);
+  --border:var(--border-primary);
+  --border2:var(--border-secondary);
+  --text:var(--text-primary);
+  --text2:var(--text-secondary);
+  --text3:var(--text-tertiary);
+  --accent:var(--accent-blue);
+  --accent-soft:var(--accent-blue-soft);
+  --danger:#e75652;
+  --danger-soft:rgba(231,86,82,.12);
+  --warn:var(--warning);
+  --warn-soft:var(--warning-soft);
+  --success:#40b879;
+  --success-soft:rgba(64,184,121,.12);
+  --sb-w:224px;
+  --radius:8px;
+  --radius-sm:6px;
+}
+html{font-size:var(--font-size);background:var(--bg-primary)}
+body{
+  font-family:var(--font-family);
+  background:var(--bg-primary);
+  color:var(--text-primary);
+  letter-spacing:0;
+}
+body::before{display:none}
+.sidebar{
+  width:var(--sb-w);
+  background:var(--bg-secondary);
+  border-right:1px solid var(--border-primary);
+  box-shadow:none;
+}
+.sb-logo{
+  padding:20px 24px;
+  border-bottom:1px solid var(--border-primary);
+}
+.sb-logo-name{
+  color:var(--accent-blue);
+  font-size:18px;
+  font-weight:650;
+  letter-spacing:-.01em;
+}
+.sb-logo-name::before{display:none}
+.sb-logo-tag{
+  color:var(--text-tertiary);
+  font-size:10px;
+  margin-top:2px;
+}
+.sb-nav{padding:16px 0}
+.sb-section{
+  color:var(--text-tertiary);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.08em;
+  padding:0 16px 8px;
+  margin-top:10px;
+}
+.sb-item{
+  margin:0;
+  padding:10px 16px;
+  border-radius:0;
+  border-left:2px solid transparent;
+  color:var(--text-secondary);
+  font-size:14px;
+  font-weight:500;
+  gap:12px;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.sb-item i{
+  color:currentColor;
+  font-size:16px;
+}
+.sb-item:hover{
+  background:var(--bg-tertiary)!important;
+  color:var(--text-primary);
+  transform:none;
+}
+.sb-item.active{
+  background:var(--accent-blue-soft)!important;
+  color:var(--accent-blue);
+  border-left-color:var(--accent-blue);
+  font-weight:600;
+}
+.sb-footer{
+  padding:16px;
+  border-top:1px solid var(--border-primary);
+  background:var(--bg-secondary);
+}
+.sb-avatar{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:var(--accent-blue-soft);
+  color:var(--accent-blue);
+  border:0;
+}
+.main{background:var(--bg-primary)}
+.topbar{
+  min-height:57px;
+  padding:16px 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border-primary);
+  box-shadow:none;
+  backdrop-filter:none;
+}
+.topbar-title{
+  color:var(--text-primary);
+  font-size:16px;
+  font-weight:650;
+}
+.content{
+  padding:24px;
+  gap:20px;
+}
+.card,
+.issue-card,
+.kcard,
+.ki-item,
+.onboarding-guide{
+  background:var(--surface);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+  box-shadow:none;
+}
+.card{padding:20px}
+.card-hd-l{
+  color:var(--text-primary);
+  font-size:14px;
+  font-weight:650;
+}
+.card-hd-l i{color:var(--accent-blue)}
+.chip{
+  background:var(--bg-tertiary)!important;
+  border:1px solid var(--border-primary)!important;
+  color:var(--text-secondary);
+  border-radius:6px;
+  padding:6px 12px;
+}
+.tbtn,.ab,.sq{
+  background:var(--bg-tertiary)!important;
+  border:1px solid var(--border-primary)!important;
+  color:var(--text-secondary);
+  border-radius:8px;
+  font-weight:500;
+  box-shadow:none;
+}
+.tbtn:hover,.ab:hover,.sq:hover{
+  background:var(--surface-elevated)!important;
+  border-color:var(--border-secondary)!important;
+  color:var(--text-primary);
+  transform:none;
+}
+.tbtn.primary,.ab-approve,.send-btn,.mini-send{
+  background:var(--accent-blue)!important;
+  color:white!important;
+  border-color:var(--accent-blue)!important;
+  box-shadow:none!important;
+}
+.badge{
+  border-radius:999px;
+  border:0;
+  padding:3px 8px;
+  font-weight:600;
+}
+.b-danger,.ct-danger{
+  background:var(--danger-soft);
+  color:var(--danger);
+}
+.b-warn,.ct-warn{
+  background:var(--warning-soft);
+  color:var(--warning);
+}
+.b-success,.ct-success{
+  background:var(--success-soft);
+  color:var(--success);
+}
+.b-accent,.ct-info{
+  background:var(--accent-blue-soft);
+  color:var(--accent-blue);
+}
+.b-gray,.ct-gray{
+  background:var(--bg-tertiary);
+  color:var(--text-tertiary);
+  border:1px solid var(--border-primary);
+}
+.tabs{
+  background:var(--surface);
+  border-bottom:1px solid var(--border-primary);
+  padding:0 20px;
+}
+.tab{
+  color:var(--text-secondary);
+  padding:13px 16px;
+  font-size:14px;
+  font-weight:500;
+}
+.tab.active{
+  color:var(--accent-blue);
+  border-bottom-color:var(--accent-blue);
+  font-weight:650;
+}
+.row,.tl-row,.history-row,.detail-item,.kb-item,.checklist-item,.confirm-row{
+  border-bottom-color:var(--border-primary);
+}
+.upload-zone{
+  background:var(--surface);
+  border:2px dashed var(--border-primary);
+  border-radius:8px;
+  padding:48px 24px;
+  box-shadow:none;
+}
+.upload-zone:hover,.upload-zone.dragover{
+  background:var(--accent-blue-soft);
+  border-color:var(--accent-blue);
+}
+.upload-zone.done{
+  background:var(--success-soft);
+  border-color:var(--success);
+}
+.flow-step{padding:12px 0}
+.flow-step:not(:last-child)::after{
+  background:var(--border-primary);
+  left:13px;
+  top:38px;
+}
+.flow-icon{
+  width:28px;
+  height:28px;
+  border:1px solid var(--border-primary);
+  box-shadow:none;
+}
+.fi-wait{background:var(--bg-tertiary);color:var(--text-tertiary)}
+.fi-active{background:var(--accent-blue-soft);color:var(--accent-blue);border-color:var(--accent-blue)}
+.fi-done{background:var(--success-soft);color:var(--success);border-color:var(--success)}
+.flow-title{
+  color:var(--text-primary);
+  font-size:13px;
+  font-weight:600;
+}
+.flow-sub{color:var(--text-tertiary);font-size:11px}
+.chunk-box{
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-primary);
+  border-left:2px solid var(--accent-blue);
+  border-radius:8px;
+  color:var(--text-secondary);
+  line-height:1.75;
+}
+.chunk-meta{color:var(--text-tertiary)}
+.chunk-hl{
+  background:var(--accent-blue-soft);
+  color:var(--accent-blue);
+  border-radius:4px;
+  padding:1px 4px;
+}
+.todo-table th{
+  background:var(--bg-tertiary);
+  color:var(--text-tertiary);
+  border-bottom:1px solid var(--border-primary);
+}
+.todo-table td{border-bottom-color:var(--border-primary)}
+.todo-row:hover{background:var(--bg-tertiary)}
+.todo-row.selected{
+  background:var(--accent-blue-soft);
+  box-shadow:inset 2px 0 0 var(--accent-blue);
+}
+.todo-title{color:var(--text-primary);font-weight:600}
+.todo-src{color:var(--text-tertiary)}
+.detail-panel,.cal-side{
+  background:var(--surface);
+  border-left:1px solid var(--border-primary);
+}
+.detail-cell,.file-row,.og-step,.notif-item{
+  background:var(--bg-tertiary)!important;
+  border:1px solid var(--border-primary)!important;
+  border-radius:8px;
+}
+.detail-label,.detail-empty,.history-date,.tl-date,.kcard-sub,.kcard-arrow,.form-label,.modal-sub{
+  color:var(--text-tertiary);
+}
+.detail-section,.todo-title,.tl-text,.kcard-title,.issue-title,.modal-title,.onboarding-guide h3{
+  color:var(--text-primary);
+}
+.risk-box,.domino{
+  background:var(--danger-soft);
+  border:1px solid rgba(231,86,82,.24);
+  color:var(--danger);
+  border-radius:8px;
+}
+.issue-card{
+  padding:16px;
+  transition:background .15s,border-color .15s;
+}
+.issue-card:hover{
+  background:var(--surface-elevated);
+  border-color:var(--border-secondary);
+  box-shadow:none;
+  transform:none;
+}
+.issue-card.selected{
+  border-color:var(--accent-blue);
+  box-shadow:0 0 0 1px var(--accent-blue);
+}
+.issue-card.candidate{
+  background:var(--warning-soft);
+  border:1px dashed var(--warning);
+}
+.issue-title{
+  font-size:14px;
+  font-weight:650;
+}
+.issue-desc{color:var(--text-secondary)}
+.history-no-change{color:var(--warning)}
+.history-warn{color:var(--danger)}
+.cal-grid{
+  background:var(--border-primary);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+}
+.cal-dow{
+  background:var(--bg-tertiary);
+  color:var(--text-tertiary);
+  padding:9px 0;
+  font-weight:600;
+}
+.cal-cell{
+  background:var(--surface);
+  min-height:76px;
+  padding:7px;
+}
+.cal-cell:hover{background:var(--bg-tertiary)}
+.cal-cell.today{background:var(--accent-blue-soft)}
+.cal-cell.risk{background:var(--danger-soft)}
+.cal-cell.cal-selected{
+  outline:2px solid var(--accent-blue);
+  background:var(--accent-blue-soft)!important;
+}
+.cal-date{
+  color:var(--text-primary);
+  font-weight:650;
+}
+.cal-tag{
+  border-radius:999px;
+  padding:2px 7px;
+}
+.risk-dot{
+  background:var(--danger);
+  box-shadow:none;
+}
+.chat-area{
+  padding:24px;
+  background:var(--bg-primary);
+}
+.msg-av{
+  width:36px;
+  height:36px;
+  border-radius:8px;
+}
+.av-ai{
+  background:var(--accent-blue-soft);
+  color:var(--accent-blue);
+  border:0;
+}
+.av-user{
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+  border:0;
+}
+.bubble{
+  border-radius:8px;
+  padding:12px 16px;
+  font-size:14px;
+  line-height:1.72;
+}
+.bubble-ai,.mini-bubble-ai{
+  background:var(--surface);
+  border:1px solid var(--border-primary);
+  color:var(--text-primary);
+}
+.bubble-user,.mini-bubble-user{
+  background:var(--accent-blue);
+  color:#fff;
+}
+.src-tag{
+  background:transparent;
+  border:0;
+  color:var(--accent-blue);
+  padding:0;
+}
+.confirm-card{
+  background:var(--surface);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+}
+.chat-input-bar,.mini-chat-hd,.mini-input-row{
+  background:var(--surface);
+  border-color:var(--border-primary);
+}
+.chat-input,.mini-input,.form-input{
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-primary);
+  color:var(--text-primary);
+  border-radius:8px;
+}
+.chat-input:focus,.mini-input:focus,.form-input:focus{
+  border-color:var(--accent-blue);
+  box-shadow:0 0 0 2px rgba(88,108,246,.18);
+}
+.modal-overlay{
+  background:rgba(10,13,18,.68);
+  backdrop-filter:blur(6px);
+}
+.modal{
+  background:var(--surface);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+  box-shadow:0 22px 70px rgba(0,0,0,.42);
+}
+.toast{
+  background:var(--surface-elevated);
+  color:var(--text-primary);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+}
+.screen-transition{
+  background:rgba(32,36,45,.72);
+  backdrop-filter:blur(8px);
+}
+.tl-dot{box-shadow:none}
+.d-danger{background:var(--danger)}
+.d-warn{background:var(--warning)}
+.d-success{background:var(--success)}
+.d-info{background:var(--accent-blue)}
+.d-gray{background:var(--text-tertiary)}
+.tl-risk{
+  background:var(--danger-soft);
+  border:0;
+  color:var(--danger);
+  border-radius:8px;
+}
+.domino-item{
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-primary);
+  border-radius:8px;
+}
+.domino-lbl,.domino-final{color:var(--danger)}
+.notif-btn{
+  background:var(--bg-tertiary)!important;
+  border:1px solid var(--border-primary)!important;
+  border-radius:8px!important;
+}
+.notif-panel{
+  background:var(--surface-elevated)!important;
+  border:1px solid var(--border-primary)!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.36)!important;
+}
+.vt-btn.active{
+  background:var(--surface);
+  color:var(--accent-blue);
+}
+.onboarding-guide p{color:var(--text-secondary)}
+.og-num{background:var(--accent-blue)}
+.ctx-banner{
+  background:var(--accent-blue-soft);
+  color:var(--accent-blue);
+  border-bottom:1px solid var(--border-primary);
+}
+.issue-quick-todo{
+  background:var(--accent-blue-soft);
+  border-color:var(--accent-blue);
+  color:var(--accent-blue);
+}
+.kflow-step{
+  background:var(--bg-tertiary);
+  border-color:var(--border-primary);
+  color:var(--text-tertiary);
+}
+.kflow-step.active{
+  background:var(--accent-blue);
+  color:#fff;
+  border-color:var(--accent-blue);
+}
+.kflow-step.done{
+  background:var(--success-soft);
+  color:var(--success);
+  border-color:rgba(64,184,121,.25);
+}
+.kcard-hd:hover{background:var(--bg-tertiary)}
+.kcard-body{border-top-color:var(--border-primary)}
+.kb-why,.kb-now,.kb-next{
+  border-radius:8px;
+  border:0;
+}
+.kb-why{background:var(--warning-soft);color:var(--warning)}
+.kb-now{background:var(--danger-soft);color:var(--danger)}
+.kb-next{background:var(--success-soft);color:var(--success)}
+.kb-item i{color:var(--accent-blue)}
+.kstep:not(:last-child)::after{background:var(--border-primary)}
+.kstep-circle{
+  background:var(--surface);
+  border-color:var(--border-secondary);
+}
+.kstep-circle.active{background:var(--accent-blue);border-color:var(--accent-blue)}
+.kstep-circle.done{background:var(--success);border-color:var(--success)}
+.cl-box{
+  background:var(--surface);
+  border-color:var(--border-secondary);
+}
+@media (max-width:1100px){
+  :root{--sb-w:224px}
+  .two-col,.three-col{grid-template-columns:1fr!important}
+}
+@media (max-width:760px){
+  .sidebar{width:100%;height:auto;max-height:280px}
+  .sb-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:8px 0}
+  .sb-item{border-left:0;border-radius:8px;margin:2px 8px}
+  .sb-section{grid-column:1/-1;margin-top:6px}
+  .content{padding:16px}
+  .body-wrap{flex-direction:column;overflow:auto}
+  .detail-panel,.cal-side{width:100%;border-left:0;border-top:1px solid var(--border-primary)}
+  .cal-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+<style>
+/* Dashboard final role-based redesign */
+.ops-db-topbar .ops-role-switch{display:flex;background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:999px;padding:2px;gap:2px}
+.ops-role-tab{font-size:12px;padding:6px 13px;border-radius:999px;cursor:pointer;transition:all .15s;color:var(--text-secondary);display:flex;align-items:center;gap:6px;font-weight:600}
+.ops-role-tab i{font-size:13px}.ops-role-tab.active{background:var(--accent-blue);color:#fff}.ops-dashboard-content{gap:20px}.ops-dashboard-view{display:none;flex-direction:column;gap:20px}.ops-dashboard-view.active{display:flex}.ops-ai-summary-card,.ops-panel,.ops-risk-card{background:var(--surface);border:1px solid var(--border-primary);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.16)}.ops-ai-summary-card{overflow:hidden}.ops-ai-summary-card.member{border-color:rgba(88,108,246,.36)}.ops-card-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border-primary);background:var(--bg-tertiary)}.ops-card-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:750;color:var(--text-primary)}.ops-card-title i{color:var(--accent-blue);font-size:17px}.ops-updated{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-tertiary)}.ops-ai-body{padding:20px}.ops-ai-body p{font-size:14px;line-height:1.75;color:var(--text-primary);max-width:1080px}.ops-ai-body strong{color:#fff;font-weight:750}.ops-evidence-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.ops-chip{font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px}.ops-chip.danger{background:var(--danger-soft);color:var(--danger)}.ops-chip.warn{background:var(--warning-soft);color:var(--warning)}.ops-chip.blue{background:var(--accent-blue-soft);color:var(--accent-blue)}.ops-chip.green{background:var(--success-soft);color:var(--success)}.ops-section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:var(--text-primary);font-size:15px;font-weight:750}.ops-section-heading>div{display:flex;align-items:center;gap:8px}.ops-section-heading i{color:var(--danger)}.ops-link-btn{border:0;background:transparent;color:var(--accent-blue);font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer}.ops-risk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.ops-risk-card{padding:18px;border-color:rgba(231,86,82,.42);background:linear-gradient(180deg,rgba(231,86,82,.08),var(--surface) 42%)}.ops-risk-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.ops-risk-card h3{font-size:15px;line-height:1.4;color:var(--text-primary);font-weight:800}.ops-risk-card p{font-size:13px;line-height:1.65;color:var(--text-secondary);margin-bottom:13px}.ops-risk-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.ops-risk-meta span{font-size:11px;color:var(--warning);background:var(--warning-soft);border-radius:999px;padding:4px 8px;font-weight:700}.ops-domino{border-top:1px solid rgba(231,86,82,.22);padding-top:12px;margin-bottom:14px}.ops-domino strong{display:block;font-size:11px;color:var(--danger);margin-bottom:5px}.ops-domino span{font-size:12px;color:var(--text-secondary);line-height:1.55}.ops-card-actions{display:flex;gap:8px}.ops-card-actions button,.ops-wide-btn{border:1px solid var(--border-primary);background:var(--bg-tertiary);color:var(--text-secondary);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer}.ops-card-actions button:first-child{background:var(--danger);border-color:var(--danger);color:#fff}.ops-card-actions button:hover,.ops-wide-btn:hover{border-color:var(--accent-blue);color:var(--text-primary)}.ops-bottom-grid,.ops-member-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.ops-panel{padding:18px}.ops-panel-title{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:15px}.ops-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.ops-stat-row>div{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:8px;padding:14px}.ops-stat-row.compact>div{padding:12px}.ops-stat-num{display:block;font-size:30px;line-height:1;font-weight:850;font-family:var(--mono)}.ops-stat-num.success{color:var(--success)}.ops-stat-num.blue{color:var(--accent-blue)}.ops-stat-num.warn{color:var(--warning)}.ops-stat-label{display:block;margin-top:7px;font-size:12px;color:var(--text-secondary);font-weight:650}.ops-progress-stack{height:9px;border-radius:999px;overflow:hidden;background:var(--bg-tertiary);display:flex;margin-bottom:12px}.ops-muted-line{font-size:12px;color:var(--text-tertiary);line-height:1.5}.ops-muted-line span{color:var(--accent-blue);font-weight:800}.ops-approval-list,.ops-task-list,.ops-brief-list{display:flex;flex-direction:column;gap:10px}.ops-approval-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:8px;padding:12px;cursor:pointer}.ops-approval-item:hover{border-color:var(--accent-blue)}.ops-approval-item strong{display:block;font-size:13px;color:var(--text-primary);margin-bottom:4px}.ops-approval-item span{font-size:11px;color:var(--text-tertiary)}.ops-approval-item i{color:var(--text-tertiary)}.ops-task-item{display:flex;gap:11px;align-items:flex-start;background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:8px;padding:12px}.ops-task-item>span{font-size:11px;font-weight:850;color:var(--accent-blue);background:var(--accent-blue-soft);border-radius:6px;padding:4px 7px}.ops-task-item.high>span{color:var(--danger);background:var(--danger-soft)}.ops-task-item strong{display:block;color:var(--text-primary);font-size:13px;margin-bottom:4px}.ops-task-item small{color:var(--text-tertiary);font-size:11px}.ops-issue-mini{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:8px;padding:13px;margin-bottom:10px;border:1px solid var(--border-primary);background:var(--bg-tertiary)}.ops-issue-mini.danger{border-color:rgba(231,86,82,.35);background:var(--danger-soft)}.ops-issue-mini.warn{border-color:rgba(217,164,65,.35);background:var(--warning-soft)}.ops-issue-mini strong{display:block;color:var(--text-primary);font-size:13px;margin-bottom:4px}.ops-issue-mini span{font-size:11px;color:var(--text-secondary)}.ops-issue-mini button{border:1px solid var(--border-primary);background:var(--surface);color:var(--text-secondary);border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer}.ops-brief-list div{display:flex;align-items:flex-start;gap:9px;background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:8px;padding:11px;color:var(--text-secondary);font-size:12px;line-height:1.5}.ops-brief-list i{color:var(--accent-blue);font-size:15px;flex-shrink:0;margin-top:1px}.ops-wide-btn{width:100%;justify-content:center;margin-top:14px}.ops-role-tab:not(.active):hover{background:var(--surface);color:var(--text-primary)}@media(max-width:1180px){.ops-risk-grid{grid-template-columns:1fr}.ops-bottom-grid,.ops-member-grid{grid-template-columns:1fr}}@media(max-width:760px){.ops-card-header,.ops-section-heading{align-items:flex-start;flex-direction:column}.ops-stat-row{grid-template-columns:1fr}.ops-card-actions{flex-direction:column}}
+</style><style>
+/* Handover preview and report draft repair styles */
+.handoff-preview-card{background:var(--surface);border:1px solid var(--accent-blue);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.16);overflow:hidden;margin-bottom:12px}.handoff-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:var(--accent-blue-soft);border-bottom:1px solid var(--border-primary)}.handoff-preview-eyebrow{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--accent-blue);margin-bottom:4px}.handoff-preview-title{font-size:16px;font-weight:800;color:var(--text-primary)}.handoff-preview-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px}.handoff-preview-row{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:8px;padding:12px}.handoff-preview-label{font-size:11px;font-weight:800;color:var(--accent-blue);margin-bottom:6px}.handoff-preview-value{font-size:12px;line-height:1.65;color:var(--text-secondary)}.handoff-preview-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}@media(max-width:900px){.handoff-preview-body{grid-template-columns:1fr}.handoff-preview-head{align-items:flex-start;flex-direction:column}}
+</style><style>
+/* Handover viewport overflow repair: layout-only */
+html,body{max-width:100%;overflow-x:hidden}
+body>div[style*="display:flex"],.main,.screen,.content{min-width:0;max-width:100%}
+#s-knowledge{min-width:0;max-width:100%;overflow:hidden}
+#s-knowledge .topbar{min-width:0;max-width:100%;gap:10px;flex-wrap:wrap}
+#s-knowledge .topbar>div{min-width:0;max-width:100%}
+#s-knowledge .topbar>div:last-child{flex-wrap:wrap;justify-content:flex-start}
+#s-knowledge .topbar .tbtn{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
+#s-knowledge>div[style*="display:flex;flex:1"]{min-width:0;max-width:100%;overflow:hidden}
+#s-knowledge>div[style*="display:flex;flex:1"]>div:first-child{width:220px;max-width:42vw;min-width:180px}
+#knowledgeContent{min-width:0;max-width:100%;overflow-x:hidden}
+#knowledgeContent *{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:keep-all}
+#knowledgeContextPanel{min-width:0;max-width:100%;overflow-x:hidden}
+.handoff-preview-card{min-width:0;max-width:100%;overflow:hidden}
+.handoff-preview-head{min-width:0;max-width:100%;flex-wrap:wrap}.handoff-preview-head>div{min-width:0;max-width:100%}
+.handoff-preview-title,.handoff-preview-value,.handoff-preview-label{overflow-wrap:anywhere;word-break:keep-all}
+.handoff-preview-body{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;max-width:100%}
+.handoff-preview-row{min-width:0;max-width:100%;overflow:hidden}.handoff-preview-actions{flex-wrap:wrap}.handoff-preview-actions .tbtn{white-space:normal}
+.kcard,.kcard-hd,.kcard-body{min-width:0;max-width:100%;overflow-wrap:anywhere}.kcard-hd{flex-wrap:wrap}.kcard-title{min-width:0}.kcard-sub{min-width:0;overflow-wrap:anywhere}
+@media(max-width:1100px){.handoff-preview-body{grid-template-columns:1fr}#s-knowledge>div[style*="display:flex;flex:1"]{flex-direction:column;overflow:auto}#s-knowledge>div[style*="display:flex;flex:1"]>div:first-child{width:100%!important;max-width:100%;min-width:0;border-right:0!important;border-bottom:1px solid var(--border);height:auto!important;max-height:none}.handoff-preview-actions{justify-content:flex-start}}
+@media(max-width:760px){#s-knowledge .topbar{align-items:flex-start}#s-knowledge .topbar>div:last-child{width:100%}#s-knowledge .topbar .tbtn{flex:1 1 180px;justify-content:flex-start}.handoff-preview-head{align-items:flex-start}.handoff-preview-body{padding:12px}.handoff-preview-actions{padding:0 12px 12px}}
+</style><style>
+/* Handover slide preview panel */
+.handoff-slide-panel{position:fixed;inset:0;z-index:1200;pointer-events:none}.handoff-slide-panel.show{pointer-events:auto}.handoff-slide-backdrop{position:absolute;inset:0;background:rgba(8,12,20,.46);opacity:0;transition:opacity .18s ease}.handoff-slide-panel.show .handoff-slide-backdrop{opacity:1}.handoff-slide-sheet{position:absolute;top:0;right:0;width:min(560px,calc(100vw - 24px));height:100vh;background:var(--surface);border-left:1px solid var(--border-primary);box-shadow:-24px 0 70px rgba(0,0,0,.38);transform:translateX(104%);transition:transform .22s ease;display:flex;flex-direction:column;min-width:0;max-width:100%}.handoff-slide-panel.show .handoff-slide-sheet{transform:translateX(0)}.handoff-slide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid var(--border-primary);background:var(--bg-tertiary);min-width:0}.handoff-slide-head>div{min-width:0}.handoff-slide-close{width:34px;height:34px;border-radius:8px;border:1px solid var(--border-primary);background:var(--surface);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}.handoff-slide-close:hover{color:var(--text-primary);border-color:var(--accent-blue)}.handoff-slide-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 22px;border-bottom:1px solid var(--border-primary);color:var(--text-tertiary);font-size:12px}.handoff-slide-meta span{display:flex;align-items:center;gap:5px}.handoff-slide-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:18px 22px;min-width:0}.handoff-slide-body .handoff-preview-body{display:grid;grid-template-columns:1fr;gap:10px;padding:0;min-width:0;max-width:100%}.handoff-slide-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--border-primary);background:var(--surface)}.handoff-slide-actions .tbtn{white-space:normal}.handoff-slide-sheet .handoff-preview-row{min-width:0;max-width:100%;overflow:hidden}.handoff-slide-sheet .handoff-preview-title,.handoff-slide-sheet .handoff-preview-value,.handoff-slide-sheet .handoff-preview-label{overflow-wrap:anywhere;word-break:keep-all}@media(max-width:760px){.handoff-slide-sheet{width:100vw}.handoff-slide-head,.handoff-slide-meta,.handoff-slide-body,.handoff-slide-actions{padding-left:16px;padding-right:16px}}
+</style><style>
+/* Skin switcher and light mode: visual-only */
+body[data-skin="light"]{
+  --bg-primary:#eef3fb;
+  --bg-secondary:#ffffff;
+  --bg-tertiary:#f5f7fb;
+  --surface:#ffffff;
+  --surface-elevated:#f8faff;
+  --text-primary:#172033;
+  --text-secondary:#566276;
+  --text-tertiary:#8b96a8;
+  --border-primary:#d9e0ea;
+  --border-secondary:#c9d2df;
+  --accent-blue:#4f67e8;
+  --accent-blue-soft:rgba(79,103,232,.10);
+  --accent-purple:#7957d9;
+  --accent-purple-soft:rgba(121,87,217,.10);
+  --danger:#d94752;
+  --danger-soft:rgba(217,71,82,.10);
+  --warning:#a86610;
+  --warning-soft:rgba(168,102,16,.12);
+  --success:#16875a;
+  --success-soft:rgba(22,135,90,.10);
+  --bg:var(--bg-primary);
+  --surface2:var(--bg-tertiary);
+  --border:var(--border-primary);
+  --border2:var(--border-secondary);
+  --text:var(--text-primary);
+  --text2:var(--text-secondary);
+  --text3:var(--text-tertiary);
+  --accent:var(--accent-blue);
+  --accent-soft:var(--accent-blue-soft);
+  --danger:#d94752;
+  --danger-soft:rgba(217,71,82,.10);
+  --warn:var(--warning);
+  --warn-soft:var(--warning-soft);
+  --success:#16875a;
+  --success-soft:rgba(22,135,90,.10);
+  background:
+    radial-gradient(circle at 12% -10%,rgba(79,103,232,.13),transparent 34%),
+    radial-gradient(circle at 92% 0,rgba(121,87,217,.10),transparent 28%),
+    var(--bg-primary);
+  color:var(--text-primary);
+}
+body[data-skin="light"] .sidebar{background:var(--bg-secondary);box-shadow:12px 0 34px rgba(31,45,70,.08)}
+body[data-skin="light"] .main{background:var(--bg-primary)}
+body[data-skin="light"] .topbar{background:rgba(255,255,255,.86);box-shadow:0 10px 26px rgba(31,45,70,.06)}
+body[data-skin="light"] .card,
+body[data-skin="light"] .issue-card,
+body[data-skin="light"] .kcard,
+body[data-skin="light"] .ki-item,
+body[data-skin="light"] .onboarding-guide,
+body[data-skin="light"] .ops-ai-summary-card,
+body[data-skin="light"] .ops-panel,
+body[data-skin="light"] .ops-risk-card,
+body[data-skin="light"] .handoff-slide-sheet,
+body[data-skin="light"] .modal,
+body[data-skin="light"] .bubble-ai,
+body[data-skin="light"] .mini-bubble-ai{background:var(--surface);box-shadow:0 12px 34px rgba(31,45,70,.07)}
+body[data-skin="light"] .ops-card-header,
+body[data-skin="light"] .handoff-slide-head,
+body[data-skin="light"] .tabs,
+body[data-skin="light"] .chat-input-bar,
+body[data-skin="light"] .mini-chat-hd,
+body[data-skin="light"] .mini-input-row{background:var(--bg-tertiary)}
+body[data-skin="light"] .ops-ai-body strong,
+body[data-skin="light"] .ops-risk-card h3,
+body[data-skin="light"] .ops-panel-title,
+body[data-skin="light"] .ops-card-title,
+body[data-skin="light"] .handoff-preview-title,
+body[data-skin="light"] .topbar-title{color:var(--text-primary)}
+body[data-skin="light"] .ops-risk-card{background:linear-gradient(180deg,rgba(217,71,82,.06),#fff 44%)}
+body[data-skin="light"] .tbtn,
+body[data-skin="light"] .ab,
+body[data-skin="light"] .sq,
+body[data-skin="light"] .ops-card-actions button,
+body[data-skin="light"] .ops-wide-btn,
+body[data-skin="light"] .handoff-slide-close{background:var(--bg-tertiary)!important;color:var(--text-secondary);border-color:var(--border-primary)!important}
+body[data-skin="light"] .tbtn.primary,
+body[data-skin="light"] .ab-approve,
+body[data-skin="light"] .send-btn,
+body[data-skin="light"] .mini-send{background:var(--accent-blue)!important;color:#fff!important;border-color:var(--accent-blue)!important}
+body[data-skin="light"] .chat-input,
+body[data-skin="light"] .mini-input,
+body[data-skin="light"] .form-input{background:#fff;color:var(--text-primary)}
+body[data-skin="light"] .handoff-slide-backdrop{background:rgba(30,42,64,.28)}
+body[data-skin="light"] .toast{background:#172033;color:white}
+.skin-switcher{position:fixed;right:18px;bottom:18px;z-index:1400;display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--border-primary);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);border-radius:999px;box-shadow:0 16px 44px rgba(0,0,0,.22)}
+.skin-switcher button{border:0;background:transparent;color:var(--text-tertiary);font-size:11px;font-weight:800;padding:7px 10px;border-radius:999px;cursor:pointer;line-height:1}
+.skin-switcher button.active{background:var(--accent-blue);color:#fff}.skin-switcher button:hover:not(.active){background:var(--bg-tertiary);color:var(--text-primary)}
+@media(max-width:760px){.skin-switcher{right:12px;bottom:12px}.skin-switcher button{padding:7px 9px}}
+</style><script>
 // ════════════════════════════════════════════════
 // 전역 상태
 // ════════════════════════════════════════════════
@@ -815,7 +2647,175 @@ const chatResponses = {};
 // ════════════════════════════════════════════════
 // 네비게이션
 // ════════════════════════════════════════════════
+function switchDbRole(role){
+  const isMember = role === 'member';
+  const adminView = document.getElementById('db-admin-view');
+  const memberView = document.getElementById('db-member-view');
+  const pmTab = document.getElementById('db-tab-pm');
+  const memberTab = document.getElementById('db-tab-member');
+  if(adminView) adminView.classList.toggle('active', !isMember);
+  if(memberView) memberView.classList.toggle('active', isMember);
+  if(pmTab) pmTab.classList.toggle('active', !isMember);
+  if(memberTab) memberTab.classList.toggle('active', isMember);
+}
+window.switchDbRole = switchDbRole;
+function getHandoffPreviewData(type){
+  const generatedAt = new Date().toLocaleString('ko-KR', { dateStyle:'medium', timeStyle:'short' });
+  const map = {
+    onboarding: {
+      title:'신규 입사자 온보딩 브리핑', target:'신규 입사자 온보딩',
+      sections:[
+        ['프로젝트 개요','OpsRadar는 운영 로그, Todo, Risk, Calendar, 인수인계 문맥을 AI가 연결해 운영 상태를 추론하는 SaaS형 운영 인텔리전스 시스템입니다.'],
+        ['현재 진행 업무','결제 API 안정화, 등록된 우선 작업 없음, 운영 로그 기반 Todo 추출 정확도 개선이 진행 중입니다.'],
+        ['최근 주요 결정','High Risk는 Dashboard에서 먼저 확인하고, AI 생성 Todo는 승인 후 실행 관리로 넘기는 흐름을 유지합니다.'],
+        ['반복 발생 이슈','운영 이벤트, 운영 리스크, Risk 데이터 없음가 반복적으로 관찰됩니다.'],
+        ['미해결 Risk','운영 데이터 연결 대기, Blocked Todo 0건, 승인 대기 0건이 남아 있습니다.'],
+        ['다음 담당자 주의사항','오전 스탠드업 전 High Risk 카드와 내 Todo를 먼저 확인하고, 출처 문서 기반으로 의사결정 근거를 남기세요.'],
+        ['관련 문서','연결된 문서가 없습니다.'],
+        ['우선 확인해야 할 Todo','등록된 Todo 없음, DB 모니터링 임계치 조정, 등록된 Todo 없음']
+      ]
+    },
+    absence: {
+      title:'부재자 업무 인수인계', target:'부재자 업무 인수인계',
+      sections:[
+        ['현재 진행 업무','결제 API 대응 Todo 2건과 등록된 우선 작업 없음 작업이 진행 중입니다.'],
+        ['긴급 대응 필요 항목','운영 데이터 확인, DB connection pool 임계치 조정, 배포 실패 원인 재점검이 필요합니다.'],
+        ['승인 대기 건','AI 생성 Todo 0건, 승인 대기 항목 0건이 승인 대기 중입니다.'],
+        ['이번 주 일정','수요일 등록된 일정 없음, 금요일 P1 리스크 점검이 예정되어 있습니다.'],
+        ['반복 발생 이슈','야간 인수인계 문서와 오전 실행 큐가 분리되어 실행 누락이 발생할 수 있습니다.'],
+        ['미해결 Risk','담당자 부재 기간 동안 High Risk 대응 owner가 불명확해질 가능성이 있습니다.'],
+        ['다음 담당자 주의사항','회의 전 승인 대기 Todo를 먼저 정리하고, 캘린더 변경 사항을 인수인계 센터에 반영하세요.'],
+        ['관련 문서','연결된 문서가 없습니다.']
+      ]
+    },
+    offboard: {
+      title:'담당자 변경/퇴직 인수인계', target:'담당자 변경·퇴직 인수인계',
+      sections:[
+        ['장기 진행 업무','운영 로그 분석 정확도 개선, RAG 근거 연결, 배포 자동화 안정화가 장기 진행 중입니다.'],
+        ['최근 주요 결정','High Risk 탐지는 결제 API, DB connection, 배포 파이프라인을 우선순위로 삼습니다.'],
+        ['반복 이슈','릴리즈 직전 승인 지연, 야간 브리핑 누락, 외부 운영 이벤트이 반복됩니다.'],
+        ['암묵적 운영 룰','장애성 이슈는 Todo 승인 전에도 캘린더 리스크 일정으로 먼저 등록합니다.'],
+        ['핵심 문서','연결된 문서가 없습니다.'],
+        ['미완료 Risk','결제 API 백업 경로 검토와 QA 자동화 적용이 아직 완료되지 않았습니다.'],
+        ['다음 담당자 주의사항','기존 담당자의 캘린더, 승인 대기 Todo, 최근 7일 AI Assistant 질의 이력을 함께 확인하세요.'],
+        ['생성일', generatedAt]
+      ]
+    }
+  };
+  const data = map[type] || map.onboarding;
+  if(!data.sections.some(s=>s[0]==='생성일')) data.sections.push(['생성일', generatedAt]);
+  return data;
+}
+function generateHandoffPreview(type){
+  const selected = type || G.currentKnowledgeType || 'onboarding';
+  const data = getHandoffPreviewData(selected);
+  renderHandoffPreview(data);
+  showToast('인수인계 문서 미리보기를 생성했습니다.','success');
+}
+function renderHandoffPreview(data){
+  const body = data.sections.map(([label,value]) => `
+    <div class="handoff-preview-row">
+      <div class="handoff-preview-label">${label}</div>
+      <div class="handoff-preview-value">${value}</div>
+    </div>`).join('');
+  let panel = document.getElementById('handoffPreviewPanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'handoffPreviewPanel';
+    panel.className = 'handoff-slide-panel';
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = `
+    <div class="handoff-slide-backdrop" onclick="closeHandoffPreview()"></div>
+    <aside class="handoff-slide-sheet" role="dialog" aria-modal="true" aria-label="인수인계 문서 미리보기">
+      <div class="handoff-slide-head">
+        <div>
+          <div class="handoff-preview-eyebrow">AI GENERATED PREVIEW</div>
+          <div class="handoff-preview-title">${data.title}</div>
+        </div>
+        <button class="handoff-slide-close" onclick="closeHandoffPreview()" aria-label="닫기"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="handoff-slide-meta"><span class="badge b-accent">${data.target}</span><span><i class="ti ti-clock"></i> ${new Date().toLocaleString('ko-KR', { dateStyle:'medium', timeStyle:'short' })}</span></div>
+      <div class="handoff-slide-body">
+        <div class="handoff-preview-body">${body}</div>
+      </div>
+      <div class="handoff-slide-actions">
+        <div class="tbtn" onclick="generateHandoffPreview(G.currentKnowledgeType || 'onboarding')"><i class="ti ti-refresh"></i> 다시 생성</div>
+        <div class="tbtn primary" onclick="showToast('미리보기 문서가 임시 저장되었습니다.','success')"><i class="ti ti-device-floppy"></i> 임시 저장</div>
+      </div>
+    </aside>`;
+  requestAnimationFrame(() => panel.classList.add('show'));
+}
+function closeHandoffPreview(){
+  const panel = document.getElementById('handoffPreviewPanel');
+  if(panel) panel.classList.remove('show');
+}
+function getReportDraftData(){
+  return {
+    title:'운영 보고서 초안',
+    sections:[
+      ['완료된 업무',['운영 로그 업로드 플로우 정리','AI Todo 추출 결과 검토 화면 개선','Dashboard High Risk 카드 구조 개선']],
+      ['진행 중인 업무',['결제 운영 이벤트 대응','DB connection pool 모니터링 임계치 조정','배포 체크리스트 및 QA 자동화 검토']],
+      ['AI 및 기술적 상세 내용',['운영 로그 기반으로 Todo, Risk, Calendar, Handover 문맥을 분리 추출','RAG 출처 문서 연결 품질 개선 필요','High Risk 도미노 영향 설명을 Dashboard에서 분리 표시']],
+      ['리스크 관리 및 해결 방안',['운영 데이터 연결 대기: PG사 확인 및 백업 경로 검토','Blocked Todo 0건: 담당자 재지정 및 승인 대기 처리','Risk 데이터 없음: 롤백 경로와 QA 자동화 우선 점검']],
+      ['팀 회고',['AI 분석 근거가 카드와 출처 문서로 분리되면서 의사결정 속도가 개선됨','인수인계 문맥은 Dashboard보다 문서형 브리핑으로 보여주는 것이 적합함']],
+      ['차주 계획',['보고서 저장 API 연결','인수인계 미리보기 API 연동','운영 로그 분석 결과와 Dashboard 지표 자동 동기화']]
+    ]
+  };
+}
+function generateReportDraft(){
+  const data = getReportDraftData();
+  renderReportDraft(data);
+  showToast('주간 보고서 초안을 생성했습니다.','success');
+}
+function renderReportDraft(data){
+  const reportScreen = document.getElementById('s-reports');
+  if(!reportScreen) return;
+  let editor = reportScreen.querySelector('[contenteditable="true"]');
+  if(!editor) return;
+  const sectionHtml = data.sections.map(([title,items]) => `
+    <h3 style="font-size:13px;font-weight:700;color:var(--text);margin:14px 0 6px">${title}</h3>
+    <ul style="padding-left:18px;margin:0 0 8px;color:var(--text2)">${items.map(item=>`<li style="margin:4px 0">${item}</li>`).join('')}</ul>`).join('');
+  editor.innerHTML = `
+    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:10px">${data.title}</div>
+    <p style="margin-bottom:12px;color:var(--text2)">AI가 운영 로그, Todo, Risk, Calendar, 인수인계 문맥을 기반으로 생성한 주간 운영 보고서 초안입니다. 필요 시 본문을 직접 수정한 뒤 저장할 수 있습니다.</p>
+    ${sectionHtml}`;
+  G.currentReportDraft = data;
+}
+function saveReport(){
+  const editor = document.querySelector('#s-reports [contenteditable="true"]');
+  const payload = { id:'mock-report-' + Date.now(), type:'weekly', html: editor ? editor.innerHTML : '', savedAt: new Date().toISOString() };
+  G.savedReports = G.savedReports || [];
+  G.savedReports.unshift(payload);
+  showToast('보고서가 임시 저장되었습니다.','success');
+  return payload;
+}
+function initDocumentGenerationActions(){
+  const knowledgeButtons = Array.from(document.querySelectorAll('#s-knowledge .tbtn'));
+  knowledgeButtons.forEach(btn => {
+    if(btn.textContent && btn.textContent.includes('문서 생성 미리보기') && !btn.dataset.previewBound){
+      btn.dataset.previewBound = '1';
+      btn.addEventListener('click', () => generateHandoffPreview(G.currentKnowledgeType || 'onboarding'));
+    }
+  });
+  const reportTopButton = document.querySelector('#s-reports .topbar .tbtn.primary');
+  if(reportTopButton && !reportTopButton.dataset.reportBound){
+    reportTopButton.dataset.reportBound = '1';
+    reportTopButton.addEventListener('click', generateReportDraft);
+  }
+  const reportButtons = Array.from(document.querySelectorAll('#s-reports .content .tbtn'));
+  reportButtons.forEach(btn => {
+    if(btn.textContent && btn.textContent.includes('저장') && !btn.dataset.saveReportBound){
+      btn.dataset.saveReportBound = '1';
+      btn.addEventListener('click', saveReport);
+    }
+  });
+}
 function nav(screen) {
+  // 플로팅 패널 닫기
+  document.getElementById('floatPanel')?.classList.remove('show');
+  document.getElementById('notifPanel')?.classList.remove('show');
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
   document.getElementById('s-' + screen).classList.add('active');
@@ -825,7 +2825,10 @@ function nav(screen) {
   if (screen === 'todo') renderTodos();
   if (screen === 'issues') renderIssues();
   if (screen === 'calendar') { renderCalendar(); showCalBanner(); }
+  if (screen === 'settings') updateSettingsPage();
   if (screen === 'knowledge') {
+    
+setTimeout(initDocumentGenerationActions, 0);
     // 버튼 전체 초기화 후 온보딩으로 바로 시작
     ['onboarding','absence','offboard'].forEach(t => {
       const btn = document.getElementById('kbtn-'+t);
@@ -896,16 +2899,25 @@ function setFlow(n, state, title, sub, subCls) {
 function showAnalysisResult(fname) {
   setStepBar(3);
   const key = fname.includes('meeting')||fname.includes('회의') ? 'meeting' : fname.includes('chat')||fname.includes('채팅') ? 'chat' : 'issue';
-  const data = {meeting:{t:5,i:2,b:1,cm:'회의록 · 1페이지 · chunk #1',cc:'2주차 회의. Azure OpenAI API 응답 지연 <span class="chunk-hl">5초 초과</span>. <span class="chunk-hl">이성우 추가 시간 필요</span>.'},chat:{t:3,i:2,b:1,cm:'채팅 로그 · chunk #6',cc:'이성우: <span class="chunk-hl">Azure OpenAI API 타임아웃</span>이 계속 발생합니다. <span class="chunk-hl">재시도 로직</span> 필요.'},issue:{t:2,i:3,b:1,cm:'이슈 로그 · chunk #8',cc:'Azure OpenAI API 응답 지연 <span class="chunk-hl">5초 초과</span>. 담당: <span class="chunk-hl">이성우</span>. <span class="chunk-hl">재시도 로직 추가 필요</span>.'}};
+  const data = {
+    meeting:{t:5,i:2,b:1,cm:'회의록 · 1페이지 · chunk #1',cc:'운영 회의. 운영 API 응답 지연 <span class="chunk-hl">5초 초과</span>. <span class="chunk-hl">담당자 A 추가 시간 필요</span>.',reason:'회의록에서 지연·초과·필요 키워드 반복 감지'},
+    chat:{t:3,i:2,b:1,cm:'채팅 로그 · chunk #6',cc:'담당자 A: <span class="chunk-hl">운영 API 타임아웃</span>이 계속 발생합니다. <span class="chunk-hl">재시도 로직</span> 필요.',reason:'채팅 로그에서 API 타임아웃 반복 언급 감지'},
+    issue:{t:2,i:3,b:1,cm:'이슈 로그 · chunk #8',cc:'운영 API 응답 지연 <span class="chunk-hl">5초 초과</span>. 담당: <span class="chunk-hl">담당자 A</span>. <span class="chunk-hl">재시도 로직 추가 필요</span>.',reason:'이슈 로그에서 5초 초과 지연 및 담당자 미조치 패턴 감지'}
+  };
   const d = data[key] || data.meeting;
   document.getElementById('resultFname').textContent = fname;
   document.getElementById('rChunkMeta').textContent = d.cm;
   document.getElementById('rChunkContent').innerHTML = d.cc;
+  // 출처 상세 (수정 5)
+  document.getElementById('rSrcDoc').textContent = d.cm.split(' · ')[0] || '—';
+  document.getElementById('rSrcRange').textContent = d.cm.split(' · ')[1] || '—';
+  document.getElementById('rSrcReason').textContent = d.reason || '반복 지연 표현 및 리스크 키워드 감지';
   countUp('rTodo', d.t, 800); countUp('rIssue', d.i, 1000); countUp('rBlocked', d.b, 600);
   const rs = document.getElementById('resultSection');
   rs.style.display = 'block';
-  G.analysisHistory.unshift({name:fname,type:key,date:'2026-05-20',todo:d.t,issue:d.i,blocked:d.b});
+  G.analysisHistory.unshift({name:fname,type:key,date:formatOpsDate('short'),todo:d.t,issue:d.i,blocked:d.b});
   showToast('분석이 완료되었습니다.');
+  addNotif(`"${fname.slice(0,20)}..." 분석 완료. Todo와 이슈를 확인하세요.`, 'success');
 }
 
 function countUp(id, target, dur) {
@@ -1005,7 +3017,13 @@ function renderTodoDetail(id){
   </div>`;
 }
 
-function approveTodo(id){const t=todos.find(x=>x.id===id);t.status='approved';showToast(`✅ "${t.title.slice(0,20)}..." 승인되었습니다.`,'success');afterTodoAction(id);}
+function approveTodo(id){
+  const t=todos.find(x=>x.id===id);
+  t.status='approved';
+  showToast(`✅ "${t.title.slice(0,20)}..." 승인되었습니다.`,'success');
+  addNotif(`"${t.title.slice(0,24)}..." Todo가 승인되었습니다.`, 'success');
+  afterTodoAction(id);
+}
 function rejectTodo(id){const t=todos.find(x=>x.id===id);t.status='rejected';showToast('반려 처리되었습니다.','warn');afterTodoAction(id);}
 function doneTodo(id){const t=todos.find(x=>x.id===id);t.status='done';showToast(`🎉 완료 처리되었습니다.`,'success');afterTodoAction(id);}
 function undoTodo(id){const t=todos.find(x=>x.id===id);t.status='pending';showToast('승인 대기로 되돌렸습니다.','info');afterTodoAction(id);}
@@ -1023,7 +3041,7 @@ function updateTodoCounts(){
   ['t-ai-cnt','t-in-cnt','t-done-cnt'].forEach((id,i)=>{const el=document.getElementById(id);el.className=i===0&&ai>0?'badge b-warn':'badge b-gray';});
 }
 function switchTodoTab(tab){G.currentTodoTab=tab;G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['ai','inprogress','done'][i]===tab);});document.getElementById('todoAINotice').style.display=tab==='ai'?'flex':'none';renderTodos();}
-function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=t.title;document.getElementById('editAssignee').value=t.assignee||'이성우';document.getElementById('editModal').classList.add('show');}
+function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=t.title;document.getElementById('editAssignee').value=t.assignee||'담당자 A';document.getElementById('editModal').classList.add('show');}
 function saveEdit(){const t=todos.find(x=>x.id===G.editTargetId);t.title=document.getElementById('editTitle').value.trim();t.assignee=document.getElementById('editAssignee').value;closeModal('editModal');renderTodos();if(G.selectedTodoId===G.editTargetId)renderTodoDetail(G.editTargetId);showToast('수정되었습니다.','info');}
 function openManualModal(){document.getElementById('manualModal').classList.add('show');}
 function saveManual(){const title=document.getElementById('manualTitle').value.trim();if(!title)return;todos.unshift({id:Date.now(),title,src:null,srcChunk:null,assignee:document.getElementById('manualAssignee').value,priority:document.getElementById('manualPriority').value,confidence:null,status:'pending',type:'manual',chunk:null,grounds:['수동 등록'],risk:''});closeModal('manualModal');document.getElementById('manualTitle').value='';if(G.currentTodoTab!=='ai')switchTodoTab('ai');else renderTodos();updateTodoCounts();showToast('✅ Todo가 등록되었습니다.','success');}
@@ -1096,7 +3114,7 @@ function openTodoCreate(issueId){
   document.getElementById('tcModalSub').textContent=`이슈: ${issue.title.slice(0,40)}...`;
   document.getElementById('tcModalFrom').textContent=`이 Todo는 "${issue.title.slice(0,30)}..." 이슈와 연결됩니다.`;
   document.getElementById('tcTitle').value=issue.suggestTodo||'';
-  document.getElementById('tcAssignee').value=issue.suggestAssignee||'이성우';
+  document.getElementById('tcAssignee').value=issue.suggestAssignee||'담당자 A';
   document.getElementById('tcPriority').value=issue.suggestPriority||'high';
   document.getElementById('todoCreateModal').classList.add('show');
 }
@@ -1119,6 +3137,8 @@ function confirmTodoCreate(){
     if(G.selectedIssueId===G.createIssueId)renderIssueDetail(G.createIssueId);
     nav('todo');
     showToast(`✅ "${title.slice(0,20)}..." Todo가 생성되었습니다.`,'success');
+    addNotif(`이슈 기반 대응 Todo "${title.slice(0,20)}..."가 생성되었습니다.`, 'success');
+    showCtxBanner('todo', `이슈 #${G.createIssueId}에서 생성된 Todo가 최상단에 추가되었습니다.`);
     updateTodoCounts();
   },1200);
 }
@@ -1179,7 +3199,7 @@ function miniChat(text){
   const u=document.createElement('div');u.className='mini-bubble mini-bubble-user';u.textContent=msg;log.appendChild(u);log.scrollTop=log.scrollHeight;
   setTimeout(()=>{
     const parsed=parseScheduleMsg(msg);
-    const reply=(msg.includes('부재')||msg.includes('출장'))?`✅ ${parsed.person} ${parsed.date} ${parsed.type}을 캘린더에 등록했습니다.`:'✅ 일정을 캘린더에 추가했습니다.';
+    const reply=(msg.includes('부재')||msg.includes('외부 일정'))?`✅ ${parsed.person} ${parsed.date} ${parsed.type}을 캘린더에 등록했습니다.`:'✅ 일정을 캘린더에 추가했습니다.';
     const a=document.createElement('div');a.className='mini-bubble mini-bubble-ai';a.textContent=reply;log.appendChild(a);log.scrollTop=log.scrollHeight;
     const dateMatch=msg.match(/(\d+)\/(\d+)/);if(dateMatch){registerCalEvent(parsed,parseInt(dateMatch[2]));renderCalendar();}
     showToast(reply);
@@ -1248,10 +3268,10 @@ function deleteCalTag(d, idx) {
 }
 
 function parseScheduleMsg(msg){
-  const people=['이성우','김성호','김예은','박주원','김희진'];
+  const people=['담당자 A','담당자 B','담당자 C','담당자 D','관리자'];
   const person=people.find(p=>msg.includes(p))||'미확인';
   const dm=msg.match(/(\d+\/\d+|\d+월\s*\d+일)/);const date=dm?dm[0]:'날짜 미확인';
-  const type=msg.includes('출장')?'출장':msg.includes('휴가')?'휴가':msg.includes('회의')||msg.includes('미팅')?'회의':'부재';
+  const type=msg.includes('외부 일정')?'외부 일정':msg.includes('휴가')?'휴가':msg.includes('회의')||msg.includes('미팅')?'회의':'부재';
   return{person,date,type,impact:type==='회의'?'팀 진행상황 점검':`${person} 담당 업무 공백 예상`};
 }
 
@@ -1269,7 +3289,7 @@ function sendMsg(text){
     if(res){
       if(res.type==='schedule') showScheduleConfirm(msg,res);
       else appendChatMsg('ai',res.text,res.src);
-    } else if(/부재|출장|휴가|회의|미팅|일정|추가/.test(msg)){
+    } else if(/부재|외부 일정|휴가|회의|미팅|일정|추가/.test(msg)){
       const parsed=parseScheduleMsg(msg);showScheduleConfirmRaw(msg,parsed);
     } else {
       appendChatMsg('ai','운영 데이터에서 관련 정보를 찾고 있습니다. 더 구체적으로 질문해주시면 정확한 답변을 드릴 수 있습니다.',null);
@@ -1322,6 +3342,7 @@ let currentKType = 'onboarding';
 const kChecks = { onboarding:{}, absence:{}, offboard:{} };
 
 function selectKnowledgeType(type) {
+  G.currentKnowledgeType = type;
   currentKType = type;
   ['onboarding','absence','offboard'].forEach(t => {
     const btn = document.getElementById('kbtn-'+t);
@@ -1349,7 +3370,7 @@ function renderKnowledgeFlow(type) {
     content.innerHTML = kContentOnboarding();
   } else if (type === 'absence') {
     flowBar.innerHTML = kFlowSteps(['맡은 업무 파악','업무 맥락 이해','처리 완료 보고']);
-    hint.textContent = '출장·휴가 기간 동안 업무 공백 없이 팀이 운영됩니다.';
+    hint.textContent = '외부 일정·휴가 기간 동안 업무 공백 없이 팀이 운영됩니다.';
     ctx.innerHTML = kCtxAbsence();
     content.innerHTML = kContentAbsence();
   } else if (type === 'briefing') {
@@ -1416,7 +3437,7 @@ function renderKnowledgeFlow(type) {
       <div style="font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:16px">운영 장애·보안 이슈·서비스 중단 등 긴급 상황 발생 시 AI가 즉시 상황을 분석합니다.</div>
       <div style="background:var(--danger-soft);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px;color:var(--danger);margin-bottom:12px">
         <div style="font-weight:500">⚠ 현재 활성 긴급 이슈</div>
-        <div style="font-size:10px;margin-top:4px">Azure OpenAI API 타임아웃 (High)</div>
+        <div style="font-size:10px;margin-top:4px">운영 API 타임아웃 (High)</div>
       </div>
       <div class="tbtn" style="font-size:11px;width:100%;justify-content:center;border-color:var(--danger);color:var(--danger)"><i class="ti ti-alert-triangle"></i> 긴급 브리핑 생성</div>`;
     content.innerHTML = `
@@ -1638,12 +3659,12 @@ function kCtxAbsence() {
     <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">내가 맡은 부재자 업무</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       <div style="background:var(--warn-soft);border:1px solid rgba(196,124,0,.15);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px">
-        <div style="font-weight:500;color:var(--text);display:flex;align-items:center;gap:5px;margin-bottom:3px">이성우 업무 대리 <span class="badge b-warn" style="font-size:9px">진행중</span></div>
+        <div style="font-weight:500;color:var(--text);display:flex;align-items:center;gap:5px;margin-bottom:3px">담당자 A 업무 대리 <span class="badge b-warn" style="font-size:9px">진행중</span></div>
         <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/19 ~ 5/20 (2일)</div>
         <div style="font-size:10px;color:var(--warn);margin-top:4px">RAG 파이프라인 담당</div>
       </div>
       <div style="background:var(--warn-soft);border:1px solid rgba(196,124,0,.15);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px">
-        <div style="font-weight:500;color:var(--text);display:flex;align-items:center;gap:5px;margin-bottom:3px">김희진 업무 대리 <span class="badge b-warn" style="font-size:9px">예정</span></div>
+        <div style="font-weight:500;color:var(--text);display:flex;align-items:center;gap:5px;margin-bottom:3px">관리자 업무 대리 <span class="badge b-warn" style="font-size:9px">예정</span></div>
         <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">5/21 (1일)</div>
         <div style="font-size:10px;color:var(--warn);margin-top:4px">PR 승인 대리</div>
       </div>
@@ -1699,7 +3720,7 @@ function kContentAbsence() {
       <div class="kcard-body">
         <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 중요한가:</strong> RAG 파이프라인이 멈추면 AI Assistant 전체가 동작하지 않습니다. 팀 핵심 기능입니다.</div></div>
         <div class="kb-now"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div><strong>현재 상태:</strong> Korea Central 리전 전환 후 타임아웃 60% 감소. 재시도 로직 3회 설정 완료. 추가 검증 필요.</div></div>
-        <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>내가 할 것:</strong> 재시도 로직 테스트 → 결과 팀 공유 → 이슈 상태 업데이트. 긴급 시 이성우에게 연락.</div></div>
+        <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>내가 할 것:</strong> 재시도 로직 테스트 → 결과 팀 공유 → 이슈 상태 업데이트. 긴급 시 담당자 A에게 연락.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:8px 0 6px">참고 문서 (AI 추출)</div>
         <div class="kb-item"><i class="ti ti-file-text"></i>issue_log_20260514_azure_timeout.txt</div>
         <div class="kb-item"><i class="ti ti-file-text"></i>chat_logs_20260514_ai_pipeline.txt</div>
@@ -1715,11 +3736,11 @@ function kContentAbsence() {
         <i class="ti ti-chevron-down kcard-arrow"></i>
       </div>
       <div class="kcard-body">
-        <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>복귀 전 인계:</strong> 내가 처리한 내용을 기록해두면 이성우 복귀 시 AI가 자동으로 브리핑 문서를 생성합니다.</div></div>
+        <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>복귀 전 인계:</strong> 내가 처리한 내용을 기록해두면 담당자 A 복귀 시 AI가 자동으로 브리핑 문서를 생성합니다.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:8px 0 6px">처리 완료 체크리스트</div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">Azure timeout 재시도 로직 테스트 완료 및 결과 공유</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">처리 내용 이슈 코멘트에 기록</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">미처리 항목 이성우 복귀 시 전달 예약</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">미처리 항목 담당자 A 복귀 시 전달 예약</div></div>
         <div style="margin-top:12px"><div class="tbtn primary" style="font-size:11px"><i class="ti ti-wand"></i> 처리 내용 인계 문서 생성</div></div>
       </div>
     </div>`;
@@ -1735,7 +3756,7 @@ function kCtxOffboard() {
     <div style="font-size:10px;color:var(--text3);margin-bottom:14px">35% 파악 완료</div>
     <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">전임자 정보</div>
     <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;font-size:11px;margin-bottom:12px">
-      <div style="font-weight:500;color:var(--text)">이성우</div>
+      <div style="font-weight:500;color:var(--text)">담당자 A</div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px">AI 파이프라인 담당 → 담당자 변경</div>
     </div>
     <div class="tbtn primary" style="font-size:11px;width:100%;justify-content:center"><i class="ti ti-wand"></i> 전임자 업무 AI 분석</div>`;
@@ -1849,9 +3870,768 @@ function showToast(msg,type='success'){
   toast.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>toast.classList.remove('show'),2800);
 }
 
+// ════════════════════════════════════════════════
+// UX 개선 1 — 플로팅 AI 버튼
+// ════════════════════════════════════════════════
+const floatCtx = {
+  dashboard: { label:'Dashboard 기반으로 답변합니다.', qs:['현재 가장 위험한 이슈는?','이번 주 마감 현황 알려줘','팀원 부재 확인해줘'] },
+  analysis:  { label:'운영 로그 분석 화면입니다.', qs:['분석된 파일 요약해줘','추출된 이슈 설명해줘'] },
+  todo:      { label:'Todo 화면 기반으로 답변합니다.', qs:['내 Todo 요약해줘','승인 대기 Todo 알려줘','가장 급한 Todo는?'] },
+  issues:    { label:'이슈 로그 기반으로 답변합니다.', qs:['미해결 이슈 요약해줘','담당자 미지정 이슈는?','High Risk 이슈 알려줘'] },
+  calendar:  { label:'캘린더 기반으로 답변합니다.', qs:['이번 달 리스크 구간 알려줘','부재 일정 추가해줘'] },
+  knowledge: { label:'인수인계 센터 기반입니다.', qs:['인수인계 문서 생성해줘','부재자 업무 이관 도와줘'] },
+  reports:   { label:'보고서 화면입니다.', qs:['주간 보고서 초안 생성해줘','이번 주 운영 요약해줘'] },
+  chat:      { label:'AI Assistant 화면입니다.', qs:['OpsRadar 사용법 알려줘'] },
+};
+
+function toggleFloatAI() {
+  const panel = document.getElementById('floatPanel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) {
+    const ctx = floatCtx[G.currentScreen] || floatCtx.dashboard;
+    document.getElementById('floatCtxLabel').textContent = ctx.label;
+    document.getElementById('floatSuggestions').innerHTML =
+      ctx.qs.map(q => `<button class="float-sq" onclick="floatAsk('${q}')">${q}</button>`).join('');
+  }
+}
+
+function floatAsk(q) {
+  document.getElementById('floatPanel').classList.remove('show');
+  nav('chat');
+  setTimeout(() => sendMsg(q), 100);
+}
+
+function floatSend() {
+  const val = document.getElementById('floatInput').value.trim();
+  if (!val) return;
+  document.getElementById('floatInput').value = '';
+  document.getElementById('floatPanel').classList.remove('show');
+  nav('chat');
+  setTimeout(() => sendMsg(val), 100);
+}
+
+// ════════════════════════════════════════════════
+// UX 개선 2 — 알림 센터
+// ════════════════════════════════════════════════
+const notifications = [];
+
+function toggleNotif() {
+  const panel = document.getElementById('notifPanel');
+  panel.classList.toggle('show');
+  document.getElementById('floatPanel').classList.remove('show');
+  document.getElementById('notifDot').style.display = 'none';
+}
+
+function clearNotifs() {
+  notifications.length = 0;
+  renderNotifs();
+}
+
+function addNotif(msg, type='info', actionFnStr) {
+  notifications.unshift({ msg, type, actionFnStr, time: Date.now() });
+  renderNotifs();
+  const dot = document.getElementById('notifDot');
+  if (dot) dot.style.display = 'block';
+}
+
+function renderNotifs() {
+  const list = document.getElementById('notifList');
+  if (!list) return;
+  if (!notifications.length) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)"><i class="ti ti-bell" style="font-size:24px;display:block;margin-bottom:8px"></i>아직 알림이 없습니다.</div>`;
+    return;
+  }
+  const iconMap = { success:'ti-check', warn:'ti-alert-triangle', info:'ti-sparkles', danger:'ti-x' };
+  const clsMap  = { success:'ni-success', warn:'ni-warn', info:'ni-info', danger:'ni-warn' };
+  const timeStr = t => {
+    const m = Math.floor((Date.now()-t)/60000);
+    return m < 1 ? '방금' : m < 60 ? `${m}분 전` : `${Math.floor(m/60)}시간 전`;
+  };
+  list.innerHTML = notifications.map(n => `
+    <div class="notif-item">
+      <div class="notif-icon ${clsMap[n.type]||'ni-info'}"><i class="ti ${iconMap[n.type]||'ti-sparkles'}" style="font-size:13px"></i></div>
+      <div class="notif-body">
+        <div class="notif-msg">${n.msg}</div>
+        <div class="notif-time">${timeStr(n.time)}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════
+// UX 개선 3 — Todo 카드뷰 토글
+// ════════════════════════════════════════════════
+let todoViewMode = 'table';
+
+function switchTodoView(mode) {
+  todoViewMode = mode;
+  document.getElementById('vt-table').classList.toggle('active', mode==='table');
+  document.getElementById('vt-card').classList.toggle('active', mode==='card');
+  document.getElementById('todoTableView').style.display = mode==='table' ? 'flex' : 'none';
+  document.getElementById('todoCardView').style.display  = mode==='card'  ? 'block' : 'none';
+  if (mode === 'card') renderTodoCards();
+}
+
+function renderTodoCards() {
+  const filtered = getFilteredTodos();
+  const grid = document.getElementById('todoCardGrid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text3);font-size:12px"><i class="ti ti-checkbox" style="font-size:28px;display:block;margin-bottom:8px"></i>이 탭에 항목이 없습니다.</div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(t => `
+    <div class="todo-card ${G.selectedTodoId===t.id?'selected':''}" onclick="selectTodo(${t.id})">
+      <div class="todo-card-meta">
+        ${priB(t.priority)}
+        ${statusB(t.status)}
+        ${t.confidence!==null?`<span style="font-size:10px;font-family:var(--mono);color:${confC(t.confidence)}">${t.confidence}%</span>`:''}
+      </div>
+      <div class="todo-card-title">${t.title}</div>
+      ${t.src?`<div class="todo-card-src">${t.src}${t.srcChunk?' · '+t.srcChunk:''}</div>`:''}
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${t.assignee||'담당자 미지정'}</div>
+      <div class="todo-card-actions">
+        ${t.status==='pending'
+          ? `<div class="ab ab-approve" onclick="event.stopPropagation();approveTodo(${t.id})">승인</div><div class="ab ab-reject" onclick="event.stopPropagation();rejectTodo(${t.id})" style="margin-left:auto">반려</div>`
+          : t.status==='approved'
+          ? `<div class="ab" style="background:var(--success);color:#fff;border-color:var(--success)" onclick="event.stopPropagation();doneTodo(${t.id})">완료</div><div class="ab ab-undo" onclick="event.stopPropagation();undoTodo(${t.id})" style="margin-left:auto">↩</div>`
+          : `<div class="ab ab-undo" onclick="event.stopPropagation();undoTodo(${t.id})">↩ 되돌리기</div>`}
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════
+// UX 개선 4, 5, 6 — 배너 / 알림 트리거
+// ════════════════════════════════════════════════
+function showCtxBanner(screenId, msg) {
+  const banner = document.getElementById(screenId+'ctxBanner');
+  if (!banner) return;
+  const textEl = document.getElementById(screenId+'ctxText');
+  if (textEl) textEl.textContent = msg;
+  banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), 5000);
+}
+
 // ── 초기화
 renderCalendar();
 updateTodoCounts();
+
+// 캘린더 AI 추천 일정 모달
+function openAISuggestModal() {
+  document.getElementById('aiSuggestModal').classList.add('show');
+}
+
+function addAISuggestEvent(title, reason) {
+  closeModal('aiSuggestModal');
+  const d = new Date(); d.setDate(d.getDate() + 2);
+  const calDate = d.getDate();
+  const ev = G.calEvents.find(e => e.d === calDate);
+  const tag = { t: title, c: 'ct-info' };
+  if (ev) ev.tags.push(tag);
+  else G.calEvents.push({ d: calDate, tags: [tag] });
+  G.newCalEvents.push({ person: title, date: `5/${calDate}`, type: '회의', impact: reason, calDate });
+  renderCalendar();
+  document.getElementById('calBadge').style.display = 'inline-block';
+  addNotif(`"${title}" 일정이 캘린더에 추가되었습니다. 출처: ${reason}`, 'success');
+  showToast(`✅ "${title}" 캘린더에 등록되었습니다.`, 'success');
+}
+
+
+// Calendar month navigation repair
+function ensureCalendarState(){
+  if(typeof G.currentCalYear !== 'number') G.currentCalYear = 2026;
+  if(typeof G.currentCalMonth !== 'number') G.currentCalMonth = 4;
+}
+function eventMatchesMonth(ev, year, month){
+  if(!ev) return false;
+  const evYear = typeof ev.y === 'number' ? ev.y : (typeof ev.year === 'number' ? ev.year : 2026);
+  const rawMonth = typeof ev.m === 'number' ? ev.m : (typeof ev.month === 'number' ? ev.month : 4);
+  const evMonth = rawMonth > 11 ? rawMonth - 1 : rawMonth;
+  return evYear === year && evMonth === month;
+}
+function filterEventsByMonth(year, month){
+  ensureCalendarState();
+  const y = typeof year === 'number' ? year : G.currentCalYear;
+  const m = typeof month === 'number' ? month : G.currentCalMonth;
+  return (G.calEvents || []).filter(ev => eventMatchesMonth(ev, y, m));
+}
+function findCalEventForDay(day, year, month){
+  const y = typeof year === 'number' ? year : G.currentCalYear;
+  const m = typeof month === 'number' ? month : G.currentCalMonth;
+  return (G.calEvents || []).find(ev => ev.d === day && eventMatchesMonth(ev, y, m));
+}
+function findNewCalEventForDay(day, year, month){
+  const y = typeof year === 'number' ? year : G.currentCalYear;
+  const m = typeof month === 'number' ? month : G.currentCalMonth;
+  return (G.newCalEvents || []).some(ev => {
+    const evYear = typeof ev.y === 'number' ? ev.y : 2026;
+    const rawMonth = typeof ev.m === 'number' ? ev.m : 4;
+    const evMonth = rawMonth > 11 ? rawMonth - 1 : rawMonth;
+    return ev.calDate === day && evYear === y && evMonth === m;
+  });
+}
+function updateCalendarHeader(){
+  ensureCalendarState();
+  const wrap = document.querySelector('#s-calendar .topbar > div:last-child');
+  if(!wrap) return;
+  const buttons = Array.from(wrap.querySelectorAll('.tbtn'));
+  const prevBtn = document.getElementById('calPrevBtn') || buttons.find(btn => btn.textContent.includes('←')) || buttons[1];
+  const nextBtn = document.getElementById('calNextBtn') || buttons.find(btn => btn.textContent.includes('→')) || buttons[2];
+  const title = document.getElementById('calMonthTitle') || wrap.querySelector('.chip');
+  const prevDate = new Date(G.currentCalYear, G.currentCalMonth - 1, 1);
+  const nextDate = new Date(G.currentCalYear, G.currentCalMonth + 1, 1);
+  if(prevBtn){ prevBtn.id = 'calPrevBtn'; prevBtn.textContent = `← ${prevDate.getMonth() + 1}월`; prevBtn.onclick = goToPrevMonth; prevBtn.setAttribute('role','button'); prevBtn.setAttribute('tabindex','0'); }
+  if(nextBtn){ nextBtn.id = 'calNextBtn'; nextBtn.textContent = `${nextDate.getMonth() + 1}월 →`; nextBtn.onclick = goToNextMonth; nextBtn.setAttribute('role','button'); nextBtn.setAttribute('tabindex','0'); }
+  if(title){ title.id = 'calMonthTitle'; title.textContent = `${G.currentCalYear}년 ${G.currentCalMonth + 1}월`; }
+}
+function renderCalendar(year, month){
+  ensureCalendarState();
+  if(typeof year === 'number') G.currentCalYear = year;
+  if(typeof month === 'number') G.currentCalMonth = month > 11 ? month - 1 : month;
+  const grid = document.getElementById('calGrid');
+  if(!grid) return;
+  grid.querySelectorAll('.cal-cell').forEach(c => c.remove());
+  updateCalendarHeader();
+  const yearValue = G.currentCalYear;
+  const monthValue = G.currentCalMonth;
+  const firstDay = new Date(yearValue, monthValue, 1).getDay();
+  const lastDate = new Date(yearValue, monthValue + 1, 0).getDate();
+  const prevLastDate = new Date(yearValue, monthValue, 0).getDate();
+  const today = new Date();
+  for(let i = firstDay - 1; i >= 0; i--){
+    const div = document.createElement('div'); div.className = 'cal-cell other'; div.innerHTML = `<div class="cal-date">${prevLastDate - i}</div>`; grid.appendChild(div);
+  }
+  for(let d = 1; d <= lastDate; d++){
+    const ev = findCalEventForDay(d, yearValue, monthValue);
+    const isNew = findNewCalEventForDay(d, yearValue, monthValue);
+    const isSelected = G.selectedCalDay === d;
+    const isToday = today.getFullYear() === yearValue && today.getMonth() === monthValue && today.getDate() === d;
+    const div = document.createElement('div');
+    div.className = `cal-cell${(ev && ev.today) || isToday ? ' today' : ''}${ev && ev.risk ? ' risk' : ''}${isNew ? ' new-event' : ''}${isSelected ? ' cal-selected' : ''}`;
+    div.innerHTML = `<div class="cal-date">${d}</div><div class="cal-tags">${ev && ev.tags ? ev.tags.map(t => `<span class="cal-tag ${t.c}">${t.t}</span>`).join('') : ''}</div>${ev && ev.risk ? '<div class="risk-dot"></div>' : ''}`;
+    div.addEventListener('click', () => openCalModal(d));
+    grid.appendChild(div);
+  }
+  const renderedCells = firstDay + lastDate;
+  const trailing = (Math.ceil(renderedCells / 7) * 7) - renderedCells;
+  for(let x = 1; x <= trailing; x++){
+    const div = document.createElement('div'); div.className = 'cal-cell other'; div.innerHTML = `<div class="cal-date">${x}</div>`; grid.appendChild(div);
+  }
+}
+function goToPrevMonth(){
+  ensureCalendarState();
+  G.currentCalMonth -= 1;
+  if(G.currentCalMonth < 0){ G.currentCalMonth = 11; G.currentCalYear -= 1; }
+  G.selectedCalDay = null;
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+}
+function goToNextMonth(){
+  ensureCalendarState();
+  G.currentCalMonth += 1;
+  if(G.currentCalMonth > 11){ G.currentCalMonth = 0; G.currentCalYear += 1; }
+  G.selectedCalDay = null;
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+}
+function openCalModal(d) {
+  ensureCalendarState();
+  G.selectedCalDay = d;
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+  const ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
+  const tags = ev && ev.tags ? ev.tags : [];
+  const modalDate = document.getElementById('calModalDate');
+  if(modalDate) modalDate.textContent = `${G.currentCalYear}년 ${G.currentCalMonth + 1}월 ${d}일`;
+  const list = document.getElementById('calModalList');
+  if(list){
+    list.innerHTML = tags.length ? tags.map((t, i) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)"><span class="cal-tag ${t.c}" style="flex:1">${t.t}</span><div onclick="deleteCalTag(${d},${i})" style="cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;border:1px solid var(--border)" title="삭제">×</div></div>`).join('') : `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">등록된 일정이 없습니다.</div>`;
+  }
+  const input = document.getElementById('calModalInput'); if(input) input.value = '';
+  calSelectedColor = 'ct-info';
+  const dot = document.getElementById('calColorDot'); if(dot) dot.style.background = 'var(--accent)';
+  const label = document.getElementById('calColorLabel'); if(label) label.textContent = '일반';
+  openModal('calModal');
+}
+function addCalTag() {
+  ensureCalendarState();
+  const d = G.selectedCalDay;
+  const input = document.getElementById('calModalInput');
+  const text = input ? input.value.trim() : '';
+  const color = calSelectedColor || 'ct-info';
+  if (!text || !d) return;
+  let ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
+  if (ev) ev.tags.push({t: text, c: color});
+  else G.calEvents.push({d, y: G.currentCalYear, m: G.currentCalMonth, tags: [{t: text, c: color}]});
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+  openCalModal(d);
+  showToast(`${G.currentCalMonth + 1}월 ${d}일 일정이 추가되었습니다.`, 'info');
+}
+function deleteCalTag(d, idx) {
+  ensureCalendarState();
+  const ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
+  if (!ev) return;
+  ev.tags.splice(idx, 1);
+  if (ev.tags.length === 0) G.calEvents = G.calEvents.filter(e => e !== ev);
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+  openCalModal(d);
+  showToast('일정이 삭제되었습니다.', 'info');
+}
+function registerCalEvent(parsed, calDate){
+  ensureCalendarState();
+  if(calDate){
+    const ex = findCalEventForDay(calDate, G.currentCalYear, G.currentCalMonth);
+    const nt = {t:`${parsed.person} ${parsed.type}`, c:'ct-new'};
+    if(ex) ex.tags.push(nt); else G.calEvents.push({d:calDate, y:G.currentCalYear, m:G.currentCalMonth, tags:[nt]});
+    G.newCalEvents.push({...parsed, calDate, y:G.currentCalYear, m:G.currentCalMonth});
+  }
+  const badge = document.getElementById('calBadge'); if(badge) badge.style.display='inline-block';
+  if(G.currentScreen === 'calendar') renderCalendar(G.currentCalYear, G.currentCalMonth);
+}
+function addAISuggestEvent(title, reason) {
+  ensureCalendarState();
+  closeModal('aiSuggestModal');
+  const calDate = Math.min(new Date().getDate() + 2, new Date(G.currentCalYear, G.currentCalMonth + 1, 0).getDate());
+  const ev = findCalEventForDay(calDate, G.currentCalYear, G.currentCalMonth);
+  const tag = { t: title, c: 'ct-info' };
+  if (ev) ev.tags.push(tag); else G.calEvents.push({ d: calDate, y: G.currentCalYear, m: G.currentCalMonth, tags: [tag] });
+  G.newCalEvents.push({ person: title, date: `${G.currentCalMonth + 1}/${calDate}`, type: '회의', impact: reason, calDate, y: G.currentCalYear, m: G.currentCalMonth });
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+  const badge = document.getElementById('calBadge'); if(badge) badge.style.display = 'inline-block';
+  addNotif(`"${title}" 일정이 캘린더에 추가되었습니다. 출처: ${reason}`, 'success');
+  showToast(`"${title}" 캘린더에 등록되었습니다.`, 'success');
+}
+function initCalendarMonthControls(){
+  ensureCalendarState();
+  updateCalendarHeader();
+  const prevBtn = document.getElementById('calPrevBtn');
+  const nextBtn = document.getElementById('calNextBtn');
+  [prevBtn, nextBtn].forEach(btn => {
+    if(!btn || btn.dataset.calendarKeyBound === 'true') return;
+    btn.dataset.calendarKeyBound = 'true';
+    btn.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); btn.click(); } });
+  });
+}
+window.goToPrevMonth = goToPrevMonth;
+window.goToNextMonth = goToNextMonth;
+window.renderCalendar = renderCalendar;
+window.filterEventsByMonth = filterEventsByMonth;
+setTimeout(() => { initCalendarMonthControls(); renderCalendar(); }, 0);
+function initCalendarModalOverlayClose(){
+  const overlay = document.getElementById('calModal');
+  if(!overlay || overlay.dataset.overlayCloseBound === 'true') return;
+  overlay.dataset.overlayCloseBound = 'true';
+  overlay.addEventListener('click', function(event){
+    if(event.target === overlay){
+      closeModal('calModal');
+      G.selectedCalDay = null;
+      renderCalendar();
+    }
+  });
+  const modalContent = overlay.querySelector('.modal');
+  if(modalContent){
+    modalContent.addEventListener('click', function(event){
+      event.stopPropagation();
+    });
+  }
+}
+setTimeout(initCalendarModalOverlayClose, 0);
+setTimeout(initDocumentGenerationActions, 0);
+
+
+// Handover center button and action repair
+const HANDOFF_TYPES = ['onboarding','absence','offboard'];
+const HANDOFF_FLOW_TYPE = { project:'briefing' };
+const HANDOFF_LABELS = {
+  onboarding:'신규 입사자 온보딩',
+  absence:'부재자 업무 인수인계',
+  offboard:'담당자 변경/퇴직 인수인계',
+
+};
+function normalizeHandoffType(type){
+  if(type === 'briefing') return 'project';
+  return HANDOFF_TYPES.includes(type) ? type : 'onboarding';
+}
+function getHandoffRenderType(type){
+  const selected = normalizeHandoffType(type);
+  return HANDOFF_FLOW_TYPE[selected] || selected;
+}
+function selectHandoffType(type){
+  selectKnowledgeType(type);
+}
+function selectKnowledgeType(type) {
+  const selected = normalizeHandoffType(type);
+  G.currentKnowledgeType = selected;
+  currentKType = selected;
+  HANDOFF_TYPES.forEach(t => {
+    const btn = document.getElementById('kbtn-' + t);
+    if (!btn) return;
+    btn.classList.toggle('active', t === selected);
+    btn.removeAttribute('style');
+    if (t === selected) {
+      btn.style.background = 'var(--accent-soft)';
+      btn.style.color = 'var(--accent)';
+      btn.style.borderColor = 'var(--accent)';
+    }
+  });
+  renderKnowledgeFlow(getHandoffRenderType(selected));
+  setTimeout(bindHandoffCenterButtons, 0);
+}
+function getHandoffPreviewData(type){
+  const selected = normalizeHandoffType(type || G.currentKnowledgeType || 'onboarding');
+  const generatedAt = new Date().toLocaleString('ko-KR', { dateStyle:'medium', timeStyle:'short' });
+  const map = {
+    onboarding: {
+      title:'신규 입사자 온보딩 브리핑', target:'신규 입사자 온보딩',
+      sections:[
+        ['프로젝트 개요','OpsRadar는 운영 로그, Todo, Risk, Calendar, 인수인계 문맥을 AI가 연결해 운영 상태를 추론하는 SaaS형 운영 인텔리전스 시스템입니다.'],
+        ['현재 운영 상태','결제 API 장기 미해결, Blocked Todo 누적, 승인 대기 항목이 핵심 관찰 지점입니다.'],
+        ['최근 주요 이슈','운영 이벤트, 운영 리스크, Risk 데이터 없음가 반복적으로 관찰됩니다.'],
+        ['우선 확인해야 할 문서','연결된 문서가 없습니다.'],
+        ['첫 업무 시작 가이드','Dashboard의 High Risk 카드 확인 → 내 Todo 확인 → 관련 출처 문서 확인 → 담당자에게 상태 공유 순서로 시작하세요.']
+      ]
+    },
+    absence: {
+      title:'부재자 업무 인수인계', target:'부재자 업무 인수인계',
+      sections:[
+        ['현재 진행 업무','결제 API 대응 Todo 2건과 등록된 우선 작업 없음 작업이 진행 중입니다.'],
+        ['긴급 대응 필요 항목','운영 데이터 확인, DB connection pool 임계치 조정, 배포 실패 원인 재점검이 필요합니다.'],
+        ['승인 대기 건','AI 생성 Todo 0건, 승인 대기 항목 0건이 승인 대기 중입니다.'],
+        ['이번 주 일정','수요일 등록된 일정 없음, 금요일 P1 리스크 점검이 예정되어 있습니다.'],
+        ['주의사항','부재 기간에는 High Risk owner가 불명확해질 수 있으므로 승인 대기 Todo를 먼저 정리하세요.']
+      ]
+    },
+    offboard: {
+      title:'담당자 변경/퇴직 인수인계', target:'담당자 변경·퇴직 인수인계',
+      sections:[
+        ['장기 진행 업무','운영 로그 분석 정확도 개선, RAG 근거 연결, 배포 자동화 안정화가 장기 진행 중입니다.'],
+        ['반복 발생 이슈','릴리즈 직전 승인 지연, 야간 브리핑 누락, 외부 운영 이벤트이 반복됩니다.'],
+        ['암묵적 운영 룰','장애성 이슈는 Todo 승인 전에도 캘린더 리스크 일정으로 먼저 등록합니다.'],
+        ['미완료 Risk','결제 API 백업 경로 검토와 QA 자동화 적용이 아직 완료되지 않았습니다.'],
+        ['핵심 참고 문서','연결된 문서가 없습니다.']
+      ]
+    },
+    project: {
+      title:'프로젝트 운영 브리핑', target:'프로젝트 브리핑',
+      sections:[
+        ['현재 프로젝트 상태','Dashboard, Todo, Risk, Calendar, 인수인계, AI Assistant 화면의 핵심 데모 흐름이 연결된 상태입니다.'],
+        ['최근 의사결정','운영 관제 중심 UX를 유지하고, AI 판단 근거는 태그와 출처 카드로 분리해 신뢰도를 높이는 방향으로 정리했습니다.'],
+        ['주요 Risk','Risk 데이터 없음, Risk 데이터 없음, Risk 데이터 없음가 프로젝트 리스크로 관리됩니다.'],
+        ['다음 액션','캘린더 일정 CRUD 점검, 인수인계 문서 생성 API 연결 준비, 보고서 저장 API 연동을 우선 처리합니다.'],
+        ['관련 문서','figma_dashboard_notes.md, opsradar_front_prototype.html, api_contract_draft.md']
+      ]
+    },
+    emergency: {
+      title:'긴급 상황 브리핑', target:'긴급 상황 브리핑',
+      sections:[
+        ['발생 이슈','Azure OpenAI 운영 이벤트과 Risk 데이터 없음이 동시에 감지되었습니다.'],
+        ['영향 범위','AI Assistant 응답 지연, Todo 자동 생성 지연, 결제 완료율 하락 가능성이 있습니다.'],
+        ['우선 대응 Todo','API 재시도 로직 확인, 백업 엔드포인트 점검, 등록된 Todo 없음를 즉시 실행합니다.'],
+        ['담당자','PM 관리자, Backend 담당자 A, Infra 담당자 B가 1차 대응 담당입니다.'],
+        ['즉시 확인할 문서','incident_runbook.md, azure_timeout_log_0529.json, payment_api_health.csv']
+      ]
+    }
+  };
+  const data = map[selected] || map.onboarding;
+  if(!data.sections.some(s => s[0] === '생성일')) data.sections.push(['생성일', generatedAt]);
+  G.currentHandoffDraft = data;
+  return data;
+}
+function openHandoffPreview(type){
+  return generateHandoffPreview(type || G.currentKnowledgeType || 'onboarding');
+}
+function generateHandoffPreview(type){
+  const selected = normalizeHandoffType(type || G.currentKnowledgeType || 'onboarding');
+  G.currentKnowledgeType = selected;
+  const data = getHandoffPreviewData(selected);
+  renderHandoffPreview(data);
+  showToast(`${HANDOFF_LABELS[selected]} 미리보기를 생성했습니다.`, 'success');
+  return data;
+}
+function renderHandoffPreview(data){
+  const body = data.sections.map(([label,value]) => `
+    <div class="handoff-preview-row">
+      <div class="handoff-preview-label">${label}</div>
+      <div class="handoff-preview-value">${value}</div>
+    </div>`).join('');
+  let panel = document.getElementById('handoffPreviewPanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'handoffPreviewPanel';
+    panel.className = 'handoff-slide-panel';
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = `
+    <div class="handoff-slide-backdrop" onclick="closeHandoffPreview()"></div>
+    <aside class="handoff-slide-sheet" role="dialog" aria-modal="true" aria-label="인수인계 문서 미리보기" onclick="event.stopPropagation()">
+      <div class="handoff-slide-head">
+        <div>
+          <div class="handoff-preview-eyebrow">AI GENERATED PREVIEW</div>
+          <div class="handoff-preview-title">${data.title}</div>
+        </div>
+        <button class="handoff-slide-close" onclick="closeHandoffPreview()" aria-label="닫기"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="handoff-slide-meta"><span class="badge b-accent">${data.target}</span><span><i class="ti ti-clock"></i> ${new Date().toLocaleString('ko-KR', { dateStyle:'medium', timeStyle:'short' })}</span></div>
+      <div class="handoff-slide-body"><div class="handoff-preview-body">${body}</div></div>
+      <div class="handoff-slide-actions">
+        <div class="tbtn" onclick="editHandoffDraft()"><i class="ti ti-pencil"></i> 수정하기</div>
+        <div class="tbtn" onclick="shareHandoffDraft()"><i class="ti ti-share"></i> 공유하기</div>
+        <div class="tbtn" onclick="generateHandoffPreview(G.currentKnowledgeType || 'onboarding')"><i class="ti ti-refresh"></i> 다시 생성</div>
+        <div class="tbtn primary" onclick="saveHandoffDraft()"><i class="ti ti-device-floppy"></i> 초안 저장</div>
+      </div>
+    </aside>`;
+  requestAnimationFrame(() => panel.classList.add('show'));
+}
+function closeHandoffPreview(){
+  const panel = document.getElementById('handoffPreviewPanel');
+  if(panel) panel.classList.remove('show');
+}
+function saveHandoffDraft(){
+  if(!G.currentHandoffDraft) G.currentHandoffDraft = getHandoffPreviewData(G.currentKnowledgeType || 'onboarding');
+  G.savedHandoffDraft = { ...G.currentHandoffDraft, savedAt:new Date().toISOString() };
+  showToast('인수인계 초안을 임시 저장했습니다.', 'success');
+}
+function editHandoffDraft(){
+  showToast('미리보기 패널에서 내용을 검토한 뒤 편집 화면으로 연결할 수 있습니다.', 'info');
+}
+function shareHandoffDraft(){
+  showToast('공유 링크를 생성했습니다. 실제 API 연결 전까지 mock 처리됩니다.', 'success');
+}
+function bindHandoffCenterButtons(){
+  const screen = document.getElementById('s-knowledge');
+  if(!screen) return;
+  const previewButton = Array.from(screen.querySelectorAll('.tbtn,button')).find(btn => (btn.textContent || '').includes('문서 생성 미리보기'));
+  if(previewButton && previewButton.dataset.handoffPreviewBound !== 'true'){
+    previewButton.dataset.handoffPreviewBound = 'true';
+    previewButton.addEventListener('click', () => openHandoffPreview(G.currentKnowledgeType || 'onboarding'));
+  }
+  Array.from(screen.querySelectorAll('.tbtn,button')).forEach(btn => {
+    if(btn.dataset.handoffActionBound === 'true' || btn.onclick) return;
+    const text = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+    if(/브리핑 생성|문서 생성|상황 분석|대응 방안 생성|인수 완성도 평가/.test(text)){
+      btn.dataset.handoffActionBound = 'true';
+      btn.addEventListener('click', () => openHandoffPreview(G.currentKnowledgeType || 'onboarding'));
+    }else if(/초안 저장|임시 저장|저장/.test(text)){
+      btn.dataset.handoffActionBound = 'true';
+      btn.addEventListener('click', saveHandoffDraft);
+    }else if(/수정/.test(text)){
+      btn.dataset.handoffActionBound = 'true';
+      btn.addEventListener('click', editHandoffDraft);
+    }else if(/공유/.test(text)){
+      btn.dataset.handoffActionBound = 'true';
+      btn.addEventListener('click', shareHandoffDraft);
+    }else if(/닫기/.test(text)){
+      btn.dataset.handoffActionBound = 'true';
+      btn.addEventListener('click', closeHandoffPreview);
+    }
+  });
+}
+window.selectHandoffType = selectHandoffType;
+window.selectKnowledgeType = selectKnowledgeType;
+window.openHandoffPreview = openHandoffPreview;
+window.generateHandoffPreview = generateHandoffPreview;
+window.renderHandoffPreview = renderHandoffPreview;
+window.closeHandoffPreview = closeHandoffPreview;
+window.saveHandoffDraft = saveHandoffDraft;
+window.editHandoffDraft = editHandoffDraft;
+window.shareHandoffDraft = shareHandoffDraft;
+setTimeout(() => { bindHandoffCenterButtons(); if(G.currentScreen === 'knowledge') selectKnowledgeType(G.currentKnowledgeType || 'onboarding'); }, 0);
+function initHandoffPanelEventDelegation(){
+  if(document.body.dataset.handoffPanelDelegationBound === 'true') return;
+  document.body.dataset.handoffPanelDelegationBound = 'true';
+  document.addEventListener('click', function(event){
+    const panel = document.getElementById('handoffPreviewPanel');
+    if(!panel || !panel.classList.contains('show')) return;
+    const target = event.target;
+    if(target === panel || target.classList?.contains('handoff-slide-backdrop')){
+      event.preventDefault();
+      event.stopPropagation();
+      closeHandoffPreview();
+      return;
+    }
+    if(target.closest?.('.handoff-slide-sheet') && !target.closest('.handoff-slide-actions')) return;
+    const action = target.closest?.('#handoffPreviewPanel .handoff-slide-actions .tbtn, #handoffPreviewPanel .handoff-slide-close');
+    if(!action) return;
+    const text = (action.textContent || action.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    if(text.includes('닫기')) closeHandoffPreview();
+    else if(text.includes('수정')) editHandoffDraft();
+    else if(text.includes('공유')) shareHandoffDraft();
+    else if(text.includes('다시 생성')) generateHandoffPreview(G.currentKnowledgeType || 'onboarding');
+    else if(text.includes('저장')) saveHandoffDraft();
+  }, true);
+}
+setTimeout(initHandoffPanelEventDelegation, 0);
+function formatOpsDate(style='long'){
+  const today = new Date();
+  if(style === 'short'){
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}.${m}.${d}`;
+  }
+  return today.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  });
+}
+function renderCurrentDateLabels(){
+  document.querySelectorAll('[data-current-date]').forEach(el => {
+    el.textContent = formatOpsDate(el.dataset.currentDate || 'long');
+  });
+}
+setTimeout(renderCurrentDateLabels, 0);
+function setOpsRadarTheme(theme){
+  const selected = theme === 'light' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', selected);
+  document.body.setAttribute('data-skin', selected);
+  try{
+    localStorage.setItem('theme', selected);
+    localStorage.setItem('opsradar-skin', selected);
+  }catch(e){}
+  document.querySelectorAll('[data-skin-choice]').forEach(btn => btn.classList.toggle('active', btn.dataset.skinChoice === selected));
+  document.querySelectorAll('[data-theme-choice]').forEach(btn => btn.classList.toggle('active', btn.dataset.themeChoice === selected));
+  const label = document.getElementById('settingsThemeLabel');
+  if(label) label.textContent = selected === 'light' ? 'Light' : 'Dark';
+}
+function setOpsRadarSkin(skin){ setOpsRadarTheme(skin); }
+function initOpsRadarSkin(){
+  let saved = 'dark';
+  try{ saved = localStorage.getItem('theme') || localStorage.getItem('opsradar-skin') || 'dark'; }catch(e){}
+  setOpsRadarTheme(saved);
+  updateSettingsPage();
+}
+function getStoredUserInfo(){
+  let rawUser = null;
+  let rawRole = null;
+  try{
+    rawUser = localStorage.getItem('user');
+    rawRole = localStorage.getItem('role');
+  }catch(e){}
+  let userName = '관리자';
+  if(rawUser){
+    try{
+      const parsed = JSON.parse(rawUser);
+      userName = parsed.name || parsed.username || parsed.email || rawUser;
+    }catch(e){ userName = rawUser; }
+  }
+  const isMember = (rawRole || '').toLowerCase() === 'member' || document.getElementById('db-tab-member')?.classList.contains('active');
+  return { userName, role: isMember ? 'Team Member' : 'Admin', roleKo: isMember ? '팀원' : '관리자' };
+}
+function updateSettingsPage(){
+  const info = getStoredUserInfo();
+  const userEl = document.getElementById('settingsUserName');
+  const roleEl = document.getElementById('settingsUserRole');
+  const stateEl = document.getElementById('settingsUserState');
+  const statusEl = document.getElementById('settingsLoginStatus');
+  if(userEl) userEl.textContent = info.userName;
+  if(roleEl) roleEl.textContent = `${info.roleKo} · ${info.role}`;
+  if(stateEl) stateEl.textContent = '로그인됨';
+  if(statusEl) statusEl.textContent = '로그인됨';
+  let theme = 'dark';
+  try{ theme = localStorage.getItem('theme') || localStorage.getItem('opsradar-skin') || document.body.dataset.theme || 'dark'; }catch(e){}
+  setOpsRadarTheme(theme);
+}
+function logout(){
+  try{
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('user');
+  }catch(e){}
+  updateSettingsPage();
+  alert('로그아웃되었습니다.');
+  nav('dashboard');
+}
+window.setOpsRadarTheme = setOpsRadarTheme;
+window.setOpsRadarSkin = setOpsRadarSkin;
+window.updateSettingsPage = updateSettingsPage;
+window.logout = logout;
+setTimeout(initOpsRadarSkin, 0);</script>
+
+<!-- ── 알림 센터 패널 ── -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-hd">
+    알림 센터
+    <span style="font-size:10px;color:var(--text3);cursor:pointer;font-weight:400" onclick="clearNotifs()">모두 읽음</span>
+  </div>
+  <div id="notifList">
+    <div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">
+      <i class="ti ti-bell" style="font-size:24px;display:block;margin-bottom:8px"></i>
+      아직 알림이 없습니다.
+    </div>
+  </div>
+</div>
+
+<!-- ── 플로팅 AI 버튼 ── -->
+<div class="float-ai" id="floatAI">
+  <div class="float-ai-panel" id="floatPanel">
+    <div class="float-ai-panel-hd"><i class="ti ti-sparkles" style="font-size:14px"></i> AI에게 바로 질문</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:8px" id="floatCtxLabel">현재 화면 기반으로 답변합니다.</div>
+    <div id="floatSuggestions"></div>
+    <div class="float-input-row">
+      <input class="float-input" id="floatInput" placeholder="질문을 입력하세요..." onkeydown="if(event.key==='Enter')floatSend()">
+      <button class="float-send" onclick="floatSend()"><i class="ti ti-send" style="font-size:12px"></i></button>
+    </div>
+  </div>
+  <button class="float-ai-btn" onclick="toggleFloatAI()" title="AI에게 질문">
+    <i class="ti ti-message-dots"></i>
+  </button>
+</div>
+
+<script>
+(function initOpsRadarCleanVersion(){
+  const CLEAN_EMPTY = '데이터 연결 후 표시됩니다.';
+  function setText(selector, value){ const el = document.querySelector(selector); if(el) el.textContent = value; }
+  function setAll(selector, value){ document.querySelectorAll(selector).forEach(el => el.textContent = value); }
+  function clearDashboardRuntimeData(){
+    setText('#pendingCount', '0');
+    setText('#issueCount', '0');
+    setText('#calBadge', '');
+    const history = document.getElementById('historyList');
+    if(history) history.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:12px;text-align:center">업로드 이력이 없습니다.</div>';
+    const riskSide = document.querySelector('#s-calendar .cal-side > div');
+    if(riskSide) {
+      riskSide.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:5px"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--text2)"></i> 리스크 구간</div><div style="font-size:11px;color:var(--text3);padding:10px 0;border-bottom:1px solid var(--border)">등록된 리스크 구간이 없습니다.</div><div style="font-size:11px;font-weight:500;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:5px"><i class="ti ti-user-off" style="font-size:13px;color:var(--text2)"></i> 부재 현황</div><div style="font-size:11px;color:var(--text3);padding:10px 0;border-bottom:1px solid var(--border)">등록된 부재 일정이 없습니다.</div><div style="font-size:11px;font-weight:500;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:5px"><i class="ti ti-flag" style="font-size:13px;color:var(--text2)"></i> 마일스톤</div><div style="font-size:11px;color:var(--text3);padding:10px 0">등록된 마일스톤이 없습니다.</div>';
+    }
+  }
+  window.getHandoffPreviewData = function(type){
+    const generatedAt = new Date().toLocaleString('ko-KR', { dateStyle:'medium', timeStyle:'short' });
+    const labels = { onboarding:'신규 입사자 온보딩', absence:'부재자 업무 인수인계', offboard:'담당자 변경·퇴직 인수인계' };
+    const selected = labels[type] ? type : (window.G && G.currentKnowledgeType) || 'onboarding';
+    return {
+      title: labels[selected] + ' 브리핑',
+      target: labels[selected],
+      sections: [
+        ['현재 진행 업무', CLEAN_EMPTY],
+        ['최근 주요 결정', CLEAN_EMPTY],
+        ['반복 발생 이슈', CLEAN_EMPTY],
+        ['미해결 Risk', CLEAN_EMPTY],
+        ['다음 담당자 주의사항', CLEAN_EMPTY],
+        ['관련 문서', '연결된 문서가 없습니다.'],
+        ['생성일', generatedAt]
+      ]
+    };
+  };
+  window.getReportDraftData = function(){
+    return {
+      title:'운영 보고서 초안',
+      sections:[
+        ['완료된 업무', CLEAN_EMPTY],
+        ['진행 중인 업무', CLEAN_EMPTY],
+        ['AI 및 기술적 상세 내용', CLEAN_EMPTY],
+        ['리스크 관리 및 해결 방안', CLEAN_EMPTY],
+        ['팀 회고', CLEAN_EMPTY],
+        ['차주 계획', CLEAN_EMPTY]
+      ]
+    };
+  };
+  setTimeout(function(){
+    if(window.G){ G.calEvents = []; G.newCalEvents = []; G.analysisHistory = []; G.createdTodosFromIssue = []; }
+    clearDashboardRuntimeData();
+    if(typeof renderCalendar === 'function') renderCalendar();
+    setAll('.ops-risk-card .badge', '대기');
+  }, 0);
+})();
 </script>
 </body>
 </html>
