@@ -9,13 +9,23 @@ main.py — TeamMemory FastAPI 애플리케이션 진입점
 
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+
+# Windows 콘솔 CP949 환경에서 이모지 출력 오류 방지
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.documents import router as documents_router
 from app.api.chat import router as chat_router
+from app.core.config import settings
+from app.core.database import engine, Base
+from app.models import document  # noqa: F401 — Base에 테이블 등록
 
 load_dotenv()
 logging.basicConfig(
@@ -27,21 +37,29 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── 시작 ──────────────────────────────────
-    upload_dir = "uploads"
-    os.makedirs(upload_dir, exist_ok=True)
+    # ── DB 테이블 자동 생성 ───────────────────
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("PostgreSQL 테이블 초기화 완료")
+    except Exception as e:
+        logger.error(f"DB 연결 실패: {e}")
 
-    faiss_dir = os.getenv("FAISS_DIR", "./faiss_db")
+    # ── uploads 디렉토리 ──────────────────────
+    os.makedirs("uploads", exist_ok=True)
+
+    # ── FAISS 상태 확인 ───────────────────────
     from app.ai.embedder import get_index_count
     try:
         count = get_index_count()
-        logger.info(f"FAISS DB 로드 완료: {count}개 벡터 ({faiss_dir})")
+        logger.info(f"FAISS DB 로드 완료: {count}개 벡터 ({settings.FAISS_DIR})")
     except Exception:
-        logger.warning(f"FAISS DB 없음. 문서를 업로드하면 자동 생성됩니다. ({faiss_dir})")
+        logger.warning(f"FAISS DB 없음. 문서 업로드 시 자동 생성됩니다. ({settings.FAISS_DIR})")
 
     yield
 
-    # ── 종료 ──────────────────────────────────
+    # ── 종료 — DB 엔진 해제 ──────────────────
+    await engine.dispose()
     logger.info("TeamMemory API 종료")
 
 
