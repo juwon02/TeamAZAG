@@ -1,252 +1,131 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ChatMessage, Document, HandoffReport, Issue, Project, Todo
 
 
-app = FastAPI(title="TeamAZAG Backend", version="0.1.0")
+ROOT_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = ROOT_DIR / "frontend"
+
+app = FastAPI(title="TeamAZAG Backend", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:4173", "http://localhost:4173"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-FRONTEND_DASHBOARD = {
-    "summary": {
-        "weekly": "이번 주는 대시보드 API 확정, 자료 업로드 파이프라인, TODO 승인 흐름이 핵심입니다.",
-        "monthly": "월간 관점에서는 근거 문서, 날짜, 담당자 수기 입력을 함께 남기는 추적 규칙이 필요합니다.",
-        "confidence": 82,
-        "sources": ["weekly_meeting_2026_05_18", "dashboard_api_spec_v2", "todo_policy_notes"],
-    },
-    "project_board": [
-        {"name": "기획", "status": "완료"},
-        {"name": "프론트", "status": "거의 최종"},
-        {"name": "백엔드", "status": "API 초안"},
-        {"name": "AI 분석", "status": "테스트 필요"},
-    ],
-    "team_status": [
-        {"member": "PM", "workload": "진행 5", "note": "AI 제안 검토 2"},
-        {"member": "Frontend", "workload": "진행 3", "note": "화면 거의 최종"},
-        {"member": "Backend", "workload": "진행 4", "note": "API 초안"},
-        {"member": "AI", "workload": "진행 2", "note": "이슈 감지 테스트"},
-    ],
-    "resources": [
-        {"name": "weekly_meeting_2026_05_18.docx", "type": "회의록", "status": "완료"},
-        {"name": "team_chat_export_2026_05_17.csv", "type": "채팅", "status": "분석중"},
-        {"name": "dashboard_api_spec_v2.pdf", "type": "문서", "status": "완료"},
-        {"name": "handoff_notes.md", "type": "인수인계", "status": "완료"},
-    ],
-}
-
-FRONTEND_UPLOADS = [
-    {
-        "name": "weekly_meeting_2026_05_18.docx",
-        "type": "회의록",
-        "status": "완료",
-        "evidence_date": "2026.05.18",
-        "result": "TODO 4건, 이슈 후보 1건",
-    },
-    {
-        "name": "team_chat_export_2026_05_17.csv",
-        "type": "채팅",
-        "status": "분석중",
-        "evidence_date": "2026.05.17",
-        "result": "자연어 이슈 감지 테스트 중",
-    },
-]
-
-FRONTEND_TODOS = [
-    {
-        "title": "대시보드 최종 화면 구조 반영",
-        "status": "progress",
-        "priority": "High",
-        "assignee": "Frontend",
-        "action": "화면 반영",
-        "due_date": "2026.05.20",
-        "evidence": "사용자 최종 프론트 메모",
-        "evidence_date": "2026.05.18",
-    },
-    {
-        "title": "마감 3일 전 이슈 자동 생성 규칙 정의",
-        "status": "suggested",
-        "priority": "High",
-        "assignee": "PM",
-        "action": "정책 승인",
-        "due_date": "2026.05.21",
-        "evidence": "이슈로그 요구사항",
-        "evidence_date": "2026.05.18",
-    },
-    {
-        "title": "자료 업로드 상태 표기 완료/분석중 분리",
-        "status": "done",
-        "priority": "Medium",
-        "assignee": "Frontend",
-        "action": "완료 확인",
-        "due_date": "2026.05.18",
-        "evidence": "AI 분석 화면 요구사항",
-        "evidence_date": "2026.05.18",
-    },
-]
-
-FRONTEND_ISSUES = [
-    {
-        "title": "마감 3일 전 자동 이슈 후보",
-        "state": "자동 생성",
-        "owner": "PM",
-        "severity": "High",
-        "detail": "대시보드 최종 화면 구조 반영 TODO가 2026.05.20 마감이라 이슈 로그에 노출됩니다.",
-    },
-    {
-        "title": "자연어 이슈 감지 테스트 필요",
-        "state": "검증 필요",
-        "owner": "AI",
-        "severity": "Medium",
-        "detail": "채팅에서 '늦을 것 같다', '막혔다', '스펙이 불명확하다' 같은 표현을 이슈 후보로 잡을 수 있는지 테스트해야 합니다.",
-    },
-]
-
-DEFAULT_REPORT = """[주간 보고서 초안]
-
-1. 요약
-- Project AZAG 프론트 구조는 거의 최종안 기준으로 정리되었습니다.
-- 핵심 탭은 대시보드, AI 분석, TODO 관리, 이슈 로그, 보고서 생성, 지식 전달, AI Assistant입니다.
-- TODO 누락 방지를 위해 근거 문서, 근거 날짜, 담당자 수기 확인 흐름이 필요합니다.
-
-2. 확인 필요
-- 자연어 기반 이슈 감지 정확도 테스트
-- 근거 없는 TODO의 운영 정책
-- 메일/채팅 연동 시점과 범위
-"""
-
-
-class ORMModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ProjectOut(ORMModel):
-    id: uuid.UUID
-    name: str
-    description: str | None
-    status: str
-
-
-class TodoOut(ORMModel):
-    id: uuid.UUID
-    title: str
-    description: str | None
-    status: str
-    priority: str
-    source_type: str
-    approval_status: str
-
-
-class IssueOut(ORMModel):
-    id: uuid.UUID
-    title: str
-    description: str | None
-    severity: str
-    status: str
-
-
-class DocumentOut(ORMModel):
-    id: uuid.UUID
-    file_name: str
-    file_type: str
-    source_type: str
-    status: str
+if FRONTEND_DIR.is_dir():
+    app.mount("/front", StaticFiles(directory=FRONTEND_DIR, html=True), name="front")
 
 
 class ChatMessageCreate(BaseModel):
     user_id: uuid.UUID | None = None
-    content: str
+    content: str = Field(min_length=1)
+    session_id: uuid.UUID | None = None
 
 
 class AssistantRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1)
 
 
-class UploadRequest(BaseModel):
-    name: str
-    type: str = "업무 문서"
+class DocumentCreate(BaseModel):
+    uploaded_by: uuid.UUID
+    file_name: str = Field(min_length=1, max_length=255)
+    file_type: str = Field(default="txt", max_length=50)
+    source_type: str = Field(default="upload", max_length=50)
+    storage_path: str | None = None
+    status: str = "uploaded"
 
 
-@app.get("/api/dashboard")
-def frontend_dashboard() -> dict[str, Any]:
-    return FRONTEND_DASHBOARD
+class TodoCreate(BaseModel):
+    created_by: uuid.UUID
+    assignee_id: uuid.UUID | None = None
+    title: str = Field(min_length=1, max_length=500)
+    description: str | None = None
+    status: str = "pending"
+    priority: str = "medium"
+    source_type: str = "manual"
+    approval_status: str = "approved"
+    confidence_score: int | None = Field(default=None, ge=0, le=100)
+    due_date: str | None = None
+    source_document_id: uuid.UUID | None = None
+    source_chunk_id: uuid.UUID | None = None
+    source_extraction_id: uuid.UUID | None = None
+    linked_issue_id: uuid.UUID | None = None
 
 
-@app.get("/api/analysis/uploads")
-def frontend_uploads() -> list[dict[str, str]]:
-    return FRONTEND_UPLOADS
+class TodoUpdate(BaseModel):
+    assignee_id: uuid.UUID | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    due_date: str | None = None
 
 
-@app.post("/api/analysis/uploads")
-def create_frontend_upload(payload: UploadRequest) -> dict[str, str]:
-    return {
-        "name": payload.name,
-        "type": payload.type,
-        "status": "분석중",
-        "evidence_date": "업로드 직후",
-        "result": "분석 대기",
-    }
+class TodoApprovalUpdate(BaseModel):
+    reviewer_id: uuid.UUID
+    approval_status: str
 
 
-@app.get("/api/todos")
-def frontend_todos(status: str | None = None) -> list[dict[str, str]]:
-    if status is None or status == "all":
-        return FRONTEND_TODOS
-    return [todo for todo in FRONTEND_TODOS if todo["status"] == status]
+class IssueCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    description: str | None = None
+    reporter_id: uuid.UUID | None = None
+    assignee_id: uuid.UUID | None = None
+    source_document_id: uuid.UUID | None = None
+    source_chunk_id: uuid.UUID | None = None
+    source_extraction_id: uuid.UUID | None = None
+    severity: str = "medium"
+    status: str = "open"
+    source_type: str = "manual"
+    confidence_score: int | None = Field(default=None, ge=0, le=100)
+    is_candidate: bool = False
 
 
-@app.get("/api/issues")
-def frontend_issues() -> list[dict[str, str]]:
-    return FRONTEND_ISSUES
+class IssueUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    description: str | None = None
+    assignee_id: uuid.UUID | None = None
+    severity: str | None = None
+    status: str | None = None
+    is_candidate: bool | None = None
 
 
-@app.get("/api/reports/default")
-def frontend_default_report() -> dict[str, str]:
-    return {"type": "weekly", "content": DEFAULT_REPORT}
+def rows(result: Any) -> list[dict[str, Any]]:
+    return [jsonable_encoder(dict(row)) for row in result.mappings().all()]
 
 
-@app.get("/api/knowledge")
-def frontend_knowledge() -> dict[str, list[str]]:
-    return {
-        "onboarding": ["프로젝트 개요", "최근 의사결정 5건", "주요 자료실 문서", "담당자별 문의 경로"],
-        "handoff": ["진행 중 TODO", "Blocked 이슈", "근거 문서가 약한 업무", "다음 주 보고서 항목"],
-    }
+def one_or_404(db: Session, query: str, params: dict[str, Any], message: str) -> dict[str, Any]:
+    row = db.execute(text(query), params).mappings().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=message)
+    return jsonable_encoder(dict(row))
 
 
-@app.post("/api/assistant/chat")
-def frontend_assistant(payload: AssistantRequest) -> dict[str, str]:
-    question = payload.question
-    if "마감" in question:
-        answer = "마감 3일 이내 업무는 대시보드 최종 화면 구조 반영입니다. 담당자는 Frontend이고 마감일은 2026.05.20입니다."
-    elif "근거" in question:
-        answer = "근거가 약한 TODO는 담당자 수기 등록 흐름 검토입니다. 근거 문서와 날짜를 못 잡으면 확인 요청 상태로 남기는 방식을 권장합니다."
-    elif "이슈" in question or "위험" in question:
-        answer = "현재 가장 위험한 항목은 근거 자료가 없는 업무 누락입니다. 운영 정책 결정이 필요합니다."
-    else:
-        answer = "현재 기준으로 TODO, 이슈 로그, 자료실 상태를 바탕으로 답변합니다."
-    return {"answer": answer}
-
-
-def get_project_or_404(db: Session, project_id: uuid.UUID) -> Project:
-    project = db.get(Project, project_id)
-    if project is None:
+def ensure_project(db: Session, project_id: uuid.UUID) -> None:
+    exists = db.execute(text("SELECT 1 FROM projects WHERE id = :project_id"), {"project_id": project_id}).first()
+    if exists is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    return project
+
+
+@app.get("/")
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/front/index.html" if FRONTEND_DIR.is_dir() else "/health")
 
 
 @app.get("/health")
@@ -254,128 +133,441 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/projects", response_model=list[ProjectOut])
-def list_projects(db: Session = Depends(get_db)) -> list[Project]:
-    return list(db.scalars(select(Project).order_by(Project.created_at.desc())).all())
+@app.get("/api/dashboard")
+def frontend_dashboard() -> dict[str, Any]:
+    return {
+        "summary": {
+            "weekly": "Project dashboard, AI analysis, Todo approval, issue log, reports, handoff, and assistant are aligned for the local prototype.",
+            "monthly": "Keep project_id as the boundary for every screen and API query.",
+            "confidence": 82,
+            "sources": ["frontend_final_v3", "schema.postgresql.sql", "dashboard-queries.postgresql.sql"],
+        },
+        "project_board": [
+            {"name": "Planning", "status": "done"},
+            {"name": "Frontend", "status": "final draft"},
+            {"name": "Backend", "status": "API contract ready"},
+            {"name": "AI analysis", "status": "mock pipeline"},
+        ],
+    }
+
+
+@app.get("/api/assistant/chat")
+def frontend_assistant_get(q: str = "") -> dict[str, str]:
+    return {"answer": assistant_answer(q)}
+
+
+@app.post("/api/assistant/chat")
+def frontend_assistant(payload: AssistantRequest) -> dict[str, str]:
+    return {"answer": assistant_answer(payload.question)}
+
+
+def assistant_answer(question: str) -> str:
+    lowered = question.lower()
+    if "deadline" in lowered or "due" in lowered:
+        return "The highest priority deadline risk is any approved Todo whose due date has passed and status is not completed."
+    if "issue" in lowered or "risk" in lowered:
+        return "Open and blocked issues should be reviewed first, ordered by severity and detection date."
+    return "The backend now exposes project-scoped dashboard, Todo, issue, document, chat, report, and handoff endpoints."
+
+
+@app.get("/projects")
+def list_projects(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    return rows(
+        db.execute(
+            text(
+                """
+                SELECT p.*, t.name AS team_name, u.name AS created_by_name
+                FROM projects p
+                JOIN teams t ON t.id = p.team_id
+                JOIN users u ON u.id = p.created_by
+                ORDER BY p.created_at DESC
+                """
+            )
+        )
+    )
+
+
+@app.get("/users/{user_id}/projects")
+def projects_visible_to_user(user_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    return rows(
+        db.execute(
+            text(
+                """
+                SELECT p.*, pm.role AS member_role, t.name AS team_name
+                FROM project_members pm
+                JOIN projects p ON p.id = pm.project_id
+                JOIN teams t ON t.id = p.team_id
+                WHERE pm.user_id = :user_id
+                ORDER BY p.created_at DESC
+                """
+            ),
+            {"user_id": user_id},
+        )
+    )
 
 
 @app.get("/projects/{project_id}/dashboard")
 def project_dashboard(project_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
-    project = get_project_or_404(db, project_id)
-    todo_counts = dict(
-        db.execute(
-            select(Todo.status, func.count(Todo.id))
-            .where(Todo.project_id == project_id)
-            .group_by(Todo.status)
-        ).all()
+    ensure_project(db, project_id)
+    summary = one_or_404(
+        db,
+        """
+        SELECT
+          p.id AS project_id,
+          p.name AS project_name,
+          p.status AS project_status,
+          COUNT(t.id) FILTER (WHERE t.approval_status = 'approved') AS total_todos,
+          COUNT(t.id) FILTER (WHERE t.approval_status = 'approved' AND t.status = 'completed') AS completed_todos,
+          COUNT(t.id) FILTER (
+            WHERE t.approval_status = 'approved'
+              AND t.status <> 'completed'
+              AND t.due_date IS NOT NULL
+              AND t.due_date < now()
+          ) AS delayed_todos,
+          COUNT(t.id) FILTER (WHERE t.source_type = 'ai' AND t.approval_status = 'pending') AS pending_ai_todos,
+          (
+            SELECT COUNT(*)
+            FROM issues i
+            WHERE i.project_id = p.id
+              AND i.is_candidate = false
+              AND i.status IN ('open', 'in_progress', 'blocked')
+          ) AS unresolved_issues,
+          (
+            SELECT COUNT(*)
+            FROM documents d
+            WHERE d.project_id = p.id
+          ) AS document_count,
+          (
+            SELECT hr.handoff_score
+            FROM handoff_reports hr
+            WHERE hr.project_id = p.id
+            ORDER BY hr.created_at DESC
+            LIMIT 1
+          ) AS latest_handoff_score
+        FROM projects p
+        LEFT JOIN todos t ON t.project_id = p.id
+        WHERE p.id = :project_id
+        GROUP BY p.id
+        """,
+        {"project_id": project_id},
+        "Project not found",
     )
-    issue_counts = dict(
+    return summary
+
+
+@app.get("/projects/{project_id}/todos")
+def list_todos(project_id: uuid.UUID, approval_status: str | None = None, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    ensure_project(db, project_id)
+    approval_filter = "AND t.approval_status = :approval_status" if approval_status else ""
+    return rows(
         db.execute(
-            select(Issue.status, func.count(Issue.id))
-            .where(Issue.project_id == project_id)
-            .group_by(Issue.status)
-        ).all()
-    )
-    document_count = db.scalar(select(func.count(Document.id)).where(Document.project_id == project_id))
-    pending_ai_todos = db.scalar(
-        select(func.count(Todo.id)).where(
-            Todo.project_id == project_id,
-            Todo.source_type == "ai",
-            Todo.approval_status == "pending",
+            text(
+                f"""
+                SELECT t.*, assignee.name AS assignee_name, creator.name AS created_by_name
+                FROM todos t
+                LEFT JOIN users assignee ON assignee.id = t.assignee_id
+                JOIN users creator ON creator.id = t.created_by
+                WHERE t.project_id = :project_id
+                {approval_filter}
+                ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC
+                """
+            ),
+            {"project_id": project_id, "approval_status": approval_status},
         )
     )
 
-    return {
-        "project": ProjectOut.model_validate(project),
-        "todo_counts": todo_counts,
-        "issue_counts": issue_counts,
-        "document_count": document_count or 0,
-        "pending_ai_todos": pending_ai_todos or 0,
-    }
 
-
-@app.get("/projects/{project_id}/todos", response_model=list[TodoOut])
-def list_todos(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Todo]:
-    get_project_or_404(db, project_id)
-    return list(db.scalars(select(Todo).where(Todo.project_id == project_id).order_by(Todo.created_at.desc())).all())
-
-
-@app.get("/projects/{project_id}/todos/ai-pending", response_model=list[TodoOut])
-def list_pending_ai_todos(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Todo]:
-    get_project_or_404(db, project_id)
-    return list(
-        db.scalars(
-            select(Todo)
-            .where(
-                Todo.project_id == project_id,
-                Todo.source_type == "ai",
-                Todo.approval_status == "pending",
-            )
-            .order_by(Todo.created_at.desc())
-        ).all()
+@app.get("/projects/{project_id}/todos/ai-pending")
+def list_pending_ai_todos(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    ensure_project(db, project_id)
+    return rows(
+        db.execute(
+            text(
+                """
+                SELECT t.*, d.file_name AS source_file_name, dc.page_number AS source_page_number
+                FROM todos t
+                LEFT JOIN documents d ON d.id = t.source_document_id
+                LEFT JOIN document_chunks dc ON dc.id = t.source_chunk_id
+                WHERE t.project_id = :project_id
+                  AND t.source_type = 'ai'
+                  AND t.approval_status = 'pending'
+                ORDER BY t.confidence_score DESC NULLS LAST, t.created_at DESC
+                """
+            ),
+            {"project_id": project_id},
+        )
     )
 
 
-@app.get("/projects/{project_id}/issues", response_model=list[IssueOut])
-def list_issues(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Issue]:
-    get_project_or_404(db, project_id)
-    return list(db.scalars(select(Issue).where(Issue.project_id == project_id).order_by(Issue.created_at.desc())).all())
-
-
-@app.get("/projects/{project_id}/documents", response_model=list[DocumentOut])
-def list_documents(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Document]:
-    get_project_or_404(db, project_id)
-    return list(
-        db.scalars(select(Document).where(Document.project_id == project_id).order_by(Document.uploaded_at.desc())).all()
+@app.post("/projects/{project_id}/todos", status_code=201)
+def create_todo(project_id: uuid.UUID, payload: TodoCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    ensure_project(db, project_id)
+    todo = one_or_404(
+        db,
+        """
+        INSERT INTO todos (
+          project_id, assignee_id, created_by, source_document_id, source_chunk_id,
+          source_extraction_id, linked_issue_id, title, description, status, priority,
+          source_type, approval_status, confidence_score, due_date
+        )
+        VALUES (
+          :project_id, :assignee_id, :created_by, :source_document_id, :source_chunk_id,
+          :source_extraction_id, :linked_issue_id, :title, :description, :status, :priority,
+          :source_type, :approval_status, :confidence_score, CAST(:due_date AS timestamp)
+        )
+        RETURNING *
+        """,
+        {"project_id": project_id, **payload.model_dump()},
+        "Could not create Todo",
     )
-
-
-@app.post("/projects/{project_id}/chat/messages")
-def create_chat_message(
-    project_id: uuid.UUID,
-    payload: ChatMessageCreate,
-    db: Session = Depends(get_db),
-) -> dict[str, Any]:
-    get_project_or_404(db, project_id)
-    message = ChatMessage(project_id=project_id, user_id=payload.user_id, role="user", content=payload.content)
-    db.add(message)
     db.commit()
-    db.refresh(message)
-    return {"id": message.id, "role": message.role, "content": message.content, "created_at": message.created_at}
+    return todo
+
+
+@app.patch("/todos/{todo_id}")
+def update_todo(todo_id: uuid.UUID, payload: TodoUpdate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        return one_or_404(db, "SELECT * FROM todos WHERE id = :todo_id", {"todo_id": todo_id}, "Todo not found")
+    set_sql = ", ".join(f"{key} = :{key}" for key in updates)
+    todo = one_or_404(
+        db,
+        f"UPDATE todos SET {set_sql}, updated_at = now() WHERE id = :todo_id RETURNING *",
+        {"todo_id": todo_id, **updates},
+        "Todo not found",
+    )
+    db.commit()
+    return todo
+
+
+@app.patch("/todos/{todo_id}/approval")
+def update_todo_approval(todo_id: uuid.UUID, payload: TodoApprovalUpdate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    if payload.approval_status not in {"approved", "rejected"}:
+        raise HTTPException(status_code=422, detail="approval_status must be approved or rejected")
+    todo = one_or_404(
+        db,
+        """
+        UPDATE todos
+        SET approval_status = :approval_status,
+            reviewed_by = :reviewer_id,
+            reviewed_at = now(),
+            updated_at = now()
+        WHERE id = :todo_id
+          AND source_type = 'ai'
+        RETURNING *
+        """,
+        {"todo_id": todo_id, **payload.model_dump()},
+        "AI Todo not found",
+    )
+    db.commit()
+    return todo
+
+
+@app.get("/projects/{project_id}/issues")
+def list_issues(project_id: uuid.UUID, is_candidate: bool | None = None, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    ensure_project(db, project_id)
+    candidate_filter = "AND i.is_candidate = :is_candidate" if is_candidate is not None else ""
+    return rows(
+        db.execute(
+            text(
+                f"""
+                SELECT i.*, reporter.name AS reporter_name, assignee.name AS assignee_name, d.file_name AS source_file_name
+                FROM issues i
+                LEFT JOIN users reporter ON reporter.id = i.reporter_id
+                LEFT JOIN users assignee ON assignee.id = i.assignee_id
+                LEFT JOIN documents d ON d.id = i.source_document_id
+                WHERE i.project_id = :project_id
+                {candidate_filter}
+                ORDER BY
+                  CASE i.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
+                  i.created_at DESC
+                """
+            ),
+            {"project_id": project_id, "is_candidate": is_candidate},
+        )
+    )
+
+
+@app.post("/projects/{project_id}/issues", status_code=201)
+def create_issue(project_id: uuid.UUID, payload: IssueCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    ensure_project(db, project_id)
+    issue = one_or_404(
+        db,
+        """
+        INSERT INTO issues (
+          project_id, reporter_id, assignee_id, source_document_id, source_chunk_id,
+          source_extraction_id, title, description, severity, status, source_type,
+          confidence_score, is_candidate, detected_at
+        )
+        VALUES (
+          :project_id, :reporter_id, :assignee_id, :source_document_id, :source_chunk_id,
+          :source_extraction_id, :title, :description, :severity, :status, :source_type,
+          :confidence_score, :is_candidate, now()
+        )
+        RETURNING *
+        """,
+        {"project_id": project_id, **payload.model_dump()},
+        "Could not create issue",
+    )
+    db.commit()
+    return issue
+
+
+@app.patch("/issues/{issue_id}")
+def update_issue(issue_id: uuid.UUID, payload: IssueUpdate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        return one_or_404(db, "SELECT * FROM issues WHERE id = :issue_id", {"issue_id": issue_id}, "Issue not found")
+    set_sql = ", ".join(f"{key} = :{key}" for key in updates)
+    issue = one_or_404(
+        db,
+        f"UPDATE issues SET {set_sql}, updated_at = now() WHERE id = :issue_id RETURNING *",
+        {"issue_id": issue_id, **updates},
+        "Issue not found",
+    )
+    db.commit()
+    return issue
+
+
+@app.get("/projects/{project_id}/documents")
+def list_documents(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    ensure_project(db, project_id)
+    return rows(
+        db.execute(
+            text(
+                """
+                SELECT d.*, uploader.name AS uploaded_by_name, COUNT(dc.id) AS chunk_count
+                FROM documents d
+                JOIN users uploader ON uploader.id = d.uploaded_by
+                LEFT JOIN document_chunks dc ON dc.document_id = d.id
+                WHERE d.project_id = :project_id
+                GROUP BY d.id, uploader.name
+                ORDER BY d.uploaded_at DESC, d.created_at DESC
+                """
+            ),
+            {"project_id": project_id},
+        )
+    )
+
+
+@app.post("/projects/{project_id}/documents", status_code=201)
+def create_document(project_id: uuid.UUID, payload: DocumentCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    ensure_project(db, project_id)
+    storage_path = payload.storage_path or f"local://projects/{project_id}/{payload.file_name}"
+    document = one_or_404(
+        db,
+        """
+        INSERT INTO documents (
+          project_id, uploaded_by, file_name, file_type, source_type, storage_path, status
+        )
+        VALUES (
+          :project_id, :uploaded_by, :file_name, :file_type, :source_type, :storage_path, :status
+        )
+        RETURNING *
+        """,
+        {"project_id": project_id, **payload.model_dump(exclude={"storage_path"}), "storage_path": storage_path},
+        "Could not create document",
+    )
+    db.commit()
+    return document
+
+
+@app.post("/projects/{project_id}/chat", status_code=201)
+@app.post("/projects/{project_id}/chat/messages", status_code=201)
+def create_chat_message(project_id: uuid.UUID, payload: ChatMessageCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    ensure_project(db, project_id)
+    session_id = payload.session_id or db.execute(
+        text(
+            """
+            INSERT INTO chat_sessions (project_id, user_id, title)
+            VALUES (:project_id, :user_id, 'Default conversation')
+            RETURNING id
+            """
+        ),
+        {"project_id": project_id, "user_id": payload.user_id},
+    ).scalar_one()
+    message = one_or_404(
+        db,
+        """
+        INSERT INTO chat_messages (chat_session_id, user_id, role, content)
+        VALUES (:chat_session_id, :user_id, 'user', :content)
+        RETURNING *
+        """,
+        {"chat_session_id": session_id, "user_id": payload.user_id, "content": payload.content},
+        "Could not create chat message",
+    )
+    db.commit()
+    return message
 
 
 @app.get("/projects/{project_id}/chat/messages")
 def list_chat_messages(project_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
-    get_project_or_404(db, project_id)
-    messages = db.scalars(
-        select(ChatMessage).where(ChatMessage.project_id == project_id).order_by(ChatMessage.created_at.asc())
-    ).all()
-    return [
-        {
-            "id": message.id,
-            "user_id": message.user_id,
-            "role": message.role,
-            "content": message.content,
-            "sources_json": message.sources_json,
-            "created_at": message.created_at,
-        }
-        for message in messages
-    ]
+    ensure_project(db, project_id)
+    return rows(
+        db.execute(
+            text(
+                """
+                SELECT
+                  cm.*,
+                  cs.project_id,
+                  COALESCE(
+                    jsonb_agg(
+                      jsonb_build_object(
+                        'document_id', cms.document_id,
+                        'chunk_id', cms.chunk_id,
+                        'source_label', cms.source_label,
+                        'page_number', cms.page_number
+                      )
+                    ) FILTER (WHERE cms.id IS NOT NULL),
+                    '[]'::jsonb
+                  ) AS sources_json
+                FROM chat_messages cm
+                JOIN chat_sessions cs ON cs.id = cm.chat_session_id
+                LEFT JOIN chat_message_sources cms ON cms.chat_message_id = cm.id
+                WHERE cs.project_id = :project_id
+                GROUP BY cm.id, cs.project_id
+                ORDER BY cm.created_at ASC
+                """
+            ),
+            {"project_id": project_id},
+        )
+    )
 
 
 @app.get("/projects/{project_id}/handoff/latest")
 def latest_handoff(project_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any] | None:
-    get_project_or_404(db, project_id)
-    report = db.scalar(
-        select(HandoffReport).where(HandoffReport.project_id == project_id).order_by(HandoffReport.created_at.desc())
-    )
+    ensure_project(db, project_id)
+    report = db.execute(
+        text(
+            """
+            SELECT hr.*
+            FROM handoff_reports hr
+            WHERE hr.project_id = :project_id
+            ORDER BY hr.created_at DESC
+            LIMIT 1
+            """
+        ),
+        {"project_id": project_id},
+    ).mappings().first()
     if report is None:
         return None
-    return {
-        "id": report.id,
-        "title": report.title,
-        "content": report.content,
-        "handoff_score": report.handoff_score,
-        "missing_items_json": report.missing_items_json,
-        "created_at": report.created_at,
-    }
+
+    items = rows(
+        db.execute(
+            text(
+                """
+                SELECT *
+                FROM handoff_items
+                WHERE handoff_report_id = :handoff_report_id
+                ORDER BY
+                  CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
+                  created_at DESC
+                """
+            ),
+            {"handoff_report_id": report["id"]},
+        )
+    )
+    payload = jsonable_encoder(dict(report))
+    payload["items"] = items
+    return payload
+
