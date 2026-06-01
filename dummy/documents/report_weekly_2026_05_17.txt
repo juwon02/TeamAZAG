@@ -1,0 +1,81 @@
+===SECTION: 주간 보고서 개요===
+보고서 유형: 주간 운영 보고서
+기간: 2026년 5월 11일 ~ 2026년 5월 17일 (2주차)
+작성일: 2026년 5월 17일
+작성자: 김희진
+팀: AZAG (김희진, 이성우, 김예은, 김성호, 박주원)
+버전: v1.0
+상태: 최종
+===SECTION_END===
+
+===SECTION: 운영 요약===
+이번 주 팀메모리 프로젝트 2주차 주요 진행 사항을 보고합니다.
+
+전체 진행률: 25% (8주 중 2주 완료)
+완료 TODO: 18건 중 12건
+Blocked 이슈: 2건
+High Risk 이슈: 1건 (Azure OpenAI API 타임아웃)
+신규 생성 문서: 11건
+
+주요 성과:
+- 이성우: AI RAG 파이프라인 4개 모듈 완성 (chunker/embedder/retriever/summarizer)
+- 김성호: FastAPI 전체 엔드포인트 껍데기 완성, DB 스키마 ERD 초안 완성
+- 김예은: Azure VM PostgreSQL 세팅 완료, Docker 컨테이너 설정 완료
+- 박주원: React 프로젝트 초기 세팅 완료, UI 레이아웃 7개 화면 마크업 완료
+- 김희진: 요구사항 정의서 최종본 팀 공유 완료
+===SECTION_END===
+
+===SECTION: 주요 리스크===
+리스크 1 [High]: Azure OpenAI API 타임아웃
+- 증상: API 응답 지연 5초 초과 케이스 발생 (오전 기준 30%)
+- 원인 분석: East US 리전 부하 집중 추정
+- 대응: Korea Central 리전 전환 테스트 중
+- 담당: 이성우
+- 예상 해결: 5월 19일
+
+리스크 2 [Medium]: CI/CD 자동 배포 미완성
+- 증상: GitHub Actions 파이프라인 미완성으로 수동 배포 운영 중
+- 대응: 김예은 3주차 초반 완성 목표
+- 담당: 김예은
+
+리스크 3 [Low]: 프론트-백엔드 API 스펙 불일치 가능성
+- 증상: API 명세서 초안 작성 중으로 실제 연동 전 불일치 가능
+- 대응: 3주차 연동 전 API 명세서 최종 확정 예정
+- 담당: 김성호, 박주원
+===SECTION_END===
+
+===SECTION: TODO 현황===
+완료 (12건):
+- [이성우] chunker.py 초안 작성 완료
+- [이성우] embedder.py FAISS 연동 완료
+- [이성우] retriever.py RAG 검색 완료
+- [이성우] summarizer.py GPT 분석 완료
+- [이성우] .env.example 작성 및 팀 공유
+- [김성호] FastAPI 라우터 뼈대 생성
+- [김성호] DB 스키마 ERD 초안 완성
+- [김성호] PostgreSQL 비동기 연결 설정
+- [김예은] Azure VM Ubuntu 환경 세팅
+- [김예은] Docker 컨테이너 설정
+- [박주원] React 프로젝트 초기 세팅
+- [박주원] 대시보드 UI 마크업 완료
+
+미완료 (6건):
+- [김성호] /todos, /documents GET API 완성 (5/19 목표)
+- [김성호] AI 추출 결과 DB 저장 연동 (5/21 목표)
+- [이성우] FastAPI 연동 테스트 (3주차)
+- [김예은] CI/CD GitHub Actions 완성 (5/19 목표)
+- [박주원] Todo 화면 API 연동 (3주차)
+- [김희진] 발표 자료 초안 (6주차)
+===SECTION_END===
+
+===SECTION: 다음 주 계획===
+3주차 목표 (5월 18일 ~ 5월 24일):
+- 이성우: FastAPI /documents/upload API와 AI 파이프라인 연결
+- 김성호: /todos /issues /documents GET/POST API 완성 + MySQL 연동
+- 김예은: CI/CD 파이프라인 완성 + 테스트 배포
+- 박주원: 프론트 와이어프레임 확정 + API 연동 시작
+- 김희진: 3주차 중간 점검 진행 + 리스크 모니터링
+
+3주차 완료 기준:
+문서 업로드 → 청킹 → 임베딩 → 검색 End-to-End 동작 확인
+===SECTION_END===

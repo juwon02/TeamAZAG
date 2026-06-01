@@ -1,0 +1,48 @@
+===DATE: 2026-05-17===
+===ISSUE: 대시보드 API 연동 논의===
+[10:05] 박주원
+희진언니, 대시보드 화면에서 필요한 API 목록 정리했어요.
+GET /api/v1/dashboard/summary - AI 운영 요약
+GET /api/v1/todos?status=pending - 미완료 Todo 목록
+GET /api/v1/issues?severity=high - High Risk 이슈
+GET /api/v1/documents/recent - 최근 업로드 문서
+
+[10:08] 김성호
+확인했어. dashboard/summary는 여러 테이블 조인이라 좀 걸릴 것 같아.
+todos랑 issues는 이번 주 안으로 완성할게.
+
+[10:12] 박주원
+감사해요! 완성되면 바로 연동 시작할게요.
+지금은 목 데이터로 화면 작업 중이에요.
+
+[10:15] 김희진
+성호야 dashboard/summary API 3주차 초반까지 가능해?
+주원이가 대시보드 마감이 3주차 중반이거든.
+
+[10:17] 김성호
+3주차 화요일(5/20)까지 맞출게요.
+===ISSUE_END===
+
+===DATE: 2026-05-17===
+===ISSUE: AI 챗봇 연동 계획===
+[14:30] 이성우
+챗봇 관련해서 retriever + summarizer 연결은 다 됐어요.
+FastAPI /chat 엔드포인트만 김성호님이 만들어주시면
+answer_question() 함수 바로 연결 가능해요.
+
+[14:33] 김성호
+알겠어. /chat 엔드포인트는 5주차 계획인데
+3주차에 껍데기라도 먼저 만들어줄게.
+
+[14:35] 이성우
+감사합니다! ai_interface.py에 chat_with_ai() 함수 있어요.
+파라미터: query(str), doc_type(optional), document_id(optional)
+반환: {"answer": str, "sources": list}
+
+[14:38] 박주원
+저도 채팅 UI 미리 만들어놓을게요.
+출처 파일명 표시 기능도 같이 넣을 예정이에요.
+
+[14:40] 김희진
+좋아! 챗봇은 MVP 이후 기능이니까 5주차까지 여유 있어.
+===ISSUE_END===
