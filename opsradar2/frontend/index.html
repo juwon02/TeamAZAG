@@ -3773,7 +3773,7 @@ async function createIssue(issueData){
       const saved = await res.json().catch(()=>body);
       return toIssueModel({...body, ...saved});
     }
-  }catch(e){}
+  }catch(e){ showApiFallbackNotice('현재 서버 연결이 원활하지 않아 이슈를 임시 저장 모드로 처리합니다.'); }
   return toIssueModel(body);
 }
 async function fetchIssues(){
@@ -3788,7 +3788,7 @@ async function fetchIssues(){
         return issues;
       }
     }
-  }catch(e){}
+  }catch(e){ showApiFallbackNotice('현재 서버 연결이 원활하지 않아 저장된 이슈 목록을 표시합니다.'); }
   try{
     const saved = JSON.parse(localStorage.getItem('opsradar_issues') || '[]');
     if(Array.isArray(saved) && saved.length) issues.splice(0, issues.length, ...saved.map(toIssueModel));
@@ -5659,6 +5659,191 @@ setTimeout(initOpsRadarSkin, 0);</script>
     if(typeof renderCalendar === 'function') renderCalendar();
     setAll('.ops-risk-card .badge', '대기');
   }, 0);
+})();
+</script>
+<script>
+(function initFrontendStabilityLayer(){
+  const TODO_STORAGE_KEY = 'opsradar_todos';
+  const CAL_STORAGE_KEY = 'opsradar_calendar_events';
+  const ISSUE_TODO_STORAGE_KEY = 'opsradar_issue_todos';
+  const FALLBACK_NOTICE_KEY = 'opsradar_api_fallback_notice';
+
+  function readStoredArray(key){
+    try{
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){ return []; }
+  }
+  function writeStoredArray(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : [])); }catch(e){}
+  }
+  function callIfFunction(name, ...args){
+    const fn = window[name];
+    if(typeof fn === 'function') return fn(...args);
+    return undefined;
+  }
+  function refreshTodoUI(){
+    callIfFunction('renderTodos');
+    callIfFunction('updateTodoCounts');
+    if(G.selectedTodoId) callIfFunction('renderTodoDetail', G.selectedTodoId);
+  }
+  function persistTodos(){
+    writeStoredArray(TODO_STORAGE_KEY, todos);
+    writeStoredArray(ISSUE_TODO_STORAGE_KEY, G.createdTodosFromIssue || []);
+  }
+  function persistCalendarEvents(){
+    writeStoredArray(CAL_STORAGE_KEY, G.calEvents || []);
+  }
+  function hydrateTodos(){
+    const savedTodos = readStoredArray(TODO_STORAGE_KEY);
+    if(savedTodos.length){
+      todos.splice(0, todos.length, ...savedTodos.map(item => ({
+        id: item.id || Date.now(),
+        title: normalizeText(item.title || '제목 없는 Todo'),
+        src: item.src || null,
+        srcChunk: item.srcChunk || null,
+        assignee: item.assignee || '담당자 A',
+        priority: item.priority || 'medium',
+        confidence: item.confidence ?? null,
+        status: item.status || 'pending',
+        type: item.type || 'manual',
+        chunk: item.chunk || null,
+        grounds: Array.isArray(item.grounds) ? item.grounds : ['임시 저장 데이터'],
+        risk: item.risk || ''
+      })));
+    }
+    const savedIssueTodos = readStoredArray(ISSUE_TODO_STORAGE_KEY);
+    if(savedIssueTodos.length) G.createdTodosFromIssue = savedIssueTodos;
+    refreshTodoUI();
+  }
+  function hydrateCalendarEvents(){
+    const saved = readStoredArray(CAL_STORAGE_KEY);
+    if(saved.length){
+      G.calEvents = saved.map(ev => ({
+        ...ev,
+        d: Number(ev.d),
+        y: typeof ev.y === 'number' ? ev.y : undefined,
+        m: typeof ev.m === 'number' ? ev.m : undefined,
+        tags: Array.isArray(ev.tags) ? ev.tags.map(tag => ({ t: normalizeText(tag.t), c: tag.c || 'ct-info' })) : []
+      })).filter(ev => ev.d && ev.tags.length);
+    }
+    callIfFunction('renderCalendar');
+  }
+  function showLocalSaveNotice(text){
+    if(typeof showToast === 'function') showToast(text || '변경사항을 이 브라우저에 임시 저장했습니다.', 'info');
+  }
+
+  window.showApiFallbackNotice = function(message){
+    const now = Date.now();
+    const last = Number(sessionStorage.getItem(FALLBACK_NOTICE_KEY) || 0);
+    if(now - last < 7000) return;
+    sessionStorage.setItem(FALLBACK_NOTICE_KEY, String(now));
+    if(typeof showToast === 'function') showToast(message || '현재 서버 연결이 원활하지 않아 임시 저장 모드로 동작합니다.', 'warn');
+  };
+  window.persistTodos = persistTodos;
+  window.persistCalendarEvents = persistCalendarEvents;
+
+  function wrapFunction(name, wrapper){
+    const original = window[name];
+    if(typeof original !== 'function' || original.__opsStableWrapped) return;
+    const wrapped = wrapper(original);
+    wrapped.__opsStableWrapped = true;
+    window[name] = wrapped;
+  }
+
+  wrapFunction('afterTodoAction', original => function(id){
+    const result = original.call(this, id);
+    persistTodos();
+    return result;
+  });
+  wrapFunction('bulkApprove', original => function(...args){
+    const before = JSON.stringify(todos.map(t => [t.id, t.status]));
+    const result = original.apply(this, args);
+    if(before !== JSON.stringify(todos.map(t => [t.id, t.status]))){
+      persistTodos();
+      showLocalSaveNotice('승인 변경사항을 임시 저장했습니다.');
+    }
+    return result;
+  });
+  wrapFunction('saveEdit', original => function(...args){
+    const result = original.apply(this, args);
+    persistTodos();
+    showLocalSaveNotice('Todo 수정사항을 임시 저장했습니다.');
+    return result;
+  });
+  wrapFunction('saveManual', original => function(...args){
+    const result = original.apply(this, args);
+    persistTodos();
+    showLocalSaveNotice('Todo를 이 브라우저에 임시 저장했습니다.');
+    return result;
+  });
+  wrapFunction('confirmTodoCreate', original => function(...args){
+    const result = original.apply(this, args);
+    setTimeout(() => { persistTodos(); showLocalSaveNotice('이슈 기반 Todo를 임시 저장했습니다.'); }, 1300);
+    return result;
+  });
+  ['resolveIssue','doConfirmIssue','doRemoveIssue'].forEach(name => {
+    wrapFunction(name, original => function(...args){
+      const result = original.apply(this, args);
+      if(typeof persistIssues === 'function') persistIssues();
+      callIfFunction('fetchDashboard');
+      return result;
+    });
+  });
+  ['addCalTag','deleteCalTag','registerCalEvent','addAISuggestEvent','doRegisterCalEvent'].forEach(name => {
+    wrapFunction(name, original => function(...args){
+      const result = original.apply(this, args);
+      persistCalendarEvents();
+      return result;
+    });
+  });
+  wrapFunction('resetUpload', original => function(...args){
+    const result = original.apply(this, args);
+    const uploadError = document.getElementById('uploadErrorCard');
+    if(uploadError) uploadError.style.display = 'none';
+    return result;
+  });
+
+  function bindPassiveButtons(){
+    document.querySelectorAll('button, .tbtn').forEach(btn => {
+      if(btn.dataset.frontendFallbackBound === 'true' || btn.onclick || btn.disabled) return;
+      const text = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+      if(!text || btn.closest('#handoffPreviewPanel') || btn.closest('#calModal')) return;
+      if(/내보내기|다운로드|공유|동기화|연동|생성|분석|저장/.test(text)){
+        btn.dataset.frontendFallbackBound = 'true';
+        btn.addEventListener('click', () => showLocalSaveNotice('이 기능은 API 연결 전까지 화면 흐름만 확인할 수 있습니다.'));
+      }
+    });
+  }
+
+  function injectResponsiveGuard(){
+    if(document.getElementById('frontendStabilityCss')) return;
+    const style = document.createElement('style');
+    style.id = 'frontendStabilityCss';
+    style.textContent = `
+      html,body{max-width:100%;overflow-x:hidden}
+      .screen,.content,.main,.panel,.card,.todo-layout,.issue-layout,.report-layout,.chat-workspace{min-width:0}
+      .tbtn,button{min-width:0}
+      .modal-overlay .modal{width:min(90vw,720px);max-height:90vh;overflow:auto}
+      .handoff-slide-sheet,.issue-detail-drawer{width:min(92vw,560px);max-width:100vw}
+      .topbar,.toolbar,.chat-top-actions,.handoff-slide-actions,.modal-actions{flex-wrap:wrap}
+      .text-content,.issue-desc,.chunk-box,.risk-box,.handoff-preview-value,.bubble{white-space:pre-line;overflow-wrap:anywhere}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function initLocalStorageFallbacks(){
+    hydrateTodos();
+    hydrateCalendarEvents();
+    if(typeof persistIssues === 'function') persistIssues();
+    bindPassiveButtons();
+    injectResponsiveGuard();
+    normalizeRenderedText(document.body);
+  }
+
+  setTimeout(initLocalStorageFallbacks, 20);
+  document.addEventListener('click', () => setTimeout(bindPassiveButtons, 0), true);
 })();
 </script>
 </body>
