@@ -22,14 +22,10 @@ SUGGESTED_QUESTIONS = [
 ]
 
 
-# ────────────────────────────────────────────
-# 요청 / 응답 스키마
-# ────────────────────────────────────────────
-
 class ChatRequest(BaseModel):
     message: str
-    doc_type: Optional[str] = None      # 필터: meeting/email/chat/csv/handover/report
-    document_id: Optional[str] = None   # 특정 문서 ID 필터
+    doc_type: Optional[str] = None
+    document_id: Optional[str] = None
     top_k: int = 3
 
     @field_validator("message")
@@ -68,18 +64,15 @@ class ExtractRequest(BaseModel):
         return v.strip()
 
 
-# ────────────────────────────────────────────
-# 엔드포인트
-# ────────────────────────────────────────────
-
 @router.post("")
 async def chat(request: ChatRequest):
     """
     RAG 기반 질문 답변.
 
-    1. retriever로 FAISS 검색
-    2. build_context로 프롬프트 컨텍스트 구성
-    3. summarizer로 GPT 답변 생성
+    1. retriever로 FAISS 검색 (내부에서 score 0.41 미만 자동 필터링)
+    2. results 비어있으면 업무 무관 질문으로 판단 → 거절
+    3. build_context로 프롬프트 컨텍스트 구성
+    4. summarizer로 GPT 답변 생성
     """
     try:
         from app.ai.retriever import retrieve, build_context
@@ -90,14 +83,16 @@ async def chat(request: ChatRequest):
             doc_type=request.doc_type,
         )
 
+        # 결과 없음 = 업무 무관 질문 or 관련 문서 없음
         if not results:
             return {
-                "answer": "관련 운영 기록을 찾을 수 없습니다. 먼저 문서를 업로드해주세요.",
+                "answer": "죄송합니다. 저는 업무 관련 문서 분석만 지원합니다. 📄\n회의록, 보고서, 이메일 등 업무 문서를 업로드 후 질문해주세요.",
                 "sources": [],
                 "chunk_count": 0,
                 "suggested_questions": SUGGESTED_QUESTIONS,
             }
 
+        # 문서 기반 GPT 답변
         context = build_context(results)
 
         from app.ai.summarizer import answer_question
@@ -113,12 +108,11 @@ async def chat(request: ChatRequest):
         }
 
     except FileNotFoundError:
-        # FAISS DB가 아직 없는 경우
         return {
-            "answer": "아직 분석된 문서가 없습니다. 먼저 문서를 업로드해주세요.",
+            "answer": "죄송합니다. 저는 업무 관련 문서 분석만 지원합니다. 📄\n회의록, 보고서, 이메일 등 업무 문서를 업로드 후 질문해주세요.",
             "sources": [],
             "chunk_count": 0,
-            "suggested_questions": ["문서를 업로드하면 질문할 수 있습니다."],
+            "suggested_questions": SUGGESTED_QUESTIONS,
         }
 
     except (ConnectionError, TimeoutError, RuntimeError) as e:
@@ -134,8 +128,6 @@ async def chat(request: ChatRequest):
 async def extract_todos(request: ExtractRequest):
     """
     텍스트에서 Todo, 결정사항, 이슈를 자동 추출합니다.
-
-    - **text**: 분석할 문서 텍스트 (10,000자 초과 시 앞 10,000자만 사용)
     """
     try:
         from app.ai.summarizer import extract_todos as ai_extract
