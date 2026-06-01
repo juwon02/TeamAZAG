@@ -1,22 +1,14 @@
-"""
-UC-04 Dashboard
-담당: 김성호 (집계 API)
-"""
-from fastapi import APIRouter
+"""Dashboard API."""
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.services.dashboard_service import DashboardService
 
 router = APIRouter()
 
 
 @router.get("/summary")
-async def get_dashboard_summary():
-    """대시보드 전체 현황 집계 (UC-04)"""
-    # TODO: 김성호 — todos/issues/documents 집계 쿼리
-    return {
-        "high_risk_count": 0,
-        "todo_total": 0,
-        "todo_completed": 0,
-        "todo_pending": 0,
-        "blocked_count": 0,
-        "ai_summary": "",
-        "recent_activities": [],
-    }
+async def get_dashboard_summary(db: AsyncSession = Depends(get_db)):
+    return await DashboardService(db).summary()

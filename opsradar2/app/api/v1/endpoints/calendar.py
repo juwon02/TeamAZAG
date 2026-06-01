@@ -1,66 +1,35 @@
-"""
-Calendar API
-담당: 박주원
-"""
-import uuid
-from fastapi import APIRouter, Depends
+"""Calendar API."""
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.repositories.calendar_repository import CalendarRepository
-from app.schemas.calendar import CalendarEventCreate
+from app.services.calendar_service import CalendarService
 
 router = APIRouter()
 
 
+@router.get("")
 @router.get("/")
 async def get_events(db: AsyncSession = Depends(get_db)):
-    repo = CalendarRepository(db)
-    events = await repo.get_all()
-    return {"events": [
-        {
-            "id": e.id,
-            "title": e.title,
-            "event_date": e.event_date,
-            "event_type": e.event_type,
-            "person": e.person,
-            "description": e.description,
-        } for e in events
-    ]}
+    service = CalendarService(CalendarRepository(db))
+    return {"events": await service.list_events()}
 
 
 @router.post("/")
-async def create_event(
-    body: CalendarEventCreate,
-    db: AsyncSession = Depends(get_db)
-):
-    repo = CalendarRepository(db)
-    event = await repo.create({
-        "id": str(uuid.uuid4()),
-        "title": body.title,
-        "event_date": body.event_date,
-        "event_type": body.event_type,
-        "person": body.person,
-        "description": body.description,
-    })
-    return {"event": {
-        "id": event.id,
-        "title": event.title,
-        "event_date": event.event_date,
-        "event_type": event.event_type,
-        "person": event.person,
-    }}
+async def create_event(body: dict, db: AsyncSession = Depends(get_db)):
+    if not body.get("title") or not body.get("event_date"):
+        raise HTTPException(400, "title and event_date are required")
+    service = CalendarService(CalendarRepository(db))
+    event = await service.create_event(body)
+    return {"event": event}
 
 
 @router.delete("/{event_id}")
-async def delete_event(
-    event_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    repo = CalendarRepository(db)
-    events = await repo.get_all()
-    event = next((e for e in events if e.id == event_id), None)
-    if not event:
-        from fastapi import HTTPException
-        raise HTTPException(404, "이벤트를 찾을 수 없어요")
-    await repo.delete(event)
-    return {"message": "삭제 완료"}
+async def delete_event(event_id: str, db: AsyncSession = Depends(get_db)):
+    service = CalendarService(CalendarRepository(db))
+    deleted = await service.delete_event(event_id)
+    if not deleted:
+        raise HTTPException(404, "event not found")
+    return {"message": "deleted"}

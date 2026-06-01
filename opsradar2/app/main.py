@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from app.api.api import api_router
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.models import document, todo, issue, calendar, report
+from app.models import calendar, chunk, document, issue, organization, report, todo
 
 app = FastAPI(
     title="OpsRadar API",
@@ -30,9 +30,7 @@ app.include_router(api_router, prefix="/api/v1")
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    pass  # DB 연결 임시 비활성화
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+
 # 루트 → index.html 반환
 @app.get("/")
 def root():
