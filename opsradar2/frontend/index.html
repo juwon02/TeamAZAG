@@ -5066,19 +5066,130 @@ function openCalModal(d) {
   const label = document.getElementById('calColorLabel'); if(label) label.textContent = '일반';
   openModal('calModal');
 }
-function addCalTag() {
+function getCalendarApiBase(){
+  if(window.OPSRADAR_API_BASE) return window.OPSRADAR_API_BASE.replace(/\/$/, '');
+  if(location.port === '8010') return `${location.origin}/api/v1`;
+  return 'http://127.0.0.1:8010/api/v1';
+}
+function calendarColorToApiType(color){
+  return {
+    'ct-danger': 'deadline',
+    'ct-gray': 'absence',
+    'ct-success': 'meeting',
+    'ct-info': 'other',
+    'ct-new': 'other'
+  }[color] || 'other';
+}
+function calendarApiTypeToColor(type){
+  return {
+    deadline: 'ct-danger',
+    absence: 'ct-gray',
+    meeting: 'ct-success',
+    milestone: 'ct-info',
+    deployment: 'ct-info',
+    other: 'ct-info'
+  }[type] || 'ct-info';
+}
+function formatCalendarApiDate(day){
+  ensureCalendarState();
+  const month = String(G.currentCalMonth + 1).padStart(2, '0');
+  const date = String(day).padStart(2, '0');
+  return `${G.currentCalYear}-${month}-${date}`;
+}
+function normalizeCalendarApiEvent(event){
+  const dateValue = normalizeText(event?.event_date || event?.starts_at || '');
+  const parts = dateValue.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(!parts) return null;
+  return {
+    d: Number(parts[3]),
+    y: Number(parts[1]),
+    m: Number(parts[2]) - 1,
+    tags: [{
+      apiId: event.id || event.apiId || null,
+      t: normalizeText(event.person ? `${event.person} ${event.title || ''}` : event.title || '일정'),
+      c: calendarApiTypeToColor(event.event_type)
+    }]
+  };
+}
+async function requestCalendarApi(path, options={}){
+  const response = await fetch(`${getCalendarApiBase()}${path}`, {
+    headers: {'Content-Type':'application/json', ...(options.headers || {})},
+    ...options
+  });
+  const text = await response.text();
+  let data = null;
+  if(text){
+    try{ data = JSON.parse(text); }catch(e){ data = { raw:text }; }
+  }
+  if(!response.ok){
+    const error = new Error(`Calendar API failed: ${response.status}`);
+    error.status = response.status;
+    error.body = data;
+    throw error;
+  }
+  return data;
+}
+async function fetchCalendarEvents(){
+  const data = await requestCalendarApi('/calendar');
+  const events = Array.isArray(data) ? data : (data?.events || data?.items || data?.results || []);
+  const byDay = new Map();
+  events.map(normalizeCalendarApiEvent).filter(Boolean).forEach(event => {
+    const key = `${event.y}-${event.m}-${event.d}`;
+    const existing = byDay.get(key);
+    if(existing) existing.tags.push(...event.tags);
+    else byDay.set(key, event);
+  });
+  G.calEvents = Array.from(byDay.values());
+  if(typeof persistCalendarEvents === 'function') persistCalendarEvents();
+  renderCalendar(G.currentCalYear, G.currentCalMonth);
+  return G.calEvents;
+}
+async function createCalendarEventViaApi({title, day, color}){
+  const data = await requestCalendarApi('/calendar/', {
+    method: 'POST',
+    body: JSON.stringify({
+      title,
+      event_date: formatCalendarApiDate(day),
+      event_type: calendarColorToApiType(color)
+    })
+  });
+  return data?.event || data?.item || data;
+}
+async function addCalTag() {
   ensureCalendarState();
   const d = G.selectedCalDay;
   const input = document.getElementById('calModalInput');
   const text = input ? input.value.trim() : '';
   const color = calSelectedColor || 'ct-info';
   if (!text || !d) return;
-  let ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
-  if (ev) ev.tags.push({t: text, c: color});
-  else G.calEvents.push({d, y: G.currentCalYear, m: G.currentCalMonth, tags: [{t: text, c: color}]});
-  renderCalendar(G.currentCalYear, G.currentCalMonth);
-  openCalModal(d);
-  showToast(`${G.currentCalMonth + 1}월 ${d}일 일정이 추가되었습니다.`, 'info');
+  try{
+    const created = await createCalendarEventViaApi({title:text, day:d, color});
+    try{
+      await fetchCalendarEvents();
+    }catch(refreshError){
+      console.warn('Calendar saved, but refresh failed', refreshError);
+      let ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
+      const tag = {t: text, c: color, apiId: created?.id || created?.apiId || null};
+      if (ev) ev.tags.push(tag);
+      else G.calEvents.push({d, y: G.currentCalYear, m:G.currentCalMonth, tags:[tag]});
+      if(typeof persistCalendarEvents === 'function') persistCalendarEvents();
+      renderCalendar(G.currentCalYear, G.currentCalMonth);
+    }
+    openCalModal(d);
+    showToast(`${G.currentCalMonth + 1}월 ${d}일 일정이 저장되었습니다.`, 'success');
+    return created;
+  }catch(error){
+    console.warn('Calendar save API failed; using local fallback', error);
+    if(typeof showApiFallbackNotice === 'function') showApiFallbackNotice('서버 저장을 확인하지 못해 이 브라우저에 임시 저장했습니다.');
+    let ev = findCalEventForDay(d, G.currentCalYear, G.currentCalMonth);
+    if (ev) ev.tags.push({t: text, c: color});
+    else G.calEvents.push({d, y: G.currentCalYear, m: G.currentCalMonth, tags: [{t: text, c: color}]});
+    if(typeof persistCalendarEvents === 'function') persistCalendarEvents();
+    renderCalendar(G.currentCalYear, G.currentCalMonth);
+    openCalModal(d);
+    showToast(`${G.currentCalMonth + 1}월 ${d}일 일정을 임시 저장했습니다.`, 'info');
+    return null;
+  }
 }
 function deleteCalTag(d, idx) {
   ensureCalendarState();

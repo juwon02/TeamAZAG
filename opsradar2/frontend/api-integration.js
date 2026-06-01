@@ -35,8 +35,19 @@
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       ...options,
     });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return res.status === 204 ? null : res.json();
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); }
+      catch (error) { data = { raw: text }; }
+    }
+    if (!res.ok) {
+      const error = new Error(`${res.status} ${res.statusText}`);
+      error.status = res.status;
+      error.body = data;
+      throw error;
+    }
+    return res.status === 204 ? null : data;
   }
 
   function replaceArray(target, values) {
@@ -106,15 +117,19 @@
   }
 
   window.opsRadarCreateCalendarEvent = async function ({ title, day, color }) {
+    const year = G.currentCalYear || new Date().getFullYear();
+    const month = String((G.currentCalMonth ?? new Date().getMonth()) + 1).padStart(2, "0");
     const created = await request("/calendar/", {
       method: "POST",
       body: JSON.stringify({
         title,
-        event_date: `2026-05-${String(day).padStart(2, "0")}`,
+        event_date: `${year}-${month}-${String(day).padStart(2, "0")}`,
         event_type: calendarTypeFromColor(color),
       }),
     });
-    return created.event;
+    try { await loadCalendarFromAPI(); }
+    catch (error) { console.warn("Calendar saved, but refresh failed", error); }
+    return created?.event || created;
   };
 
   function normalizeCalendarEvent(e) {
