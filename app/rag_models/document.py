@@ -69,3 +69,31 @@ class Issue(Base):
     confidence_score = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class FaissIndex(Base):
+    """FAISS 벡터 인덱스 메타데이터"""
+    __tablename__ = "faiss_indexes"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid_lib.uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    index_path = Column(String(500), nullable=False)
+    vector_count = Column(Integer, default=0)
+    embedding_model = Column(String(100), default="text-embedding-3-large")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmbeddingJob(Base):
+    """임베딩 작업 추적"""
+    __tablename__ = "embedding_jobs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid_lib.uuid4)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    status = Column(String(50), default="pending")  # pending, running, completed, failed
+    progress = Column(Integer, default=0)  # 0-100
+    total_chunks = Column(Integer, default=0)
+    processed_chunks = Column(Integer, default=0)
+    error_msg = Column(Text)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
