@@ -199,7 +199,9 @@ async def upload_document(
 
     document_id = str(uuid.uuid4())
     os.makedirs("uploads", exist_ok=True)
-    save_path = os.path.join("uploads", f"{document_id}_{file.filename}")
+    import re
+    safe_filename = re.sub(r'[^\w\.\-]', '_', file.filename or "unknown")
+    save_path = os.path.join("uploads", f"{document_id}_{safe_filename}")
 
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
