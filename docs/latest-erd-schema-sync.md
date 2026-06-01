@@ -1,8 +1,6 @@
 # Latest ERD Schema Sync
 
-The `dev` branch ERD review and the deployable OpsRadar 2 schema both define
-the same 18 application tables. For the deployable application, the executable
-source of truth is `opsradar2/schema.sql`.
+This branch treats `opsradar_erd_postgresql_faiss.html` as the DB design reference, and the executable PostgreSQL source of truth is `schema.postgresql.sql`.
 
 ## Tables
 
@@ -25,22 +23,24 @@ source of truth is `opsradar2/schema.sql`.
 - `chat_messages`
 - `ai_summaries`
 
-## Naming Decisions
+## Important Naming Decisions
 
 - Member-scoped references use `project_members.id`.
-- Todo state uses `pending`, `in_progress`, `blocked`, and `completed`.
+- Todo state uses `status` with `pending`, `in_progress`, `blocked`, and `completed`.
 - Issue risk uses `severity` with `low`, `medium`, `high`, and `critical`.
 - Calendar timestamps use `starts_at` and `ends_at`.
-- FAISS vectors remain outside PostgreSQL. PostgreSQL stores index metadata
-  and external vector identifiers.
+- FAISS vectors are not stored in PostgreSQL. PostgreSQL stores `faiss_indexes` and `chunk_embeddings.vector_external_id`.
 
-## Dev Merge Decision
+## API Scope
 
-The root-level `app/`, Alembic files, and `db/schema.postgresql.sql` from
-`dev` are reference material for a separate prototype. They are not merged
-into the deployable runtime because the repository architecture defines
-`opsradar2/` as the application boundary.
+The FastAPI app keeps the current read-oriented surface stable:
 
-Useful indexes from the latest ERD were added to `opsradar2/schema.sql` with
-`IF NOT EXISTS`, excluding the root prototype's `documents(status)` index
-because OpsRadar 2 intentionally uses `documents.analysis_status`.
+- project list
+- dashboard summary
+- Todo list and AI pending Todo list
+- Issue list
+- document list
+- latest handoff
+- chat message create/list
+
+Full CRUD expansion is intentionally left for a later API integration pass.
