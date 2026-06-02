@@ -10,16 +10,59 @@ class TodoRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _columns(self, table_name: str) -> set[str]:
+        result = await self.db.execute(
+            text(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = :table_name
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
     async def get_all(self, status: Optional[str] = None, source: Optional[str] = None) -> list[dict]:
+        todo_columns = await self._columns("todos")
+        chunk_columns = await self._columns("document_chunks")
+
         filters = []
         params = {}
         if status:
             filters.append("t.status = :status")
             params["status"] = status
-        if source:
+        if source and "source_type" in todo_columns:
             filters.append("t.source_type = :source")
             params["source"] = source
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+
+        source_expr = "t.source_type" if "source_type" in todo_columns else "'manual'"
+        confidence_expr = "t.confidence_score" if "confidence_score" in todo_columns else "NULL::integer"
+        approval_expr = "t.approval_status" if "approval_status" in todo_columns else "'approved'"
+        due_expr = "t.due_at" if "due_at" in todo_columns else "t.due_date" if "due_date" in todo_columns else "NULL::timestamptz"
+        source_chunk_expr = "t.source_chunk_id::text" if "source_chunk_id" in todo_columns else "NULL::text"
+
+        joins = []
+        assignee_expr = "NULL::text"
+        if "assignee_member_id" in todo_columns:
+            joins.append("LEFT JOIN project_members pm ON pm.id = t.assignee_member_id")
+            joins.append("LEFT JOIN users u ON u.id = pm.user_id")
+            assignee_expr = "u.name"
+        elif "assignee_id" in todo_columns:
+            joins.append("LEFT JOIN users u ON u.id = t.assignee_id")
+            assignee_expr = "u.name"
+
+        document_expr = "NULL::text"
+        if "source_chunk_id" in todo_columns and "document_id" in chunk_columns:
+            joins.append("LEFT JOIN document_chunks dc ON dc.id = t.source_chunk_id")
+            document_expr = "dc.document_id::text"
+        elif "source_document_id" in todo_columns:
+            document_expr = "t.source_document_id::text"
+
+        joins_sql = "\n                ".join(joins)
+
         result = await self.db.execute(
             text(
                 f"""
@@ -28,18 +71,16 @@ class TodoRepository:
                   t.title,
                   t.status,
                   t.priority,
-                  u.name AS assignee,
-                  t.source_type AS source,
-                  t.confidence_score AS confidence,
-                  dc.document_id::text AS document_id,
-                  t.source_chunk_id::text AS source_chunk_id,
-                  t.approval_status,
-                  t.due_at,
+                  {assignee_expr} AS assignee,
+                  {source_expr} AS source,
+                  {confidence_expr} AS confidence,
+                  {document_expr} AS document_id,
+                  {source_chunk_expr} AS source_chunk_id,
+                  {approval_expr} AS approval_status,
+                  {due_expr} AS due_at,
                   t.created_at
                 FROM todos t
-                LEFT JOIN project_members pm ON pm.id = t.assignee_member_id
-                LEFT JOIN users u ON u.id = pm.user_id
-                LEFT JOIN document_chunks dc ON dc.id = t.source_chunk_id
+                {joins_sql}
                 {where_clause}
                 ORDER BY t.created_at DESC
                 """
