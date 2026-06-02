@@ -78,7 +78,10 @@ app.add_middleware(
 # ============================================================================
 # RAG API (파일 업로드, Q&A, 추출)
 app.include_router(rag_router)
-
+# 프론트엔드 정적 파일 서빙
+from fastapi.staticfiles import StaticFiles
+app.mount("/frontend", StaticFiles(directory="opsradar2/frontend"), name="frontend")
+app.mount("/static", StaticFiles(directory="opsradar2/frontend"), name="static")
 # ============================================================================
 # 기본 엔드포인트
 # ============================================================================
