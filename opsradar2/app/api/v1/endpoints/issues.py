@@ -24,11 +24,18 @@ async def create_issue(body: IssueCreate, db: AsyncSession = Depends(get_db)):
 async def get_issues(
     status: Optional[str] = None,
     risk_level: Optional[str] = None,
+    project_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     service = IssueService(IssueRepository(db))
     normalized_status = None if status in (None, "all") else status
-    return {"issues": await service.list_issues(status=normalized_status, risk_level=risk_level)}
+    return {
+        "issues": await service.list_issues(
+            status=normalized_status,
+            risk_level=risk_level,
+            project_id=project_id,
+        )
+    }
 
 
 @router.patch("/{issue_id}")

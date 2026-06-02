@@ -16,11 +16,12 @@ router = APIRouter()
 async def get_todos(
     status: Optional[str] = None,
     source: Optional[str] = None,
+    project_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     service = TodoService(TodoRepository(db))
     normalized_status = None if status in (None, "all") else status
-    return {"todos": await service.list_todos(status=normalized_status, source=source)}
+    return {"todos": await service.list_todos(status=normalized_status, source=source, project_id=project_id)}
 
 
 @router.post("")

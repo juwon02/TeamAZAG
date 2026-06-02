@@ -1,5 +1,7 @@
 """Calendar API."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +14,9 @@ router = APIRouter()
 
 @router.get("")
 @router.get("/")
-async def get_events(db: AsyncSession = Depends(get_db)):
+async def get_events(project_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     service = CalendarService(CalendarRepository(db))
-    return {"events": await service.list_events()}
+    return {"events": await service.list_events(project_id=project_id)}
 
 
 @router.post("/")

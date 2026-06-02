@@ -14,8 +14,13 @@ class IssueService:
     async def create_issue(self, data: dict) -> dict:
         return await self.repo.create(data)
 
-    async def list_issues(self, status: Optional[str] = None, risk_level: Optional[str] = None) -> list[dict]:
-        return await self.repo.get_all(status=status, risk_level=risk_level)
+    async def list_issues(
+        self,
+        status: Optional[str] = None,
+        risk_level: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> list[dict]:
+        return await self.repo.get_all(status=status, risk_level=risk_level, project_id=project_id)
 
     async def update_issue(self, issue_id: str, data: dict) -> bool:
         return await self.repo.update(issue_id, data)

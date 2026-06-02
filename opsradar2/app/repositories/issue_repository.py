@@ -81,12 +81,20 @@ class IssueRepository:
         await self.db.commit()
         return dict(result.mappings().one())
 
-    async def get_all(self, status: Optional[str] = None, risk_level: Optional[str] = None) -> list[dict]:
+    async def get_all(
+        self,
+        status: Optional[str] = None,
+        risk_level: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> list[dict]:
         issue_columns = await self._columns("issues")
         chunk_columns = await self._columns("document_chunks")
 
         filters = []
         params = {}
+        if project_id and "project_id" in issue_columns:
+            filters.append("i.project_id = CAST(:project_id AS uuid)")
+            params["project_id"] = project_id
         if "approval_status" in issue_columns:
             filters.append("i.approval_status <> 'rejected'")
         if status:

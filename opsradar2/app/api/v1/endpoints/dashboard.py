@@ -1,5 +1,7 @@
 """Dashboard API."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,5 +12,5 @@ router = APIRouter()
 
 
 @router.get("/summary")
-async def get_dashboard_summary(db: AsyncSession = Depends(get_db)):
-    return await DashboardService(db).summary()
+async def get_dashboard_summary(project_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    return await DashboardService(db).summary(project_id=project_id)

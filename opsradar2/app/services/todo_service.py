@@ -9,8 +9,13 @@ class TodoService:
     def __init__(self, repo: TodoRepository):
         self.repo = repo
 
-    async def list_todos(self, status: Optional[str] = None, source: Optional[str] = None) -> list[dict]:
-        return await self.repo.get_all(status=status, source=source)
+    async def list_todos(
+        self,
+        status: Optional[str] = None,
+        source: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> list[dict]:
+        return await self.repo.get_all(status=status, source=source, project_id=project_id)
 
     async def create_todo(self, data: dict) -> str:
         return await self.repo.create(data)

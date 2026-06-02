@@ -1,6 +1,7 @@
 """Report persistence for the OpsRadar schema."""
 
 from datetime import date, timedelta
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,25 +11,58 @@ class ReportRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def generate(self, period: str) -> dict:
+    async def generate(self, period: str, project_id: str | None = None) -> dict:
+        selected_project = project_id or await self._default_project_id()
+        if selected_project is None:
+            raise ValueError("project is required")
+
         summary = (
             await self.db.execute(
                 text(
                     """
                     SELECT
-                      (SELECT count(*) FROM todos) AS total_todos,
-                      (SELECT count(*) FROM todos WHERE status = 'completed') AS done_todos,
-                      (SELECT count(*) FROM todos WHERE status IN ('pending', 'in_progress')) AS active_todos,
-                      (SELECT count(*) FROM issues WHERE status <> 'resolved') AS open_issues,
-                      (SELECT count(*) FROM issues WHERE status <> 'resolved' AND severity IN ('high', 'critical')) AS high_issues,
-                      (SELECT count(*) FROM calendar_events WHERE starts_at::date >= current_date) AS upcoming_events
+                      (SELECT count(*) FROM todos WHERE project_id = CAST(:project_id AS uuid)) AS total_todos,
+                      (
+                        SELECT count(*)
+                        FROM todos
+                        WHERE project_id = CAST(:project_id AS uuid)
+                          AND status IN ('completed', 'done')
+                      ) AS done_todos,
+                      (
+                        SELECT count(*)
+                        FROM todos
+                        WHERE project_id = CAST(:project_id AS uuid)
+                          AND status IN ('pending', 'in_progress', 'blocked')
+                      ) AS active_todos,
+                      (
+                        SELECT count(*)
+                        FROM issues
+                        WHERE project_id = CAST(:project_id AS uuid)
+                          AND status <> 'resolved'
+                      ) AS open_issues,
+                      (
+                        SELECT count(*)
+                        FROM issues
+                        WHERE project_id = CAST(:project_id AS uuid)
+                          AND status <> 'resolved'
+                          AND severity IN ('high', 'critical')
+                      ) AS high_issues,
+                      (
+                        SELECT count(*)
+                        FROM calendar_events
+                        WHERE project_id = CAST(:project_id AS uuid)
+                          AND starts_at::date >= current_date
+                      ) AS upcoming_events
                     """
-                )
+                ),
+                {"project_id": selected_project},
             )
         ).mappings().one()
+
         start, end = self._period_range(period)
         content = self._content(start, end, summary)
         table, start_column, end_column, constraint = self._storage(period)
+
         result = await self.db.execute(
             text(
                 f"""
@@ -38,8 +72,14 @@ class ReportRepository:
                 )
                 VALUES (
                   gen_random_uuid(),
-                  (SELECT id FROM projects ORDER BY created_at LIMIT 1),
-                  (SELECT id FROM project_members ORDER BY joined_at LIMIT 1),
+                  CAST(:project_id AS uuid),
+                  (
+                    SELECT id
+                    FROM project_members
+                    WHERE project_id = CAST(:project_id AS uuid)
+                    ORDER BY joined_at
+                    LIMIT 1
+                  ),
                   CAST(:start AS date),
                   CAST(:end AS date),
                   :content,
@@ -58,16 +98,19 @@ class ReportRepository:
                 """
             ),
             {
+                "project_id": selected_project,
                 "start": start,
                 "end": end,
                 "content": content,
-                "done_todos": int(summary["done_todos"]),
-                "total_todos": int(summary["total_todos"]),
+                "done_todos": int(summary["done_todos"] or 0),
+                "total_todos": int(summary["total_todos"] or 0),
             },
         )
         await self.db.commit()
+
         return {
             "report_id": result.scalar_one(),
+            "project_id": selected_project,
             "period": period,
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
@@ -85,6 +128,7 @@ class ReportRepository:
             ),
             {"report_id": report_id, "content": content},
         )
+
         if weekly.rowcount == 0:
             monthly = await self.db.execute(
                 text(
@@ -99,26 +143,40 @@ class ReportRepository:
             updated = monthly.rowcount > 0
         else:
             updated = True
+
         await self.db.commit()
         return updated
 
-    async def get_all(self) -> list[dict]:
+    async def get_all(self, project_id: str | None = None) -> list[dict]:
+        params = {"project_id": project_id} if project_id else {}
+        weekly_where = "WHERE project_id = CAST(:project_id AS uuid)" if project_id else ""
+        monthly_where = "WHERE project_id = CAST(:project_id AS uuid)" if project_id else ""
+
         result = await self.db.execute(
             text(
-                """
-                SELECT id::text AS id, 'weekly' AS period, week_start::text AS start_date,
-                       week_end::text AS end_date, content, progress_rate, created_at
+                f"""
+                SELECT id::text AS id, project_id::text AS project_id, 'weekly' AS period,
+                       week_start::text AS start_date, week_end::text AS end_date,
+                       content, progress_rate, created_at
                 FROM weekly_reports
+                {weekly_where}
                 UNION ALL
-                SELECT id::text AS id, 'monthly' AS period, month_start::text AS start_date,
-                       month_end::text AS end_date, content, progress_rate, created_at
+                SELECT id::text AS id, project_id::text AS project_id, 'monthly' AS period,
+                       month_start::text AS start_date, month_end::text AS end_date,
+                       content, progress_rate, created_at
                 FROM monthly_reports
+                {monthly_where}
                 ORDER BY created_at DESC
                 LIMIT 20
                 """
-            )
+            ),
+            params,
         )
         return [dict(row) for row in result.mappings().all()]
+
+    async def _default_project_id(self) -> str | None:
+        result = await self.db.execute(text("SELECT id::text FROM projects ORDER BY created_at LIMIT 1"))
+        return result.scalar_one_or_none()
 
     @staticmethod
     def _period_range(period: str) -> tuple[date, date]:
@@ -127,6 +185,7 @@ class ReportRepository:
             start = today.replace(day=1)
             next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
             return start, next_month - timedelta(days=1)
+
         start = today - timedelta(days=today.weekday())
         return start, start + timedelta(days=6)
 
@@ -137,14 +196,15 @@ class ReportRepository:
         return "weekly_reports", "week_start", "week_end", "uq_weekly_reports_project_week"
 
     @staticmethod
-    def _content(start: date, end: date, summary) -> str:
+    def _content(start: date, end: date, summary: Any) -> str:
         return "\n".join(
             [
-                "# 운영 보고서 초안",
-                f"기간: {start.isoformat()} ~ {end.isoformat()}",
-                f"Todo 진행: 완료 {summary['done_todos']}건 / 전체 {summary['total_todos']}건",
-                f"진행 중 또는 대기 Todo: {summary['active_todos']}건",
-                f"미해결 이슈: {summary['open_issues']}건, High Risk: {summary['high_issues']}건",
-                f"다가오는 캘린더 일정: {summary['upcoming_events']}건",
+                "# Operations Report Draft",
+                f"Period: {start.isoformat()} ~ {end.isoformat()}",
+                f"Todo progress: {summary['done_todos']} done / {summary['total_todos']} total",
+                f"Active todos: {summary['active_todos']}",
+                f"Open issues: {summary['open_issues']} / High risk: {summary['high_issues']}",
+                f"Upcoming calendar events: {summary['upcoming_events']}",
+                "Next actions: review unfinished work, check due dates, and update handoff notes.",
             ]
         )

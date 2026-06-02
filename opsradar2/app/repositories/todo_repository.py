@@ -24,12 +24,20 @@ class TodoRepository:
         )
         return {row[0] for row in result.all()}
 
-    async def get_all(self, status: Optional[str] = None, source: Optional[str] = None) -> list[dict]:
+    async def get_all(
+        self,
+        status: Optional[str] = None,
+        source: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> list[dict]:
         todo_columns = await self._columns("todos")
         chunk_columns = await self._columns("document_chunks")
 
         filters = []
         params = {}
+        if project_id and "project_id" in todo_columns:
+            filters.append("t.project_id = CAST(:project_id AS uuid)")
+            params["project_id"] = project_id
         if status:
             filters.append("t.status = :status")
             params["status"] = status

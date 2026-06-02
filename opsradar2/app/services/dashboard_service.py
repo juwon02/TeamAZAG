@@ -8,35 +8,45 @@ class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def summary(self) -> dict:
+    async def summary(self, project_id: str | None = None) -> dict:
+        params = {"project_id": project_id} if project_id else {}
+        todo_where = "WHERE project_id = CAST(:project_id AS uuid)" if project_id else ""
+        issue_where = "WHERE project_id = CAST(:project_id AS uuid)" if project_id else ""
+        summary_where = "WHERE project_id = CAST(:project_id AS uuid)" if project_id else ""
+
         result = await self.db.execute(
             text(
-                """
+                f"""
                 SELECT
                   COUNT(*) FILTER (WHERE status = 'completed') AS done_todos,
                   COUNT(*) AS total_todos,
                   COUNT(*) FILTER (WHERE status = 'pending') AS pending_todos,
                   COUNT(*) FILTER (WHERE status = 'blocked') AS blocked_todos
                 FROM todos
+                {todo_where}
                 """
-            )
+            ),
+            params,
         )
         todo = dict(result.mappings().one())
 
         result = await self.db.execute(
             text(
-                """
+                f"""
                 SELECT
-                  COUNT(*) FILTER (WHERE severity = 'high' AND status <> 'resolved') AS high_risk_count,
+                  COUNT(*) FILTER (WHERE severity IN ('high', 'critical') AND status <> 'resolved') AS high_risk_count,
                   COUNT(*) FILTER (WHERE status = 'blocked') AS blocked_issues
                 FROM issues
+                {issue_where}
                 """
-            )
+            ),
+            params,
         )
         issue = dict(result.mappings().one())
 
         result = await self.db.execute(
-            text("SELECT summary FROM ai_summaries ORDER BY created_at DESC LIMIT 1")
+            text(f"SELECT summary FROM ai_summaries {summary_where} ORDER BY created_at DESC LIMIT 1"),
+            params,
         )
         ai_summary = result.scalar_one_or_none() or ""
 
