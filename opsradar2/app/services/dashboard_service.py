@@ -1,14 +1,22 @@
 """Dashboard aggregation service."""
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def summary(self) -> dict:
+    async def summary(self, project_id: str = None) -> dict:
+        """Get dashboard summary with optional project_id."""
+        # project_id 파라미터가 없으면 첫 번째 프로젝트 사용
+        if not project_id:
+            result = await self.db.execute(
+                text("SELECT id FROM projects LIMIT 1")
+            )
+            row = result.first()
+            if row:
+                project_id = str(row[0])
+        
         result = await self.db.execute(
             text(
                 """
@@ -22,7 +30,6 @@ class DashboardService:
             )
         )
         todo = dict(result.mappings().one())
-
         result = await self.db.execute(
             text(
                 """
@@ -34,17 +41,15 @@ class DashboardService:
             )
         )
         issue = dict(result.mappings().one())
-
         result = await self.db.execute(
             text("SELECT summary FROM ai_summaries ORDER BY created_at DESC LIMIT 1")
         )
         ai_summary = result.scalar_one_or_none() or ""
-
         total_todos = int(todo["total_todos"] or 0)
         done_todos = int(todo["done_todos"] or 0)
         completion_rate = round((done_todos / total_todos) * 100) if total_todos else 0
-
         return {
+            "project_id": project_id,
             "done_todos": done_todos,
             "total_todos": total_todos,
             "pending_todos": int(todo["pending_todos"] or 0),

@@ -326,21 +326,7 @@
           });
           const data = await res.json();
           removeTyping();
-          
-          // answer가 배열이면 깔끔한 텍스트 형식으로, 문자열이면 그대로 처리
-          let answer;
-          if (Array.isArray(data.answer)) {
-            // 배열을 읽기 쉬운 형식으로 변환
-            answer = data.answer.map((item, idx) => {
-              const lines = Object.entries(item)
-                .map(([key, value]) => `  ${key}: ${value}`)
-                .join("\n");
-              return `[${idx + 1}]\n${lines}`;
-            }).join("\n\n");
-          } else {
-            answer = data.answer || "답변을 가져올 수 없습니다.";
-          }
-          
+          const answer = data.answer || "답변을 가져올 수 없습니다.";
           const sources = (data.sources || []).join(", ");
           appendChatMsg("ai", answer, sources || null);
         } catch (error) {

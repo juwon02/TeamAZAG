@@ -1,0 +1,95 @@
+"""Todo persistence for the v4 OpsRadar schema."""
+
+from typing import Optional
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class TodoRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_all(self, status: Optional[str] = None, source: Optional[str] = None) -> list[dict]:
+        filters = []
+        params = {}
+        if status:
+            filters.append("t.status = :status")
+            params["status"] = status
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        result = await self.db.execute(
+            text(
+                f"""
+                SELECT
+                  t.id::text AS id,
+                  t.title,
+                  t.status,
+                  t.priority,
+                  t.assignee,
+                  'manual' AS source,
+                  t.confidence_score AS confidence,
+                  dc.document_id::text AS document_id,
+                  t.source_chunk_id::text AS source_chunk_id,
+                  'approved' AS approval_status,
+                  t.due_date,
+                  t.created_at
+                FROM todos t
+                LEFT JOIN document_chunks dc ON dc.id = t.source_chunk_id
+                {where_clause}
+                ORDER BY t.created_at DESC
+                """
+            ),
+            params,
+        )
+        return [dict(row) for row in result.mappings().all()]
+
+    async def create(self, data: dict) -> str:
+        result = await self.db.execute(
+            text(
+                """
+                INSERT INTO todos (
+                  id, project_id, title, status, priority,
+                  assignee, confidence_score, due_date,
+                  created_at, updated_at
+                )
+                VALUES (
+                  gen_random_uuid(),
+                  COALESCE(CAST(:project_id AS uuid), '00000000-0000-0000-0000-000000000000'::uuid),
+                  :title,
+                  COALESCE(:status, 'pending'),
+                  COALESCE(:priority, 'medium'),
+                  :assignee,
+                  :confidence,
+                  CAST(:due_date AS timestamp),
+                  now(),
+                  now()
+                )
+                RETURNING id::text
+                """
+            ),
+            {
+                "project_id": data.get("project_id"),
+                "title": data["title"],
+                "status": data.get("status"),
+                "priority": data.get("priority"),
+                "assignee": data.get("assignee"),
+                "confidence": data.get("confidence", 0),
+                "due_date": data.get("due_date"),
+            },
+        )
+        await self.db.commit()
+        return result.scalar_one()
+
+    async def update_status(self, todo_id: str, status: str) -> bool:
+        result = await self.db.execute(
+            text(
+                """
+                UPDATE todos
+                SET status = :status, updated_at = now()
+                WHERE id = CAST(:todo_id AS uuid)
+                """
+            ),
+            {"todo_id": todo_id, "status": status},
+        )
+        await self.db.commit()
+        return result.rowcount > 0
