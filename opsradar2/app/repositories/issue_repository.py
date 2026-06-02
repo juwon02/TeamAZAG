@@ -24,12 +24,71 @@ class IssueRepository:
         )
         return {row[0] for row in result.all()}
 
+    async def create(self, data: dict) -> dict:
+        result = await self.db.execute(
+            text(
+                """
+                INSERT INTO issues (
+                  id, project_id, assignee_member_id, title, description,
+                  severity, status, source_type, approval_status, domino_chain,
+                  created_at, updated_at
+                )
+                SELECT
+                  gen_random_uuid(),
+                  selected_project.id,
+                  pm.id,
+                  :title,
+                  :description,
+                  COALESCE(:severity, 'medium'),
+                  COALESCE(:status, 'open'),
+                  'manual',
+                  'approved',
+                  :domino_impact,
+                  now(),
+                  now()
+                FROM (
+                  SELECT COALESCE(
+                    CAST(:project_id AS uuid),
+                    (SELECT id FROM projects ORDER BY created_at LIMIT 1)
+                  ) AS id
+                ) selected_project
+                LEFT JOIN users u ON u.name = :assignee
+                LEFT JOIN project_members pm
+                  ON pm.project_id = selected_project.id
+                 AND pm.user_id = u.id
+                RETURNING
+                  id::text AS id,
+                  title,
+                  description,
+                  severity,
+                  severity AS risk_level,
+                  status,
+                  'manual' AS source,
+                  domino_chain AS domino_impact,
+                  created_at
+                """
+            ),
+            {
+                "project_id": data.get("project_id"),
+                "title": data["title"],
+                "description": data.get("description"),
+                "severity": data.get("severity"),
+                "status": data.get("status"),
+                "assignee": data.get("assignee"),
+                "domino_impact": data.get("domino_impact"),
+            },
+        )
+        await self.db.commit()
+        return dict(result.mappings().one())
+
     async def get_all(self, status: Optional[str] = None, risk_level: Optional[str] = None) -> list[dict]:
         issue_columns = await self._columns("issues")
         chunk_columns = await self._columns("document_chunks")
 
         filters = []
         params = {}
+        if "approval_status" in issue_columns:
+            filters.append("i.approval_status <> 'rejected'")
         if status:
             filters.append("i.status = :status")
             params["status"] = status
@@ -45,10 +104,12 @@ class IssueRepository:
         else:
             approval_expr = "'approved'"
 
+        description_expr = "i.description" if "description" in issue_columns else "NULL::text"
         source_expr = "i.source_type" if "source_type" in issue_columns else "'manual'"
         confidence_expr = "i.confidence_score" if "confidence_score" in issue_columns else "NULL::integer"
         updated_at_expr = "i.updated_at" if "updated_at" in issue_columns else "i.created_at"
         source_chunk_expr = "i.source_chunk_id::text" if "source_chunk_id" in issue_columns else "NULL::text"
+        domino_expr = "i.domino_chain" if "domino_chain" in issue_columns else "NULL::text"
 
         joins = []
         assignee_expr = "NULL::text"
@@ -75,7 +136,9 @@ class IssueRepository:
                 SELECT
                   i.id::text AS id,
                   i.title,
+                  {description_expr} AS description,
                   i.status,
+                  i.severity,
                   i.severity AS risk_level,
                   {source_expr} AS source,
                   {confidence_expr} AS confidence,
@@ -83,6 +146,7 @@ class IssueRepository:
                   {document_expr} AS document_id,
                   {source_chunk_expr} AS source_chunk_id,
                   {approval_expr} AS approval_status,
+                  {domino_expr} AS domino_impact,
                   i.created_at,
                   {updated_at_expr} AS updated_at
                 FROM issues i
@@ -94,6 +158,13 @@ class IssueRepository:
             params,
         )
         return [dict(row) for row in result.mappings().all()]
+
+    async def exists(self, issue_id: str) -> bool:
+        result = await self.db.execute(
+            text("SELECT EXISTS(SELECT 1 FROM issues WHERE id = CAST(:issue_id AS uuid))"),
+            {"issue_id": issue_id},
+        )
+        return bool(result.scalar_one())
 
     async def update(self, issue_id: str, data: dict) -> bool:
         allowed = {key: value for key, value in data.items() if key in {"status", "approval_status"}}
