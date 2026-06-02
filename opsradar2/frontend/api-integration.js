@@ -1,5 +1,5 @@
 (function () {
-  const API = window.OPSRADAR_API_BASE || "http://127.0.0.1:8010/api/v1";
+  const API = window.OPSRADAR_API_BASE || "/api/v1";
   const idMap = new Map();
   let nextUiId = 100000;
 
@@ -7,6 +7,36 @@
     const key = `${kind}:${apiId}`;
     if (!idMap.has(key)) idMap.set(key, nextUiId++);
     return idMap.get(key);
+  }
+
+  async function request(path, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    const attempts = method === "GET" ? 2 : 1;
+    let lastError;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const res = await fetch(`${API}${path}`, {
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options,
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return res.status === 204 ? null : res.json();
+      } catch (error) {
+        lastError = error;
+        if (attempt + 1 < attempts) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  function replaceArray(target, values) {
+    if (!Array.isArray(target)) return;
+    target.length = 0;
+    target.push(...values);
   }
 
   function apiStatusToUi(status) {
@@ -30,60 +60,46 @@
     }[status] || status;
   }
 
-  async function request(path, options = {}) {
-    const res = await fetch(`${API}${path}`, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      ...options,
-    });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return res.status === 204 ? null : res.json();
-  }
-
-  function replaceArray(target, values) {
-    target.length = 0;
-    target.push(...values);
-  }
-
-  function normalizeTodo(t) {
+  function normalizeTodo(todo) {
     return {
-      id: uiId("todo", t.id),
-      apiId: t.id,
-      title: t.title || "Untitled",
-      src: t.document_id || null,
-      srcChunk: t.source_chunk_id || null,
-      assignee: t.assignee || null,
-      priority: t.priority || "medium",
-      confidence: t.confidence == null ? null : Number(t.confidence),
-      status: apiStatusToUi(t.status),
-      type: t.source || "manual",
+      id: uiId("todo", todo.id),
+      apiId: todo.id,
+      title: todo.title || "Untitled",
+      src: todo.document_id || null,
+      srcChunk: todo.source_chunk_id || null,
+      assignee: todo.assignee || null,
+      priority: todo.priority || "medium",
+      confidence: todo.confidence == null ? null : Number(todo.confidence),
+      status: apiStatusToUi(todo.status),
+      type: todo.source || "manual",
       chunk: null,
-      grounds: [t.source === "ai" ? "DB AI 분석 결과" : "DB 저장 Todo"],
+      grounds: [todo.source === "ai" ? "DB AI analysis result" : "DB saved Todo"],
       risk: "",
     };
   }
 
-  function normalizeIssue(i) {
-    const status = i.status || "open";
-    const source = i.source || "manual";
+  function normalizeIssue(issue) {
+    const status = issue.status || "open";
+    const source = issue.source || "manual";
     return {
-      id: uiId("issue", i.id),
-      apiId: i.id,
+      id: uiId("issue", issue.id),
+      apiId: issue.id,
       type: status === "resolved" ? "resolved" : source === "ai" ? "candidate" : "confirmed",
-      severity: i.risk_level || "medium",
+      severity: issue.risk_level || "medium",
       status,
-      confidence: i.confidence == null ? null : Number(i.confidence),
-      title: i.title || "Untitled issue",
-      src: i.document_id || null,
-      assignee: i.assignee || null,
+      confidence: issue.confidence == null ? null : Number(issue.confidence),
+      title: issue.title || "Untitled issue",
+      src: issue.document_id || null,
+      assignee: issue.assignee || null,
       days: 0,
-      desc: i.description || i.title || "",
+      desc: issue.description || issue.title || "",
       chunk: "",
       history: [],
       domino: [],
       dominoFinal: "",
-      suggestTodo: i.title ? `${i.title} 대응` : null,
-      suggestAssignee: i.assignee || null,
-      suggestPriority: i.risk_level === "high" ? "high" : "medium",
+      suggestTodo: issue.title ? `${issue.title} follow-up` : null,
+      suggestAssignee: issue.assignee || null,
+      suggestPriority: issue.risk_level === "high" ? "high" : "medium",
     };
   }
 
@@ -105,40 +121,33 @@
     }[color] || "milestone";
   }
 
-  window.opsRadarCreateCalendarEvent = async function ({ title, day, color }) {
-    const created = await request("/calendar/", {
-      method: "POST",
-      body: JSON.stringify({
-        title,
-        event_date: `2026-05-${String(day).padStart(2, "0")}`,
-        event_type: calendarTypeFromColor(color),
-      }),
-    });
-    return created.event;
-  };
-
-  function normalizeCalendarEvent(e) {
-    const day = Number(String(e.event_date || "").split("-")[2]);
-    if (!day) return null;
+  function normalizeCalendarEvent(event) {
+    const date = String(event.event_date || "");
+    const [year, month, day] = date.split("-").map(Number);
+    if (!year || !month || !day) return null;
     return {
-      apiId: e.id,
+      apiId: event.id,
       d: day,
+      y: year,
+      m: month - 1,
       tags: [{
-        apiId: e.id,
-        t: e.person ? `${e.person} ${e.title}` : e.title,
-        c: calendarClass(e.event_type),
+        apiId: event.id,
+        t: event.person ? `${event.person} ${event.title}` : event.title,
+        c: calendarClass(event.event_type),
       }],
     };
   }
 
   function mergeCalendarEvents(events) {
+    if (!window.G) return;
     const byDay = new Map();
     events.map(normalizeCalendarEvent).filter(Boolean).forEach((event) => {
-      const existing = byDay.get(event.d);
+      const key = `${event.y}-${event.m}-${event.d}`;
+      const existing = byDay.get(key);
       if (existing) existing.tags.push(...event.tags);
-      else byDay.set(event.d, event);
+      else byDay.set(key, event);
     });
-    G.calEvents = Array.from(byDay.values());
+    window.G.calEvents = Array.from(byDay.values());
   }
 
   async function loadDashboardFromAPI() {
@@ -149,195 +158,139 @@
     const pendingEl = document.getElementById("pendingCount");
     if (rateEl) rateEl.textContent = `${data.done_todos || 0} / ${data.total_todos || 0}`;
     if (barEl) barEl.style.width = `${data.todo_completion_rate || 0}%`;
-    if (blockedEl) blockedEl.textContent = `${data.blocked_count || 0}건`;
+    if (blockedEl) blockedEl.textContent = `${data.blocked_count || 0} items`;
     if (pendingEl) pendingEl.textContent = data.pending_todos || 0;
   }
 
   async function loadTodosFromAPI() {
+    if (typeof todos === "undefined") return;
     const data = await request("/todos");
     replaceArray(todos, (data.todos || []).map(normalizeTodo));
-    renderTodos();
-    updateTodoCounts();
+    if (typeof renderTodos === "function") renderTodos();
+    if (typeof updateTodoCounts === "function") updateTodoCounts();
   }
 
   async function loadIssuesFromAPI() {
+    if (typeof issues === "undefined") return;
     const data = await request("/issues");
     replaceArray(issues, (data.issues || []).map(normalizeIssue));
-    renderIssues();
+    if (typeof renderIssues === "function") renderIssues();
   }
 
   async function loadCalendarFromAPI() {
     const data = await request("/calendar");
     mergeCalendarEvents(data.events || []);
-    renderCalendar();
+    if (typeof renderCalendar === "function") renderCalendar();
   }
 
-  const uiApproveTodo = approveTodo;
-  approveTodo = async function (id) {
-    const todo = todos.find((x) => x.id === id);
-    if (todo?.apiId) {
-      try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("approved") }) }); }
-      catch (error) { console.warn("Todo approve API failed", error); }
-    }
-    uiApproveTodo(id);
-  };
-
-  const uiRejectTodo = rejectTodo;
-  rejectTodo = async function (id) {
-    const todo = todos.find((x) => x.id === id);
-    if (todo?.apiId) {
-      try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("rejected") }) }); }
-      catch (error) { console.warn("Todo reject API failed", error); }
-    }
-    uiRejectTodo(id);
-  };
-
-  const uiDoneTodo = doneTodo;
-  doneTodo = async function (id) {
-    const todo = todos.find((x) => x.id === id);
-    if (todo?.apiId) {
-      try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("done") }) }); }
-      catch (error) { console.warn("Todo done API failed", error); }
-    }
-    uiDoneTodo(id);
-  };
-
-  const uiUndoTodo = undoTodo;
-  undoTodo = async function (id) {
-    const todo = todos.find((x) => x.id === id);
-    if (todo?.apiId) {
-      try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("pending") }) }); }
-      catch (error) { console.warn("Todo undo API failed", error); }
-    }
-    uiUndoTodo(id);
-  };
-
-  saveManual = async function () {
-    const title = document.getElementById("manualTitle").value.trim();
-    if (!title) return;
-    const assignee = document.getElementById("manualAssignee").value;
-    const priority = document.getElementById("manualPriority").value;
-    let apiId = null;
-    try {
-      const created = await request("/todos", {
-        method: "POST",
-        body: JSON.stringify({ title, assignee, priority, source: "manual", status: "pending" }),
-      });
-      apiId = created.todo_id;
-    } catch (error) {
-      console.warn("Todo create API failed", error);
-    }
-    todos.unshift({
-      id: apiId ? uiId("todo", apiId) : Date.now(),
-      apiId,
-      title,
-      src: null,
-      srcChunk: null,
-      assignee,
-      priority,
-      confidence: null,
-      status: "pending",
-      type: "manual",
-      chunk: null,
-      grounds: ["수동 등록"],
-      risk: "",
-    });
-    closeModal("manualModal");
-    document.getElementById("manualTitle").value = "";
-    if (G.currentTodoTab !== "ai") switchTodoTab("ai");
-    else renderTodos();
-    updateTodoCounts();
-    showToast("Todo가 등록되었습니다.", "success");
-  };
-
-  const uiResolveIssue = resolveIssue;
-  resolveIssue = async function (id) {
-    const issue = issues.find((x) => x.id === id);
-    if (issue?.apiId) {
-      try { await request(`/issues/${issue.apiId}/resolve`, { method: "PATCH" }); }
-      catch (error) { console.warn("Issue resolve API failed", error); }
-    }
-    uiResolveIssue(id);
-  };
-
-  const uiDoConfirmIssue = doConfirmIssue;
-  doConfirmIssue = async function () {
-    const issue = issues.find((x) => x.id === G.confirmIssueId);
-    if (issue?.apiId) {
-      try { await request(`/issues/${issue.apiId}`, { method: "PATCH", body: JSON.stringify({ status: "open", approval_status: "approved" }) }); }
-      catch (error) { console.warn("Issue confirm API failed", error); }
-    }
-    uiDoConfirmIssue();
-  };
-
-  confirmTodoCreate = async function () {
-    const title = document.getElementById("tcTitle").value.trim();
-    if (!title) return;
-    const assignee = document.getElementById("tcAssignee").value;
-    const priority = document.getElementById("tcPriority").value;
-    const due = document.getElementById("tcDue").value;
-    const sourceIssue = issues.find((x) => x.id === G.createIssueId);
-    closeModal("todoCreateModal");
-    showTransition("이슈 기반 대응 Todo를 생성하고 있습니다");
-    let apiId = null;
-    try {
-      const created = await request("/todos", {
-        method: "POST",
-        body: JSON.stringify({ title, assignee, priority, source: "manual", status: "pending" }),
-      });
-      apiId = created.todo_id;
-    } catch (error) {
-      console.warn("Issue todo create API failed", error);
-    }
-    setTimeout(() => {
-      hideTransition();
-      G.createdTodosFromIssue.push({ id: Date.now(), issueId: G.createIssueId, title, assignee, priority, dueDate: due, status: "pending" });
-      todos.unshift({
-        id: apiId ? uiId("todo", apiId) : Date.now() + 1,
-        apiId,
+  window.opsRadarCreateCalendarEvent = async function ({ title, day, month, year, color }) {
+    const target = new Date(
+      year ?? window.G?.currentCalYear ?? new Date().getFullYear(),
+      month ?? window.G?.currentCalMonth ?? new Date().getMonth(),
+      day,
+    );
+    const created = await request("/calendar/", {
+      method: "POST",
+      body: JSON.stringify({
         title,
-        src: sourceIssue ? `이슈 #${G.createIssueId}` : null,
-        srcChunk: "이슈 연결",
-        assignee,
-        priority,
-        confidence: null,
-        status: "pending",
-        type: "ai",
-        chunk: null,
-        grounds: ["이슈 기반 생성"],
-        risk: "",
-      });
-      document.getElementById("todoFromIssueBanner").style.display = "inline-flex";
-      document.getElementById("todoBadge").style.display = "inline-block";
-      renderIssues();
-      if (G.selectedIssueId === G.createIssueId) renderIssueDetail(G.createIssueId);
-      nav("todo");
-      showToast(`"${title.slice(0, 20)}..." Todo가 생성되었습니다.`, "success");
-      addNotif(`이슈 기반 대응 Todo "${title.slice(0, 20)}..."가 생성되었습니다.`, "success");
-      showCtxBanner("todo", `이슈 #${G.createIssueId}에서 생성된 Todo가 최상단에 추가되었습니다.`);
-      updateTodoCounts();
-    }, 500);
+        event_date: [
+          target.getFullYear(),
+          String(target.getMonth() + 1).padStart(2, "0"),
+          String(target.getDate()).padStart(2, "0"),
+        ].join("-"),
+        event_type: calendarTypeFromColor(color),
+      }),
+    });
+    return created.event;
   };
 
-  const uiDeleteCalTag = deleteCalTag;
-  deleteCalTag = async function (day, index) {
-    const tag = G.calEvents.find((x) => x.d === day)?.tags[index];
-    if (tag?.apiId) {
-      try { await request(`/calendar/${tag.apiId}`, { method: "DELETE" }); }
-      catch (error) { console.warn("Calendar delete API failed", error); }
-    }
-    uiDeleteCalTag(day, index);
-  };
-
-  window.addEventListener("load", () => {
-    Promise.allSettled([
+  window.opsRadarApi = {
+    request,
+    loadCalendar: loadCalendarFromAPI,
+    reload: () => Promise.allSettled([
       loadDashboardFromAPI(),
       loadTodosFromAPI(),
       loadIssuesFromAPI(),
       loadCalendarFromAPI(),
-    ]).then((results) => {
+    ]),
+  };
+
+  function patchTodoActions() {
+    if (typeof approveTodo === "function") {
+      const original = approveTodo;
+      window.approveTodo = approveTodo = async function (id) {
+        const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
+        if (todo?.apiId) {
+          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("approved") }) }); }
+          catch (error) { console.warn("Todo approve API failed", error); }
+        }
+        original(id);
+      };
+    }
+
+    if (typeof rejectTodo === "function") {
+      const original = rejectTodo;
+      window.rejectTodo = rejectTodo = async function (id) {
+        const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
+        if (todo?.apiId) {
+          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("rejected") }) }); }
+          catch (error) { console.warn("Todo reject API failed", error); }
+        }
+        original(id);
+      };
+    }
+
+    if (typeof doneTodo === "function") {
+      const original = doneTodo;
+      window.doneTodo = doneTodo = async function (id) {
+        const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
+        if (todo?.apiId) {
+          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("done") }) }); }
+          catch (error) { console.warn("Todo done API failed", error); }
+        }
+        original(id);
+      };
+    }
+  }
+
+  function patchCreateActions() {
+    if (typeof saveManual === "function") {
+      const original = saveManual;
+      window.saveManual = saveManual = async function () {
+        const titleEl = document.getElementById("manualTitle");
+        const title = titleEl?.value?.trim();
+        if (!title) return original();
+        try {
+          await request("/todos", {
+            method: "POST",
+            body: JSON.stringify({
+              title,
+              assignee: document.getElementById("manualAssignee")?.value || null,
+              priority: document.getElementById("manualPriority")?.value || "medium",
+              source: "manual",
+              status: "pending",
+            }),
+          });
+        } catch (error) {
+          console.warn("Todo create API failed", error);
+        }
+        original();
+      };
+    }
+  }
+
+  function initialize() {
+    patchTodoActions();
+    patchCreateActions();
+    window.opsRadarApi.reload().then((results) => {
       const rejected = results.filter((r) => r.status === "rejected");
       if (rejected.length) console.warn("Some OpsRadar API loads failed", rejected);
     });
-  });
+  }
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", initialize, { once: true });
+  } else {
+    initialize();
+  }
 })();
