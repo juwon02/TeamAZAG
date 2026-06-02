@@ -282,6 +282,7 @@
   function initialize() {
     patchTodoActions();
     patchCreateActions();
+    patchChatActions();
     window.opsRadarApi.reload().then((results) => {
       const rejected = results.filter((r) => r.status === "rejected");
       if (rejected.length) console.warn("Some OpsRadar API loads failed", rejected);
@@ -293,4 +294,40 @@
   } else {
     initialize();
   }
+// AI Assistant 연동
+function patchChatActions() {
+  if (typeof sendMsg === "function") {
+    const original = sendMsg;
+    window.sendMsg = sendMsg = async function (text) {
+      if (window.G?.chatTyping) return;
+      const input = document.getElementById("chatInput");
+      const msg = text || input?.value?.trim();
+      if (!msg) return;
+      if (input) { input.value = ""; input.style.height = "auto"; }
+      appendChatMsg("user", msg);
+      showTyping();
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/rag/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: msg,
+            message: msg,
+            project_id: "00000000-0000-0000-0000-000000000000"
+          })
+        });
+        const data = await res.json();
+        removeTyping();
+        const answer = data.answer || "답변을 가져올 수 없습니다.";
+        const sources = (data.sources || []).join(", ");
+        appendChatMsg("ai", answer, sources || null);
+      } catch (error) {
+        removeTyping();
+        // API 실패 시 기존 방식으로 fallback
+        original(text);
+      }
+    };
+  }
+}
 })();
