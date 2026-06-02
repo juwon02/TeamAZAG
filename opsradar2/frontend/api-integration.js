@@ -70,7 +70,7 @@
       id: uiId("issue", issue.id),
       apiId: issue.id,
       type: status === "resolved" ? "resolved" : source === "ai" ? "candidate" : "confirmed",
-      severity: issue.risk_level || "medium",
+      severity: issue.risk_level || issue.severity || "medium",
       status,
       confidence: issue.confidence == null ? null : Number(issue.confidence),
       title: issue.title || "Untitled issue",
@@ -81,10 +81,10 @@
       chunk: "",
       history: [],
       domino: [],
-      dominoFinal: "",
+      dominoFinal: issue.domino_impact || "",
       suggestTodo: issue.title ? `${issue.title} follow-up` : null,
       suggestAssignee: issue.assignee || null,
-      suggestPriority: issue.risk_level === "high" ? "high" : "medium",
+      suggestPriority: (issue.risk_level || issue.severity) === "high" ? "high" : "medium",
     };
   }
 
@@ -109,7 +109,7 @@
   function normalizeCalendarEvent(event) {
     const date = String(event.event_date || "");
     const [year, month, day] = date.split("-").map(Number);
-    if (!day) return null;
+    if (!year || !month || !day) return null;
     return {
       apiId: event.id,
       d: day,
@@ -127,11 +127,39 @@
     if (!window.G) return;
     const byDay = new Map();
     events.map(normalizeCalendarEvent).filter(Boolean).forEach((event) => {
-      const existing = byDay.get(event.d);
+      const key = `${event.y}-${event.m}-${event.d}`;
+      const existing = byDay.get(key);
       if (existing) existing.tags.push(...event.tags);
-      else byDay.set(event.d, event);
+      else byDay.set(key, event);
     });
-    G.calEvents = Array.from(byDay.values());
+    window.G.calEvents = Array.from(byDay.values());
+  }
+
+  function normalizeReport(report) {
+    const type = report.period === "monthly" ? "monthly" : "weekly";
+    return {
+      id: report.id,
+      apiId: report.id,
+      type,
+      title: type === "monthly" ? "월간 운영 보고서" : "주간 운영 보고서",
+      period: `${report.start_date || report.week_start || "-"} ~ ${report.end_date || report.week_end || "-"}`,
+      createdAt: report.created_at,
+      author: "OpsRadar",
+      status: "draft",
+      issues: 0,
+      doneTodos: 0,
+      pendingTodos: 0,
+      sections: {
+        completed: [report.content || "저장된 보고서 본문이 없습니다."],
+        inProgress: [],
+        technical: [],
+        risk: [],
+        retrospective: [],
+        nextPlan: [],
+      },
+      docs: ["DB 저장 보고서"],
+      html: report.content || "",
+    };
   }
 
   async function loadDashboardFromAPI() {
@@ -167,46 +195,19 @@
     if (typeof renderCalendar === "function") renderCalendar();
   }
 
-  function normalizeReport(report) {
-    const type = report.period === "monthly" ? "monthly" : "weekly";
-    return {
-      id: report.id,
-      apiId: report.id,
-      type,
-      title: type === "monthly" ? "월간 운영 보고서" : "주간 운영 보고서",
-      period: `${report.start_date || "-"} ~ ${report.end_date || "-"}`,
-      createdAt: report.created_at,
-      author: "OpsRadar",
-      status: "draft",
-      issues: 0,
-      doneTodos: 0,
-      pendingTodos: 0,
-      sections: {
-        completed: [report.content || "저장된 보고서 본문이 없습니다."],
-        inProgress: [],
-        technical: [],
-        risk: [],
-        retrospective: [],
-        nextPlan: [],
-      },
-      docs: ["DB 저장 보고서"],
-      html: report.content || "",
-    };
-  }
-
   async function loadReportsFromAPI() {
     if (typeof persistReports !== "function") return;
     const data = await request("/reports");
     const reports = (data.reports || []).map(normalizeReport);
     persistReports(reports);
-    if (window.G) G.savedReports = reports;
+    if (window.G) window.G.savedReports = reports;
     if (typeof renderReportList === "function") renderReportList();
   }
 
   window.opsRadarCreateCalendarEvent = async function ({ title, day, month, year, color }) {
     const target = new Date(
-      year ?? window.G?.currentCalYear ?? 2026,
-      month ?? window.G?.currentCalMonth ?? 4,
+      year ?? window.G?.currentCalYear ?? new Date().getFullYear(),
+      month ?? window.G?.currentCalMonth ?? new Date().getMonth(),
       day,
     );
     const created = await request("/calendar/", {
@@ -245,8 +246,16 @@
       window.approveTodo = approveTodo = async function (id) {
         const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
         if (todo?.apiId) {
-          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("approved") }) }); }
-          catch (error) { console.warn("Todo approve API failed", error); showToast("Todo 저장에 실패했습니다.", "warn"); return; }
+          try {
+            await request(`/todos/${todo.apiId}`, {
+              method: "PATCH",
+              body: JSON.stringify({ status: uiStatusToApi("approved"), approval_status: "approved" }),
+            });
+          } catch (error) {
+            console.warn("Todo approve API failed", error);
+            showToast("Todo 저장에 실패했습니다.", "warn");
+            return;
+          }
         }
         original(id);
       };
@@ -257,8 +266,16 @@
       window.rejectTodo = rejectTodo = async function (id) {
         const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
         if (todo?.apiId) {
-          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ approval_status: "rejected" }) }); }
-          catch (error) { console.warn("Todo reject API failed", error); showToast("Todo 저장에 실패했습니다.", "warn"); return; }
+          try {
+            await request(`/todos/${todo.apiId}`, {
+              method: "PATCH",
+              body: JSON.stringify({ approval_status: "rejected" }),
+            });
+          } catch (error) {
+            console.warn("Todo reject API failed", error);
+            showToast("Todo 저장에 실패했습니다.", "warn");
+            return;
+          }
         }
         original(id);
       };
@@ -269,83 +286,18 @@
       window.doneTodo = doneTodo = async function (id) {
         const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
         if (todo?.apiId) {
-          try { await request(`/todos/${todo.apiId}`, { method: "PATCH", body: JSON.stringify({ status: uiStatusToApi("done") }) }); }
-          catch (error) { console.warn("Todo done API failed", error); showToast("Todo 저장에 실패했습니다.", "warn"); return; }
-        }
-        original(id);
-      };
-    }
-
-    if (typeof undoTodo === "function") {
-      const original = undoTodo;
-      window.undoTodo = undoTodo = async function (id) {
-        const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
-        if (todo?.apiId) {
           try {
             await request(`/todos/${todo.apiId}`, {
               method: "PATCH",
-              body: JSON.stringify({ status: "pending", approval_status: "approved" }),
+              body: JSON.stringify({ status: uiStatusToApi("done") }),
             });
           } catch (error) {
-            console.warn("Todo undo API failed", error);
+            console.warn("Todo done API failed", error);
             showToast("Todo 저장에 실패했습니다.", "warn");
             return;
           }
         }
         original(id);
-      };
-    }
-
-    if (typeof bulkApprove === "function") {
-      const original = bulkApprove;
-      window.bulkApprove = bulkApprove = async function () {
-        const checkedIds = Object.keys(window.G?.todoChecked || {})
-          .filter((id) => G.todoChecked[id])
-          .map(Number);
-        let pending = typeof todos === "undefined"
-          ? []
-          : todos.filter((todo) => todo.status === "pending" && checkedIds.includes(todo.id));
-        if (!pending.length && typeof todos !== "undefined") {
-          pending = todos.filter((todo) => todo.status === "pending");
-        }
-        try {
-          await Promise.all(
-            pending
-              .filter((todo) => todo.apiId)
-              .map((todo) => request(`/todos/${todo.apiId}`, {
-                method: "PATCH",
-                body: JSON.stringify({ status: "in_progress", approval_status: "approved" }),
-              })),
-          );
-        } catch (error) {
-          console.warn("Todo bulk approve API failed", error);
-          showToast("Todo 일괄 저장에 실패했습니다.", "warn");
-          return;
-        }
-        original();
-      };
-    }
-
-    if (typeof saveEdit === "function") {
-      const original = saveEdit;
-      window.saveEdit = saveEdit = async function () {
-        const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === window.G?.editTargetId);
-        if (todo?.apiId) {
-          try {
-            await request(`/todos/${todo.apiId}`, {
-              method: "PATCH",
-              body: JSON.stringify({
-                title: document.getElementById("editTitle")?.value?.trim(),
-                assignee: document.getElementById("editAssignee")?.value || null,
-              }),
-            });
-          } catch (error) {
-            console.warn("Todo edit API failed", error);
-            showToast("Todo 수정에 실패했습니다.", "warn");
-            return;
-          }
-        }
-        original();
       };
     }
   }
@@ -354,8 +306,7 @@
     if (typeof saveManual === "function") {
       const original = saveManual;
       window.saveManual = saveManual = async function () {
-        const titleEl = document.getElementById("manualTitle");
-        const title = titleEl?.value?.trim();
+        const title = document.getElementById("manualTitle")?.value?.trim();
         if (!title) return original();
         try {
           await request("/todos", {
@@ -379,59 +330,20 @@
   }
 
   function patchCalendarActions() {
-    if (typeof addCalTag === "function") {
-      const originalAdd = addCalTag;
-      window.addCalTag = addCalTag = async function () {
-        const day = window.G?.selectedCalDay;
-        const title = document.getElementById("calModalInput")?.value?.trim();
-        if (!title || !day) return originalAdd();
-        try {
-          await window.opsRadarCreateCalendarEvent({
-            title,
-            day,
-            year: window.G?.currentCalYear,
-            month: window.G?.currentCalMonth,
-            color: typeof calSelectedColor === "undefined" ? "ct-info" : calSelectedColor,
-          });
-          originalAdd();
-          await loadCalendarFromAPI();
-        } catch (error) {
-          console.warn("Calendar create API failed", error);
-          showToast("캘린더 등록에 실패했습니다.", "warn");
-        }
-      };
-    }
-
     if (typeof deleteCalTag === "function") {
       const original = deleteCalTag;
       window.deleteCalTag = deleteCalTag = async function (day, index) {
         const tag = window.G?.calEvents?.find((x) => x.d === day)?.tags[index];
         if (tag?.apiId) {
-          try { await request(`/calendar/${tag.apiId}`, { method: "DELETE" }); }
-          catch (error) { console.warn("Calendar delete API failed", error); showToast("캘린더 삭제에 실패했습니다.", "warn"); return; }
+          try {
+            await request(`/calendar/${tag.apiId}`, { method: "DELETE" });
+          } catch (error) {
+            console.warn("Calendar delete API failed", error);
+            showToast("캘린더 삭제에 실패했습니다.", "warn");
+            return;
+          }
         }
         original(day, index);
-      };
-    }
-
-    if (typeof doRegisterCalEvent === "function") {
-      const originalRegister = doRegisterCalEvent;
-      window.doRegisterCalEvent = doRegisterCalEvent = async function (button, person, date, type, impact, day) {
-        if (!day) return originalRegister(button, person, date, type, impact, day);
-        try {
-          await window.opsRadarCreateCalendarEvent({
-            title: person ? `${person} ${type}` : type,
-            day,
-            year: window.G?.currentCalYear,
-            month: window.G?.currentCalMonth,
-            color: type === "부재" ? "ct-gray" : "ct-info",
-          });
-          originalRegister(button, person, date, type, impact, day);
-          await loadCalendarFromAPI();
-        } catch (error) {
-          console.warn("Chat calendar create API failed", error);
-          showToast("캘린더 등록에 실패했습니다.", "warn");
-        }
       };
     }
   }
@@ -470,6 +382,9 @@
 
   function initialize() {
     patchTodoActions();
+    patchCreateActions();
+    patchCalendarActions();
+    patchReportActions();
     window.opsRadarApi.reload().then((results) => {
       const rejected = results.filter((r) => r.status === "rejected");
       if (rejected.length) console.warn("Some OpsRadar API loads failed", rejected);
