@@ -279,22 +279,6 @@
     }
   }
 
-  function initialize() {
-    patchTodoActions();
-    patchCreateActions();
-    patchChatActions();
-    window.opsRadarApi.reload().then((results) => {
-      const rejected = results.filter((r) => r.status === "rejected");
-      if (rejected.length) console.warn("Some OpsRadar API loads failed", rejected);
-    });
-  }
-
-  if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", initialize, { once: true });
-  } else {
-    initialize();
-  }
-
   // AI Assistant 연동
   function patchChatActions() {
     if (typeof sendMsg === "function") {
@@ -326,11 +310,10 @@
           });
           const data = await res.json();
           removeTyping();
-          
-          // answer가 배열이면 깔끔한 텍스트 형식으로, 문자열이면 그대로 처리
+
+          // answer가 배열이면 읽기 쉬운 형식으로, 문자열이면 그대로 처리
           let answer;
           if (Array.isArray(data.answer)) {
-            // 배열을 읽기 쉬운 형식으로 변환
             answer = data.answer.map((item, idx) => {
               const lines = Object.entries(item)
                 .map(([key, value]) => `  ${key}: ${value}`)
@@ -340,15 +323,137 @@
           } else {
             answer = data.answer || "답변을 가져올 수 없습니다.";
           }
-          
+
           const sources = (data.sources || []).join(", ");
           appendChatMsg("ai", answer, sources || null);
         } catch (error) {
           removeTyping();
-          // API 실패 시 기존 방식으로 fallback
           original(text);
         }
       };
     }
+  }
+
+  // 파일 업로드 → AI 분석 실제 API 연동
+  window.startAnalysis = async function () {
+    const files = window.G?.uploadedFiles;
+    if (!files || !files.length) {
+      if (typeof showUploadError === "function") showUploadError("general");
+      return;
+    }
+    if (typeof hideUploadError === "function") hideUploadError();
+
+    document.getElementById("uploadSection").style.display = "none";
+    document.getElementById("analysisSection").style.display = "block";
+    if (document.getElementById("analysisGuide")) {
+      document.getElementById("analysisGuide").style.display = "none";
+    }
+
+    const fname = files[0].name;
+    document.getElementById("uploadedFname").textContent = `AI가 업무 내용을 분석하고 있습니다... · ${fname}`;
+
+    try {
+      // 1단계: 파일 업로드
+      if (typeof setFlow === "function") setFlow(1, "active", "업무 항목 추출 중...", "AI 분석 진행 중...", "s-active");
+
+      const formData = new FormData();
+      formData.append("file", files[0]);
+      formData.append("project_id", "30000000-0000-0000-0000-000000000001");
+
+      const uploadRes = await fetch("http://127.0.0.1:8000/rag/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) throw new Error(`업로드 실패: ${uploadRes.status}`);
+      const uploadData = await uploadRes.json();
+      const documentId = uploadData.document_id;
+
+      if (typeof setFlow === "function") setFlow(1, "done", "업무 항목 추출 완료", "업무 항목 추출 완료", "s-done");
+
+      // 2단계: 분석 상태 폴링
+      if (typeof setFlow === "function") setFlow(2, "active", "위험 이슈 확인 중...", "AI 분석 진행 중...", "s-active");
+
+      let result = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusRes = await fetch(`http://127.0.0.1:8000/rag/documents/${documentId}/status`);
+        const statusData = await statusRes.json();
+
+        if (statusData.status === "completed") {
+          result = statusData.result;
+          break;
+        } else if (statusData.status === "failed") {
+          throw new Error(statusData.error || "분석 실패");
+        }
+      }
+
+      if (typeof setFlow === "function") setFlow(2, "done", "위험 이슈 확인 완료", "위험 이슈 확인 완료", "s-done");
+
+      // 3단계: 결과 표시
+      if (typeof setFlow === "function") setFlow(3, "active", "운영 요약 생성 중...", "AI 분석 진행 중...", "s-active");
+      await new Promise((r) => setTimeout(r, 1000));
+      if (typeof setFlow === "function") setFlow(3, "done", "운영 요약 생성 완료", "운영 요약 생성 완료", "s-done");
+
+      document.getElementById("analysisBadge").textContent = "완료";
+      document.getElementById("analysisBadge").className = "badge b-success";
+
+      // 실제 결과 표시
+      const todosList = result?.todos || [];
+      const issuesList = result?.issues || [];
+
+      document.getElementById("resultFname").textContent = fname;
+      document.getElementById("rChunkMeta").textContent = `분석 완료 · ${result?.chunk_count || 0}개 청크`;
+      document.getElementById("rChunkContent").innerHTML = result?.summary || "분석이 완료되었습니다.";
+      if (document.getElementById("rSrcDoc")) document.getElementById("rSrcDoc").textContent = fname;
+      if (document.getElementById("rSrcRange")) document.getElementById("rSrcRange").textContent = `${result?.chunk_count || 0}개 청크`;
+      if (document.getElementById("rSrcReason")) document.getElementById("rSrcReason").textContent = result?.summary || "";
+
+      if (typeof countUp === "function") {
+        countUp("rTodo", todosList.length, 800);
+        countUp("rIssue", issuesList.length, 1000);
+        countUp("rBlocked", 0, 600);
+      }
+
+      document.getElementById("resultSection").style.display = "block";
+
+      if (window.G?.analysisHistory) {
+        window.G.analysisHistory.unshift({
+          name: fname,
+          type: "meeting",
+          date: new Date().toLocaleDateString(),
+          todo: todosList.length,
+          issue: issuesList.length,
+          blocked: 0,
+        });
+      }
+
+      if (typeof showToast === "function") showToast("분석이 완료되었습니다.");
+
+      // todos/issues 목록 갱신
+      await window.opsRadarApi?.reload();
+
+    } catch (err) {
+      console.error("[startAnalysis] 오류:", err);
+      document.getElementById("uploadSection").style.display = "block";
+      document.getElementById("analysisSection").style.display = "none";
+      if (typeof showUploadError === "function") showUploadError("general");
+    }
+  };
+
+  function initialize() {
+    patchTodoActions();
+    patchCreateActions();
+    patchChatActions();
+    window.opsRadarApi.reload().then((results) => {
+      const rejected = results.filter((r) => r.status === "rejected");
+      if (rejected.length) console.warn("Some OpsRadar API loads failed", rejected);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", initialize, { once: true });
+  } else {
+    initialize();
   }
 })();
