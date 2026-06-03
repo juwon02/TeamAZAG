@@ -1,0 +1,71 @@
+날짜: 2026년 6월 7일 (일) 오후 2시
+장소: 디스코드 음성채널 #시연
+참석자: 김희진, 이성우, 김예은, 김성호, 박주원
+회의 유형: 4주차 MVP 내부 시연
+
+---
+
+[시연 진행]
+
+김희진: 시연 시작합니다. 이성우가 전체 흐름 시연해줘.
+
+이성우: 
+Step 1 - 파일 업로드
+meeting_2026_05_07_kickoff.txt 파일 업로드합니다.
+(파일 선택 → 업로드 버튼 → startAnalysis 함수 호출)
+→ POST http://127.0.0.1:8000/rag/documents/upload 호출됨
+→ document_id 수신 완료
+
+Step 2 - 분석 상태 폴링
+GET /rag/documents/{id}/status 2초 간격 폴링 시작
+pending → processing → completed
+(약 8초 후) ✅ 분석 완료!
+
+Step 3 - 결과 확인
+Todo 자동 추출 결과:
+1. DB 스키마 ERD 초안 작성 (confidence: 94, high) → 김성호
+2. Azure VM PostgreSQL 환경 세팅 (confidence: 91, high) → 김예은
+3. RAG 파이프라인 설계 (confidence: 87, medium) → 이성우
+4. React 프로젝트 초기화 (confidence: 82, medium) → 박주원
+5. Use Case 정의서 작성 (confidence: 79, medium) → 김희진
+
+이슈 자동 추출:
+1. GitHub 레포 이름 통일 필요 (severity: low)
+2. API 키 관리 방법 미결 (severity: medium)
+
+박주원: Todo 화면에서 1번 Todo 승인 버튼 클릭합니다.
+(PATCH /api/v1/todos/{id} → approval_status: "approved")
+→ 승인 완료! Dashboard에 반영됩니다.
+
+김성호: Dashboard 확인합니다.
+total_todos: 5, pending_todos: 4, completed_todos: 1
+high_issues: 0, progress_rate: 20%
+실시간 업데이트 ✅
+
+이성우: AI Assistant 시연합니다.
+Q: "킥오프 회의에서 결정된 기술 스택 알려줘"
+A: "킥오프 회의에서 결정된 기술 스택은 다음과 같습니다.
+백엔드: FastAPI + PostgreSQL(asyncpg)
+AI/RAG: LangChain + FAISS + Azure OpenAI(gpt-4o, text-embedding-3-large)
+프론트: React + TailwindCSS
+인프라: Azure VM + Docker"
+출처: meeting_2026_05_07_kickoff.txt ✅
+
+---
+
+[시연 후 피드백]
+
+김희진: 완벽해요. Todo 담당자 자동 매핑이 특히 인상적이에요.
+
+박주원: Dashboard 차트가 좀 더 시각적으로 있으면 좋겠어요.
+
+김성호: API 응답 속도 빠른 게 체감됩니다.
+
+김예은: 배포 안정성 문제없어요. 서버 2주 연속 무중단.
+
+---
+
+[결정사항]
+- MVP 시연 성공 ✅
+- Dashboard 차트 시각화 강화 → 5주차 추가 작업
+- 최종 발표 준비 6주차부터 시작

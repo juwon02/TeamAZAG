@@ -1,0 +1,93 @@
+===EMAIL_START===
+날짜: 2026-05-26
+발신: 김성호 <sungho@azag.dev>
+수신: 이성우 <sungwoo@azag.dev>
+제목: UUID 스키마 정규화 완료 확인 요청
+
+성우야,
+
+지난번에 MySQL에서 PostgreSQL로 전환하면서 스키마도 같이 정규화했잖아.
+최종 확정된 UUID 기반 스키마 확인해줄 수 있어?
+
+내가 정리한 테이블 구조:
+
+TODOS 테이블:
+- id: UUID (PK)
+- project_id: UUID (FK → projects)
+- assignee_member_id: UUID (FK → project_members)
+- created_by_member_id: UUID (FK → project_members)
+- reviewed_by_member_id: UUID (FK → project_members, nullable)
+- source_document_id: UUID (FK → documents, nullable)
+- source_chunk_id: UUID (FK → document_chunks, nullable)
+- linked_issue_id: UUID (FK → issues, nullable)
+- title: VARCHAR
+- status: VARCHAR (pending/in_progress/done)
+- priority: VARCHAR (high/medium/low)
+- approval_status: VARCHAR (pending/approved/rejected)
+
+ISSUES 테이블:
+- id: UUID (PK)
+- project_id: UUID (FK → projects)
+- assignee_member_id: UUID (FK → project_members, nullable)
+- reporter_member_id: UUID (FK → project_members)
+- source_document_id: UUID (FK → documents, nullable)
+- source_chunk_id: UUID (FK → document_chunks, nullable)
+- title: VARCHAR
+- severity: VARCHAR (high/medium/low)
+- status: VARCHAR (open/in_progress/resolved)
+- approval_status: VARCHAR (pending/approved/rejected)
+
+이게 맞지?
+
+성호
+===EMAIL_END===
+
+===EMAIL_START===
+날짜: 2026-05-26
+발신: 이성우 <sungwoo@azag.dev>
+수신: 김성호 <sungho@azag.dev>
+제목: Re: UUID 스키마 정규화 완료 확인 요청
+
+성호야,
+
+맞아. 정확하게 정리했어.
+추가로 dashboard_service.py에서 쿼리할 때
+project_id가 항상 포함되어야 해.
+현재 테스트용 project_id는 30000000-0000-0000-0000-000000000001 이야.
+
+그리고 FAISS 인덱스 연결도 확인해줘:
+FAISS_INDEXES 테이블:
+- id: UUID (PK)
+- project_id: UUID (FK)
+- index_path: VARCHAR (서버 로컬 경로)
+- embedding_model: VARCHAR (text-embedding-3-large)
+- embedding_dimension: INTEGER (3072)
+- status: VARCHAR (ready/building/error)
+
+성우
+===EMAIL_END===
+
+===EMAIL_START===
+날짜: 2026-05-27
+발신: 김성호 <sungho@azag.dev>
+수신: 팀 전체 <team@azag.dev>
+제목: DB 스키마 최종 확정 공지
+
+팀원 여러분,
+
+UUID 기반 PostgreSQL 스키마 최종 확정됐습니다.
+
+핵심 변경사항 (MySQL 대비):
+1. 모든 PK: Integer → UUID
+2. DB: MySQL 8.0 → PostgreSQL 14 (asyncpg 드라이버)
+3. 연결 문자열: postgresql+asyncpg://azag_user:1111@74.249.82.58:5432/azag_db
+4. FAISS 인덱스 메타데이터 테이블 추가
+5. confidence_score, approval_status 컬럼 추가
+
+마이그레이션 스크립트: app/db/migrations/001_uuid_schema.sql
+로컬 DB 초기화: python -m app.db.seed (더미 데이터 자동 주입)
+
+문의: 김성호 (#개발 채널)
+
+성호
+===EMAIL_END===

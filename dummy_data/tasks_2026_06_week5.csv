@@ -1,0 +1,21 @@
+id,title,assignee,status,priority,due_date,category,confidence_score,source
+T-501,보고서 자동 생성 AI 프롬프트 작성,이성우,completed,high,2026-06-06,ai,null,manual
+T-502,보고서 CRUD API 완성 (POST/GET /api/v1/reports),김성호,completed,high,2026-06-06,backend,null,manual
+T-503,지식 전달 화면 구현,박주원,completed,high,2026-06-06,frontend,null,manual
+T-504,파일 업로드 유효성 검사 영구 수정 (index.html L3361),박주원,completed,medium,2026-06-02,frontend,null,manual
+T-505,FAISS 캐싱 추가 (응답속도 개선),김예은,completed,medium,2026-06-04,infra,null,manual
+T-506,6월 7일 시연 준비 총괄,김희진,completed,high,2026-06-07,pm,null,manual
+T-507,시연용 더미 문서 파일 준비,이성우,completed,medium,2026-06-05,ai,null,manual
+T-508,Dashboard 차트 데이터 API 설계,김성호,in_progress,medium,2026-06-13,backend,null,manual
+T-509,보고서 화면 UI 구현,박주원,completed,medium,2026-06-06,frontend,null,manual
+T-510,부하 테스트 환경 구성 (동시 사용자 10명),김예은,in_progress,medium,2026-06-13,infra,null,manual
+T-511,API_BASE_URL 환경변수 분리,이성우,completed,low,2026-06-03,ai,null,manual
+T-512,project_id 동적 조회 로직 안정화,박주원,completed,medium,2026-06-03,frontend,null,manual
+T-513,최종 발표 자료 목차 작성,김희진,in_progress,high,2026-06-14,pm,null,manual
+T-514,통합 테스트 시나리오 20개 작성,김희진,in_progress,high,2026-06-09,pm,null,manual
+T-515,AI 응답에 날짜 정보 포함 개선,이성우,pending,medium,2026-06-13,ai,82,ai
+T-516,PostgreSQL 쿼리 인덱스 최적화,김성호,pending,low,2026-06-13,backend,75,ai
+T-517,캘린더 뷰 화면 설계,박주원,pending,low,2026-06-20,frontend,70,ai
+T-518,v0.4.0 배포 (보고서 기능),김예은,completed,high,2026-06-07,infra,null,manual
+T-519,GitHub seongwoo-final 브랜치 PR 생성,이성우,completed,medium,2026-06-03,pm,null,manual
+T-520,더미 데이터 40개 추가 생성,이성우,in_progress,medium,2026-06-05,ai,null,manual

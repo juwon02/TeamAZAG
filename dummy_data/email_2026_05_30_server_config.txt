@@ -1,0 +1,74 @@
+===EMAIL_START===
+날짜: 2026-05-30
+발신: 김예은 <yeeun@azag.dev>
+수신: 팀 전체 <team@azag.dev>
+제목: 서버 포트 구성 최종 안내
+
+팀원 여러분,
+
+서버 포트 구성 최종 확정됐습니다. 꼭 확인해주세요.
+
+[포트 구성]
+포트 8000: 메인 RAG 서버
+  - 경로: C:\Users\soldesk\azag_chatbot
+  - 역할: RAG 파이프라인, 문서 업로드, 챗봇 API
+  - 실행: uvicorn app.main:app --port 8000 --reload
+
+포트 8001: OpsRadar2 서버
+  - 경로: C:\Users\soldesk\azag_chatbot\opsradar2
+  - 역할: 대시보드 API, Todo/이슈 CRUD
+  - 실행: uvicorn app.main:app --port 8001 --reload
+
+[DB 연결]
+postgresql+asyncpg://azag_user:1111@74.249.82.58:5432/azag_db
+
+[주의사항]
+- 두 서버 모두 실행되어야 프론트 정상 동작
+- AI Assistant는 포트 8000 /rag/chat 호출
+- Todo/이슈 CRUD는 포트 8001 /api/v1/... 호출
+- FAISS 인덱스는 포트 8000 서버에서 관리
+
+[로컬 실행 순서]
+1. PostgreSQL 연결 확인 (74.249.82.58:5432)
+2. 포트 8000 서버 실행
+3. 포트 8001 서버 실행
+4. 브라우저에서 http://localhost:8001 접속
+
+동시 실행 스크립트: start_servers.bat (루트 폴더)
+
+예은
+===EMAIL_END===
+
+===EMAIL_START===
+날짜: 2026-05-30
+발신: 이성우 <sungwoo@azag.dev>
+수신: 김예은 <yeeun@azag.dev>
+제목: Re: 서버 포트 구성 최종 안내
+
+예은아,
+
+한 가지 추가할게.
+api-integration.js에서 API URL 하드코딩 제거했어.
+이제 상대경로로 호출하는데,
+개발 환경에서는 http://127.0.0.1:8000이고
+배포 환경에서는 서버 IP로 바뀌어야 해.
+
+BASE_URL 환경변수로 분리하면 어떨까?
+
+성우
+===EMAIL_END===
+
+===EMAIL_START===
+날짜: 2026-05-31
+발신: 김예은 <yeeun@azag.dev>
+수신: 이성우 <sungwoo@azag.dev>
+제목: Re: Re: 서버 포트 구성 최종 안내
+
+성우야,
+
+좋아! .env 파일에 VITE_API_BASE_URL=http://127.0.0.1:8000 추가할게.
+프론트에서 import.meta.env.VITE_API_BASE_URL 으로 읽으면 돼.
+배포 시엔 http://74.249.82.58:8000 으로 변경.
+
+예은
+===EMAIL_END===

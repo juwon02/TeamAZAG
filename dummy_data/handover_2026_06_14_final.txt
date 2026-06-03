@@ -1,0 +1,64 @@
+===SECTION: 최종 인수인계 문서===
+문서 유형: 최종 인수인계 (발표 전)
+작성일: 2026년 6월 14일
+작성자: 김희진 (팀장)
+===SECTION_END===
+
+===SECTION: 프로젝트 최종 현황===
+프로젝트명: OpsRadar MVP
+팀명: AZAG
+기간: 2026-05-01 ~ 2026-06-28
+진행률: 90% (7주차 진입)
+
+완성된 기능 전체:
+✅ 파일 업로드 (txt/pdf/docx/csv)
+✅ AI 자동 분석 (Todo/이슈 추출, confidence_score)
+✅ Todo 승인/반려/완료 워크플로우
+✅ 이슈 로그 (severity 기반 분류)
+✅ Dashboard (실시간 집계)
+✅ AI Assistant (RAG 기반 Q&A, FAISS)
+✅ 보고서 자동 생성 (주간/월간)
+✅ 지식 전달 화면
+✅ CI/CD 자동 배포
+
+미완성:
+- 캘린더 뷰 (범위 축소 결정)
+- 로그인/인증 (범위 축소 결정)
+===SECTION_END===
+
+===SECTION: 시스템 접속 정보===
+[서버]
+포트 8000: http://74.249.82.58:8000 (RAG 메인)
+포트 8001: http://74.249.82.58:8001 (OpsRadar2)
+
+[데이터베이스]
+postgresql+asyncpg://azag_user:1111@74.249.82.58:5432/azag_db
+기본 project_id: 30000000-0000-0000-0000-000000000001
+
+[GitHub]
+https://github.com/juwon02/TeamAZAG
+메인 브랜치: main, dev
+이성우 브랜치: seongwoo-final (PR 진행 중)
+
+[로컬 실행]
+1. start_servers.bat 실행 (8000, 8001 동시 시작)
+2. http://localhost:8001 접속
+===SECTION_END===
+
+===SECTION: 발표 시연 체크리스트===
+시연 전:
+□ 포트 8000 서버 실행 확인
+□ 포트 8001 서버 실행 확인
+□ PostgreSQL 연결 확인 (74.249.82.58:5432)
+□ FAISS 인덱스 로드 확인 (/app/faiss_db/)
+□ 시연용 회의록 파일 준비 (meeting_2026_05_07_kickoff.txt)
+□ 브라우저 캐시 초기화
+
+시연 순서:
+1. 파일 업로드 → startAnalysis 호출
+2. 분석 상태 폴링 (pending → processing → completed)
+3. Todo 자동 추출 결과 확인
+4. 승인 버튼 클릭 → Dashboard 반영 확인
+5. AI Assistant: "킥오프 회의에서 결정된 기술 스택은?"
+6. 답변: PostgreSQL, FAISS, Azure OpenAI gpt-4o 확인
+===SECTION_END===

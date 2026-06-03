@@ -1,0 +1,69 @@
+===SECTION: 4주차 인수인계 문서===
+문서 유형: 주차별 인수인계
+작성일: 2026년 5월 30일
+작성자: 이성우 (AI 담당) + 박주원 (프론트 담당)
+===SECTION_END===
+
+===SECTION: 서버 실행 방법===
+[필수] 두 서버 모두 실행해야 정상 동작
+
+서버 1 (포트 8000 — 메인 RAG 서버):
+  경로: C:\Users\soldesk\azag_chatbot
+  실행: uvicorn app.main:app --port 8000 --reload
+  역할: /rag/documents/upload, /rag/chat, FAISS 관리
+
+서버 2 (포트 8001 — OpsRadar2 대시보드):
+  경로: C:\Users\soldesk\azag_chatbot\opsradar2
+  실행: uvicorn app.main:app --port 8001 --reload
+  역할: /api/v1/todos, /api/v1/issues, /api/v1/dashboard
+
+동시 실행: start_servers.bat (루트 폴더)
+
+DB 연결:
+  postgresql+asyncpg://azag_user:1111@74.249.82.58:5432/azag_db
+  (VPN 또는 허용된 IP에서만 접근 가능)
+===SECTION_END===
+
+===SECTION: 핵심 API 목록===
+[포트 8000]
+POST /rag/documents/upload → 파일 업로드 + AI 분석 시작
+GET  /rag/documents/{id}/status → 분석 상태 폴링
+POST /rag/chat → AI 챗봇 (project_id 필수)
+
+[포트 8001]
+GET  /api/v1/dashboard/summary → 대시보드 집계
+GET  /api/v1/todos → Todo 목록
+POST /api/v1/todos → Todo 수동 생성
+PATCH /api/v1/todos/{id} → 승인/반려/완료
+GET  /api/v1/issues → 이슈 목록
+PATCH /api/v1/issues/{id} → 이슈 상태 변경
+===SECTION_END===
+
+===SECTION: 프론트엔드 핵심 함수===
+api-integration.js 주요 함수:
+
+window.startAnalysis(files):
+  - 파일 업로드 → POST /rag/documents/upload
+  - 상태 폴링 30회×2초
+  - 완료 시 결과 표시
+
+patchTodoActions():
+  - 승인/반려/완료 버튼 → PATCH /api/v1/todos/{id}
+
+patchChatActions():
+  - sendMsg → POST http://127.0.0.1:8000/rag/chat
+  - project_id: data-project-id 속성에서 동적 조회
+  - 폴백: "30000000-0000-0000-0000-000000000001"
+
+loadDashboardFromAPI():
+  - GET /api/v1/dashboard/summary
+  - 카드 4개 실데이터 반영
+===SECTION_END===
+
+===SECTION: 알려진 이슈 및 주의사항===
+1. DB 연결 VPN 필요: 74.249.82.58:5432 외부 IP 접근 시
+2. FAISS 인덱스: 포트 8000 서버 /app/faiss_db/ (Azure 영구 디스크)
+3. 파일 업로드: 현재 모든 파일 허용 (서버에서 검증)
+4. project_id: 현재 30000000-0000-0000-0000-000000000001 고정
+   → 추후 로그인 시스템 연동 시 동적 변경 예정
+===SECTION_END===

@@ -1,0 +1,70 @@
+================================================================
+채팅 로그 — Dashboard 개발 채널
+================================================================
+날짜: 2026-05-28 (목)
+채널: #dev-dashboard
+================================================================
+
+[09:00] 김성호
+dashboard/summary API 완성했습니다!
+
+응답 예시:
+{
+  "total_todos": 18,
+  "pending_todos": 6,
+  "in_progress_todos": 4,
+  "completed_todos": 8,
+  "high_issues": 2,
+  "total_issues": 5,
+  "recent_documents": [
+    {
+      "id": "...",
+      "file_name": "meeting_2026_05_21_week3_mid.txt",
+      "uploaded_at": "2026-05-21T10:00:00Z",
+      "analysis_status": "completed"
+    }
+  ],
+  "progress_rate": 65,
+  "analyzed_documents": 7
+}
+
+project_id: 30000000-0000-0000-0000-000000000001 기준입니다.
+
+[09:05] 박주원
+완벽해요! 바로 연동 시작할게요.
+loadDashboardFromAPI 함수에서 GET /api/v1/dashboard/summary 호출.
+
+[09:10] 박주원
+연동 완료! 카드 4개 실데이터 표시됩니다.
+pending_todos: 6 ✅
+high_issues: 2 ✅
+progress_rate: 65% ✅
+recent_documents: 파일명 3개 ✅
+
+[09:15] 이성우
+실데이터 반영됐네요! 이제 Todo 승인하면 바로 Dashboard 업데이트 되나요?
+
+[09:17] 박주원
+네! patchTodoActions에서 승인 완료 후 loadDashboardFromAPI() 재호출하도록 했어요.
+승인 → 2초 후 Dashboard 자동 갱신됩니다.
+
+[10:30] 박주원
+차트 시각화도 추가했어요:
+- 진행률 도넛 차트 (65%)
+- 우선순위별 Todo 막대 그래프 (High/Medium/Low)
+- 이번 주 일별 완료 추이 꺾은선 차트
+
+[10:35] 김희진
+대시보드 진짜 이쁘다!
+스크린샷 찍어서 발표 자료에 넣을게요.
+
+[11:00] 김성호
+한 가지 추가됐어요.
+normalizeCalendarEvent 함수랑 loadCalendarFromAPI 추가.
+캘린더 이벤트도 dashboard에 표시될 예정이에요.
+
+[11:05] 박주원
+오 좋아요. 캘린더 위젯도 넣을게요.
+다음 일정 상위 3개 표시 형태로.
+
+================================================================

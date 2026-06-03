@@ -1,0 +1,83 @@
+===SECTION: 신규 팀원 온보딩 가이드===
+문서 유형: 온보딩 문서
+작성일: 2026년 5월 17일
+작성자: 김희진 (팀장)
+대상: 팀메모리 프로젝트 신규 참여자
+
+이 문서는 팀메모리(OpsRadar) 프로젝트에 새로 합류하는 팀원이
+현재 프로젝트 상태와 맥락을 빠르게 이해할 수 있도록 작성되었습니다.
+===SECTION_END===
+
+===SECTION: 프로젝트 현재 상태===
+프로젝트명: 팀메모리 (OpsRadar)
+현재 단계: 2주차 완료 / 3주차 시작
+전체 진행률: 약 25%
+
+현재 구현 완료:
+- AI RAG 파이프라인 (chunker/embedder/retriever/summarizer)
+- Azure VM + PostgreSQL 인프라
+- FastAPI 엔드포인트 껍데기 7개
+- React UI 레이아웃 7개 화면
+
+현재 진행 중:
+- FastAPI + AI 파이프라인 연동 (3주차)
+- 프론트 API 연동 (3주차)
+- CI/CD 자동 배포 (3주차)
+
+주요 기술 결정 사항:
+- 벡터DB: ChromaDB → FAISS 전환 (Windows DLL 충돌로 변경)
+- DB: MySQL → PostgreSQL 전환 (팀 결정)
+- AI 모델: gpt-4o + text-embedding-3-large
+- 프레임워크: FastAPI + React (Vite) + TailwindCSS
+===SECTION_END===
+
+===SECTION: 최근 주요 의사결정===
+1. 벡터DB FAISS 채택 (2026-05-14)
+   배경: ChromaDB Windows 환경 DLL 충돌 문제
+   결정: faiss-cpu 패키지로 전환
+   영향: embedder.py, retriever.py 수정
+
+2. PostgreSQL 전환 (2026-05-15)
+   배경: 비동기 처리 성능 및 팀 선호도
+   결정: MySQL → PostgreSQL + asyncpg
+   영향: DB 스키마 수정, .env 설정 변경
+
+3. 청크 사이즈 700자 결정 (2026-05-19)
+   배경: 멘토 권장 500~800자 중 중간값
+   결정: CHUNK_SIZE=700, CHUNK_OVERLAP=100
+   영향: 검색 품질 개선 확인
+
+4. 유사도 임계값 0.41 결정 (2026-05-19)
+   배경: threshold_test.py로 직접 테스트
+   결정: SCORE_THRESHOLD=0.41
+   영향: 무관한 질문 차단, 관련 질문 통과
+===SECTION_END===
+
+===SECTION: 주요 리스크 현황===
+현재 리스크:
+1. Azure API 타임아웃 [High] - 이성우 대응 중
+2. CI/CD 미완성 [Medium] - 김예은 3주차 목표
+3. API 스펙 불일치 가능성 [Low] - 명세서 확정 예정
+
+온보딩 시 주의사항:
+- API 키는 이성우에게 디스코드 DM 요청
+- DB 비밀번호는 김성호에게 디스코드 DM 요청
+- faiss_db/는 gitignore 처리됨 → python -m app.ai.embedder 실행 필요
+- 브랜치: main(배포) / dev(통합) / feat/이름(개발)
+===SECTION_END===
+
+===SECTION: 참고 문서===
+핵심 참고 문서:
+- 요구사항 정의서: Notion 링크
+- Use Case 정의서: Notion 링크
+- API 명세서: Notion 링크
+- ERD: ERDCloud 링크
+- GitHub: https://github.com/yeni0224/teamAZAG (SeongWoo 브랜치)
+
+로컬 개발 환경 세팅 순서:
+1. git clone https://github.com/yeni0224/teamAZAG.git
+2. pip install -r requirements.txt
+3. .env.example → .env 복사 후 값 입력
+4. python -m app.ai.embedder (FAISS DB 생성)
+5. uvicorn app.main:app --reload
+===SECTION_END===

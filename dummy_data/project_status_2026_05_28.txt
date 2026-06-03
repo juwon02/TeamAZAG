@@ -1,0 +1,47 @@
+===SECTION: 프로젝트 운영 상태===
+문서 유형: 프로젝트 운영 현황
+작성일: 2026년 5월 28일
+작성자: 김희진 (팀장)
+기준일: 2026년 5월 28일 (4주차 완료)
+
+전체 진행률: 70% (8주 중 4주 완료)
+현재 단계: 4주차 완료 — MVP 완성
+다음 마일스톤: 5주차 보고서 기능 (6월 6일)
+최종 목표: 6주차 통합 QA → 최종 발표 (6월 28일)
+
+팀원별 현황:
+- 김희진 (PM): 6월 7일 시연 시나리오 확정. 팀 이슈 0건.
+- 이성우 (AI): startAnalysis API 연동 완성. /rag/chat 완성. FAISS 영구 저장 해결.
+- 김성호 (백엔드): todos/issues CRUD PATCH 완성. dashboard/summary API 완성.
+- 김예은 (인프라): 포트 8000/8001 동시 실행 스크립트 완성. 서버 무중단 2주.
+- 박주원 (프론트): 전체 화면 실데이터 연동 완성. API 상대경로 전환 완성.
+===SECTION_END===
+
+===SECTION: 기술 스택 최종 확정===
+백엔드: Python 3.11, FastAPI, PostgreSQL 14 (asyncpg)
+DB 연결: postgresql+asyncpg://azag_user:1111@74.249.82.58:5432/azag_db
+AI/ML: LangChain, FAISS (faiss-cpu), Azure OpenAI (gpt-4o, text-embedding-3-large)
+인프라: Azure VM (74.249.82.58, Korea Central), Docker
+프론트엔드: Vanilla JS (index.html), TailwindCSS
+서버 구성: 포트 8000 (RAG 메인), 포트 8001 (OpsRadar2 대시보드)
+스키마: UUID 기반 PostgreSQL (INTEGER PK 제거)
+===SECTION_END===
+
+===SECTION: 완성된 기능===
+✅ 파일 업로드 → startAnalysis → 상태 폴링 → 분석 완료
+✅ Todo 자동 추출 (confidence_score, priority, assignee 포함)
+✅ 이슈 자동 추출 (severity, approval_status 포함)
+✅ Todo 승인/반려/완료 (PATCH API 연동)
+✅ Dashboard 실데이터 표시 (summary API 연동)
+✅ AI Assistant /rag/chat (project_id 동적 조회)
+✅ CI/CD 자동 배포 (GitHub Actions → Azure VM)
+✅ FAISS 영구 저장 (Azure 데이터 디스크)
+===SECTION_END===
+
+===SECTION: 미완성 기능===
+- 보고서 자동 생성 (5주차)
+- 지식 전달 화면 (5주차)
+- 캘린더 뷰 (6주차)
+- 통합 QA 테스트 (6주차)
+- 최종 발표 자료 (7주차)
+===SECTION_END===

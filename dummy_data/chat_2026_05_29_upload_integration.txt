@@ -1,0 +1,68 @@
+================================================================
+채팅 로그 — 파일 업로드 API 연동 채널
+================================================================
+날짜: 2026-05-29 (금)
+채널: #dev-upload-integration
+================================================================
+
+[09:00] 이성우
+startAnalysis 함수 실제 API 연동 완성했습니다!
+이전에 더미 함수로만 있던 거 실제 POST /rag/documents/upload로 교체했어요.
+
+흐름:
+1. 파일 선택 → FormData 생성
+2. POST http://127.0.0.1:8000/rag/documents/upload 호출
+3. 응답에서 document_id 추출
+4. GET /rag/documents/{document_id}/status 30회×2초 폴링
+5. status === "completed" 되면 결과 표시
+
+[09:05] 박주원
+오 완성됐어요? 근데 파일 업로드 유효성 검사 때문에
+이상한 파일도 다 걸러버리던데요.
+회의록 txt 파일인데 "업무 관련 문서가 아닌 것 같습니다" 에러 떠요.
+
+[09:08] 이성우
+아 looksLikeBusinessRecord 함수가 날짜 패턴이나 발화자 패턴 없으면 막아버리더라고요.
+일단 콘솔에서 오버라이드할게요:
+window.looksLikeBusinessRecord = function(text) { return true; }
+window.validateUploadedFiles = async function(files) { return { ok: true }; }
+
+[09:10] 박주원
+아 그렇구나. 그럼 index.html 3361번째 줄에서
+return hasDate && (hasSpeaker || hasContent)
+이걸 return true로 바꾸면 영구 수정이에요?
+
+[09:12] 이성우
+맞아요. 지금은 임시 오버라이드로 쓰고 나중에 영구 수정하면 됩니다.
+
+[09:15] 김성호
+todos PATCH API 완성했어요.
+PATCH /api/v1/todos/{id} 로 status, approval_status 변경 가능합니다.
+approve → approval_status: "approved"
+reject → approval_status: "rejected"
+done → status: "done"
+
+[09:18] 박주원
+바로 붙일게요! 승인/반려/완료 버튼 연동 오늘 완성하겠습니다.
+
+[10:30] 박주원
+patchTodoActions 함수 구현 완성했어요.
+승인/반려/완료 버튼 클릭 시 PATCH API 자동 호출됩니다.
+
+[10:33] 이성우
+테스트해봤는데 회의록 업로드 → 분석 완료 → Todo 자동 추출 → 승인까지
+전체 흐름 완벽하게 동작합니다! ✅
+
+[10:35] 김희진
+MVP 완성이네요! 수고들 했어요 🎉
+
+[11:00] 김예은
+포트 8000(메인 RAG 서버)이랑 8001(opsradar2) 동시 실행 스크립트 만들었어요.
+start_servers.bat 파일 루트에 추가했습니다.
+실행 순서: 8000 먼저 → 3초 대기 → 8001 실행
+
+[11:05] 이성우
+완벽해요. DB 연결은 74.249.82.58:5432 PostgreSQL이고
+project_id는 30000000-0000-0000-0000-000000000001 사용합니다.
+
+================================================================

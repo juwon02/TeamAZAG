@@ -1,0 +1,49 @@
+문서 유형: 주간 업무 보고서
+작성자: 김성호 (백엔드 담당)
+기간: 2026년 5월 26일 ~ 5월 30일 (4주차)
+작성일: 2026년 5월 30일
+
+---
+
+[이번 주 목표]
+- dashboard/summary API 완성
+- todos/issues PATCH API (승인/반려/완료) 완성
+- PostgreSQL 커넥션 풀 이슈 해결
+
+---
+
+[완료된 작업]
+1. dashboard/summary API 완성
+   - GET /api/v1/dashboard/summary
+   - project_id: 30000000-0000-0000-0000-000000000001 기준
+   - JOIN 쿼리로 응답시간 120ms 달성
+
+2. todos PATCH API 완성
+   - PATCH /api/v1/todos/{id}
+   - approve: approval_status → "approved"
+   - reject: approval_status → "rejected"
+   - done: status → "done"
+
+3. issues PATCH API 완성
+   - PATCH /api/v1/issues/{id}
+   - status: open → in_progress → resolved
+
+4. PostgreSQL 커넥션 풀 최적화
+   - min_size=5, max_size=20 (ISSUE-004 해결)
+   - 동시 업로드 5개 테스트 통과
+
+5. UUID 스키마 정규화 최종 확인
+   - todos, issues 테이블 FK 정규화 완료
+   - confidence_score, approval_status 컬럼 정상 동작
+
+---
+
+[이슈]
+- ISSUE-004: 커넥션 풀 소진 → 해결 완료
+
+---
+
+[다음 주 계획 (5주차)]
+- 보고서 API (POST/GET /api/v1/reports) 설계 및 구현
+- 월간 보고서 집계 쿼리 작성
+- Dashboard API 추가 필드 지원 (캘린더 이벤트)

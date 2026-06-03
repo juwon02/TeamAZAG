@@ -1,0 +1,55 @@
+날짜: 2026년 5월 28일 (수) 오후 6시
+장소: 디스코드 음성채널 #팀회의
+참석자: 김희진, 이성우, 김예은, 김성호, 박주원
+회의 유형: 4주차 중간 점검
+
+---
+
+[회의 목적]
+dashboard/summary API 및 AI Assistant /chat 완성 여부 확인.
+
+---
+
+[논의 내용]
+
+김희진: dashboard/summary API랑 /chat 엔드포인트 오늘 마감이야. 상황 공유해줘.
+
+김성호: dashboard/summary API 완성했어요. PostgreSQL 집계 쿼리 최적화해서
+응답 시간 평균 120ms 나옵니다. 반환 필드:
+total_todos, pending_todos, in_progress_todos, completed_todos,
+high_issues, recent_documents, progress_rate, analyzed_documents
+
+이성우: /chat 엔드포인트 완성했어요.
+포트 8000 메인 서버에 /rag/chat 라우터 붙였고
+retriever가 FAISS에서 유사 청크 top-3 검색 후
+summarizer가 gpt-4o로 답변 생성합니다.
+project_id는 요청 바디에서 동적으로 받아요.
+
+박주원: AI Assistant 프론트엔드 연동도 완성했어요.
+sendMsg 함수가 POST /rag/chat 호출하고
+project_id는 현재 프로젝트에서 동적으로 조회합니다.
+출처 파일명도 답변 아래 표시돼요.
+
+김성호: 포트 8001(opsradar2)에서 포트 8000으로 프록시 없이
+직접 /rag/chat 호출하는 방식으로 확정했습니다.
+
+김희진: Dashboard 화면은?
+
+박주원: dashboard/summary API 연동해서 카드 4개 전부 실데이터로 표시됩니다.
+
+---
+
+[결정사항]
+- /rag/chat 엔드포인트: 포트 8000 메인 서버 (확정)
+- project_id: 동적 조회 방식 (하드코딩 제거)
+- API 호출: 상대경로 사용 (절대경로 제거)
+- 6월 7일 내부 시연 준비 완료 선언
+
+---
+
+[다음 할 일]
+- 이성우: 파일 업로드 UI startAnalysis 함수 실제 API 연동
+- 박주원: 파일 업로드 유효성 검사 로직 수정
+- 김성호: issues, todos PATCH API (승인/반려/완료) 완성
+- 김예은: 포트 8000, 8001 동시 실행 배포 스크립트 작성
+- 김희진: 6월 7일 시연 시나리오 최종 확정

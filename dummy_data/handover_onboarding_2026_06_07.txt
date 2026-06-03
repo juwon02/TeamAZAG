@@ -1,0 +1,57 @@
+===SECTION: 시연 전 온보딩 가이드===
+문서 유형: 시연 참관자 온보딩
+작성일: 2026년 6월 7일
+작성자: 김희진 (팀장)
+대상: 내부 시연 참관자 및 신규 팀원
+
+이 문서는 OpsRadar 내부 시연에 참관하거나
+새로 합류하는 팀원이 현재 시스템을 이해할 수 있도록 작성되었습니다.
+===SECTION_END===
+
+===SECTION: 시스템 접속===
+로컬 개발 환경:
+1. start_servers.bat 실행 (루트 폴더)
+   → 포트 8000 (RAG 메인) + 포트 8001 (OpsRadar2) 동시 실행
+
+2. 브라우저: http://localhost:8001
+
+서버 환경 (Azure VM):
+- RAG 서버: http://74.249.82.58:8000
+- 대시보드: http://74.249.82.58:8001
+- DB: postgresql://azag_user:1111@74.249.82.58:5432/azag_db
+===SECTION_END===
+
+===SECTION: 핵심 기능 요약===
+1. 파일 업로드 & AI 분석
+   - 지원 형식: .txt, .pdf, .docx, .csv
+   - 업로드 후 자동 AI 분석 (평균 8~30초)
+   - Todo, 이슈 자동 추출
+
+2. Todo 관리
+   - AI 제안 / 진행 중 / 완료 탭 분리
+   - 승인(approve) / 반려(reject) / 완료(done) 액션
+   - confidence_score, priority 표시
+
+3. 이슈 로그
+   - High/Medium/Low severity 분류
+   - 출처 문서 추적
+
+4. Dashboard
+   - 전체 현황 카드 (Todo 수, 이슈 수, 완료율)
+   - 주간 추이 차트
+
+5. AI Assistant
+   - 문서 기반 Q&A (FAISS RAG)
+   - 출처 파일명 표시
+   - 업무 무관 질문 자동 차단
+
+6. 보고서 생성
+   - 주간/월간 보고서 자동 생성
+   - 날짜 범위 선택 후 1클릭 생성
+===SECTION_END===
+
+===SECTION: 현재 데이터 기준===
+기본 project_id: 30000000-0000-0000-0000-000000000001
+로드된 문서: OpsRadar 개발 과정 회의록, 이메일, 채팅 로그 등 40개+
+팀원: 김희진(PM), 이성우(AI), 김예은(인프라), 김성호(백엔드), 박주원(프론트)
+===SECTION_END===

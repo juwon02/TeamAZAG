@@ -1,0 +1,19 @@
+id,title,assignee,status,priority,due_date,category,confidence_score,source
+T-601,통합 QA: 파일 업로드 엣지 케이스,이성우,completed,high,2026-06-11,qa,null,manual
+T-602,통합 QA: 동시 업로드 5개 테스트,김예은,completed,high,2026-06-11,qa,null,manual
+T-603,통합 QA: AI Assistant 무관 질문 차단,이성우,completed,medium,2026-06-11,qa,null,manual
+T-604,통합 QA: Todo 승인 후 Dashboard 반영,박주원,completed,medium,2026-06-11,qa,null,manual
+T-605,통합 QA: 대용량 파일(10MB) 처리,이성우,completed,medium,2026-06-12,qa,null,manual
+T-606,Dashboard 차트 시각화 강화,박주원,completed,high,2026-06-12,frontend,null,manual
+T-607,AI 응답 날짜 정보 포함,이성우,completed,medium,2026-06-11,ai,null,manual
+T-608,부하 테스트 완료 (동시 10명),김예은,completed,medium,2026-06-12,infra,null,manual
+T-609,버그 수정: 폴링 타임아웃 30→60회 조정,이성우,completed,medium,2026-06-10,ai,null,manual
+T-610,버그 수정: PATCH API 응답 코드 수정,김성호,completed,medium,2026-06-10,backend,null,manual
+T-611,최종 발표 자료 초안 작성,김희진,in_progress,high,2026-06-13,pm,null,manual
+T-612,v0.5.0 배포 (QA 수정 반영),김예은,in_progress,high,2026-06-13,infra,null,manual
+T-613,포트폴리오 노션 페이지 정리,김희진,pending,medium,2026-06-21,pm,null,manual
+T-614,README.md 최종 업데이트,이성우,pending,low,2026-06-21,pm,null,manual
+T-615,API 문서 Swagger UI 점검,김성호,pending,low,2026-06-14,backend,null,manual
+T-616,최종 발표 시연 환경 점검,김예은,pending,high,2026-06-21,infra,null,manual
+T-617,발표 역할 분담 확정,김희진,pending,high,2026-06-14,pm,null,manual
+T-618,시연 스크립트 최종 리허설,김희진,pending,high,2026-06-21,pm,null,manual

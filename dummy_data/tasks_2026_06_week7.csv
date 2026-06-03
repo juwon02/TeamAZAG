@@ -1,0 +1,16 @@
+id,title,assignee,status,priority,due_date,category,confidence_score,source
+T-701,최종 발표 자료 완성,김희진,in_progress,high,2026-06-21,pm,null,manual
+T-702,발표 시연 환경 최종 점검,김예은,pending,high,2026-06-21,infra,null,manual
+T-703,v1.0.0 최종 배포,김예은,pending,high,2026-06-21,infra,null,manual
+T-704,포트폴리오 노션 페이지 정리,김희진,in_progress,medium,2026-06-21,pm,null,manual
+T-705,README.md 최종 업데이트,이성우,in_progress,medium,2026-06-21,ai,null,manual
+T-706,API 문서 Swagger UI 최종 점검,김성호,pending,low,2026-06-21,backend,null,manual
+T-707,발표 역할별 리허설,팀 전체,pending,high,2026-06-21,pm,null,manual
+T-708,모바일 레이아웃 수정 (TC-019 P3),박주원,in_progress,low,2026-06-21,frontend,null,manual
+T-709,시연 스크립트 최종 확정,김희진,pending,high,2026-06-20,pm,null,manual
+T-710,발표 PPT 디자인 최종 검토,김희진,pending,high,2026-06-21,pm,null,manual
+T-711,FAISS 인덱스 발표용 사전 로드,이성우,pending,high,2026-06-27,ai,null,manual
+T-712,발표 당일 서버 상태 모니터링 담당,김예은,pending,high,2026-06-28,infra,null,manual
+T-713,Q&A 예상 질문 목록 작성,팀 전체,pending,medium,2026-06-21,pm,null,manual
+T-714,GitHub 레포 공개 설정 확인,김예은,pending,low,2026-06-21,infra,null,manual
+T-715,더미 데이터 dummy 브랜치 정리,이성우,in_progress,medium,2026-06-10,ai,null,manual

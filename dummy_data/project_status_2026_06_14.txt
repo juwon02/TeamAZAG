@@ -1,0 +1,36 @@
+===SECTION: 프로젝트 운영 상태===
+문서 유형: 프로젝트 운영 현황
+작성일: 2026년 6월 14일
+작성자: 김희진 (팀장)
+기준일: 2026년 6월 14일 (6주차 완료)
+
+전체 진행률: 90% (8주 중 6주 완료)
+현재 단계: 6주차 완료 — 통합 QA 완료
+다음 마일스톤: 7주차 — 최종 발표 준비 (6월 21일)
+최종 목표: 6월 28일 최종 발표
+
+팀원별 현황:
+- 김희진 (PM): 최종 발표 자료 작성 중 (60% 완료). 발표 역할 배분 확정.
+- 이성우 (AI): 통합 QA 완료. AI 응답 날짜 정보 포함 개선 완료.
+  seongwoo-final 브랜치 PR 생성 완료.
+- 김성호 (백엔드): Dashboard 집계 N+1 최적화 완료. 모든 API 안정화.
+- 김예은 (인프라): 부하 테스트 통과 (10명 동시). v0.5.0 배포 완료.
+- 박주원 (프론트): Dashboard 차트 시각화 완성. QA 피드백 전부 반영.
+===SECTION_END===
+
+===SECTION: 통합 QA 결과===
+테스트 시나리오: 20개
+통과: 18개 (90%) ✅
+실패: 2개
+- TC-019: 모바일 레이아웃 일부 깨짐 (P3 처리)
+- TC-020: IE 미지원 (정책 결정 — 미지원 확정)
+===SECTION_END===
+
+===SECTION: 최종 버전 기술 스택===
+백엔드: Python 3.11, FastAPI 0.111, PostgreSQL 14 (asyncpg 0.29)
+AI: LangChain 0.2, FAISS (faiss-cpu 1.7.4), Azure OpenAI gpt-4o
+인프라: Azure VM B2s (74.249.82.58, Korea Central), Docker
+프론트: Vanilla JS + HTML + TailwindCSS
+서버: 포트 8000 (RAG), 8001 (OpsRadar2 대시보드)
+스키마: PostgreSQL UUID PK, snake_case 컬럼
+===SECTION_END===
