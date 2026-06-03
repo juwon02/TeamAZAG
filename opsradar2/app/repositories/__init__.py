@@ -1,2 +1,0 @@
-from app.repositories.todo_repository import TodoRepository
-from app.repositories.issue_repository import IssueRepository

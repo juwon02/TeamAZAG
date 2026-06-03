@@ -1,1 +1,0 @@
-# TeamMemory app package
