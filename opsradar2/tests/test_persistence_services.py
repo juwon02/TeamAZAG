@@ -20,7 +20,7 @@ class ReportRepoStub:
     def __init__(self):
         self.generated_period = None
 
-    async def generate(self, period):
+    async def generate(self, period, project_id=None):
         self.generated_period = period
         return {"period": period}
 
