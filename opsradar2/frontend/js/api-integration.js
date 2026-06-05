@@ -56,11 +56,17 @@
   }
 
   function normalizeTodo(todo) {
+    const sourceFileName = todo.source_file_name || null;
+    const sourceUploadedAt = todo.source_uploaded_at || todo.created_at || null;
     return {
       id: uiId("todo", todo.id),
       apiId: todo.id,
       title: todo.title || "Untitled",
-      src: todo.document_id || null,
+      src: sourceFileName || todo.document_id || null,
+      sourceFileName,
+      sourceUploadedAt,
+      createdAt: todo.created_at || null,
+      documentId: todo.document_id || null,
       srcChunk: todo.source_chunk_id || null,
       assignee: todo.assignee || null,
       priority: todo.priority || "medium",
@@ -68,7 +74,7 @@
       status: todo.approval_status === "rejected" ? "rejected" : apiStatusToUi(todo.status),
       type: todo.source || "manual",
       chunk: null,
-      grounds: [todo.source === "ai" ? "DB AI analysis result" : "DB saved Todo"],
+      grounds: [sourceFileName ? `출처 파일: ${sourceFileName}` : todo.source === "ai" ? "AI 분석 결과" : "수동 등록 Todo"],
       risk: "",
     };
   }
@@ -178,10 +184,27 @@
     const barEl = document.getElementById("db-todo-bar");
     const blockedEl = document.getElementById("db-blocked");
     const pendingEl = document.getElementById("pendingCount");
-    if (rateEl) rateEl.textContent = `${data.done_todos || 0} / ${data.total_todos || 0}`;
+    const dashboardPendingEl = document.getElementById("db-pending");
+    const summaryEl = document.getElementById("db-ai-summary-text");
+    const dataChipEl = document.getElementById("db-ai-chip-data");
+    const blockedChipEl = document.getElementById("db-ai-chip-blocked");
+    const pendingChipEl = document.getElementById("db-ai-chip-pending");
+    const totalTodos = data.total_todos || 0;
+    const doneTodos = data.done_todos || 0;
+    const pendingTodos = data.pending_todos || 0;
+    const blockedCount = data.blocked_count || 0;
+    const summary = (data.ai_summary || "").trim();
+    if (rateEl) rateEl.textContent = `${doneTodos} / ${totalTodos}`;
     if (barEl) barEl.style.width = `${data.todo_completion_rate || 0}%`;
-    if (blockedEl) blockedEl.textContent = `${data.blocked_count || 0} items`;
-    if (pendingEl) pendingEl.textContent = data.pending_todos || 0;
+    if (blockedEl) blockedEl.textContent = blockedCount;
+    if (pendingEl) pendingEl.textContent = pendingTodos;
+    if (dashboardPendingEl) dashboardPendingEl.textContent = pendingTodos;
+    if (summaryEl) {
+      summaryEl.textContent = summary || "운영 로그와 Todo 데이터가 연결되면 AI가 현재 운영 상태, 위험 요인, 우선 실행 항목을 요약합니다.";
+    }
+    if (dataChipEl) dataChipEl.textContent = totalTodos ? `Todo ${totalTodos}건 반영` : "운영 데이터 대기";
+    if (blockedChipEl) blockedChipEl.textContent = `Blocked ${blockedCount}건`;
+    if (pendingChipEl) pendingChipEl.textContent = `승인 대기 ${pendingTodos}건`;
   }
 
   async function loadTodosFromAPI() {

@@ -23,4 +23,6 @@ class TodoResponse(BaseModel):
     source: str
     confidence: Optional[int]
     document_id: Optional[str]
+    source_file_name: Optional[str] = None
+    source_uploaded_at: Optional[str] = None
     created_at: str

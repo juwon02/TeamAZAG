@@ -34,6 +34,7 @@ class TodoRepository:
     ) -> list[dict]:
         todo_columns = await self._columns("todos")
         chunk_columns = await self._columns("document_chunks")
+        document_columns = await self._columns("documents")
 
         filters = []
         params = {}
@@ -65,11 +66,18 @@ class TodoRepository:
             assignee_expr = "u.name"
 
         document_expr = "NULL::text"
+        source_file_expr = "NULL::text"
+        source_uploaded_expr = "NULL::timestamptz"
+        direct_document_expr = "t.source_document_id" if "source_document_id" in todo_columns else "NULL::uuid"
+        chunk_document_expr = "dc.document_id" if "source_chunk_id" in todo_columns and "document_id" in chunk_columns else "NULL::uuid"
         if "source_chunk_id" in todo_columns and "document_id" in chunk_columns:
             joins.append("LEFT JOIN document_chunks dc ON dc.id = t.source_chunk_id")
-            document_expr = "dc.document_id::text"
-        elif "source_document_id" in todo_columns:
-            document_expr = "t.source_document_id::text"
+        if "source_document_id" in todo_columns or ("source_chunk_id" in todo_columns and "document_id" in chunk_columns):
+            document_expr = f"COALESCE({direct_document_expr}, {chunk_document_expr})::text"
+        if {"id", "file_name", "created_at"}.issubset(document_columns):
+            joins.append(f"LEFT JOIN documents d ON d.id = COALESCE({direct_document_expr}, {chunk_document_expr})")
+            source_file_expr = "d.file_name"
+            source_uploaded_expr = "d.created_at"
 
         joins_sql = "\n                ".join(joins)
 
@@ -85,6 +93,8 @@ class TodoRepository:
                   {source_expr} AS source,
                   {confidence_expr} AS confidence,
                   {document_expr} AS document_id,
+                  {source_file_expr} AS source_file_name,
+                  {source_uploaded_expr} AS source_uploaded_at,
                   {source_chunk_expr} AS source_chunk_id,
                   {approval_expr} AS approval_status,
                   {due_expr} AS due_at,

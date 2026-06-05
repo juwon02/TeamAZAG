@@ -81,11 +81,11 @@
           <span class="ops-updated"><i class="ti ti-clock"></i> 마지막 업데이트 15분 전</span>
         </div>
         <div class="ops-ai-body">
-          <p>운영 로그와 Todo 데이터가 연결되면 AI가 현재 운영 상태, 위험 요인, 우선 실행 항목을 요약합니다.</p>
+          <p id="db-ai-summary-text">운영 로그와 Todo 데이터가 연결되면 AI가 현재 운영 상태, 위험 요인, 우선 실행 항목을 요약합니다.</p>
           <div class="ops-evidence-chips">
-            <span class="ops-chip blue">운영 데이터 대기</span>
-            <span class="ops-chip warn">Blocked Todo 0건</span>
-            <span class="ops-chip green">승인 대기 0건</span>
+            <span class="ops-chip blue" id="db-ai-chip-data">운영 데이터 대기</span>
+            <span class="ops-chip warn" id="db-ai-chip-blocked">Blocked Todo 0건</span>
+            <span class="ops-chip green" id="db-ai-chip-pending">승인 대기 0건</span>
           </div>
         </div>
       </section>
@@ -321,7 +321,7 @@
     <!-- 테이블 뷰 -->
     <div id="todoTableView" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
       <table class="todo-table">
-        <thead><tr><th style="width:28px"><input type="checkbox" id="chkAll" onchange="toggleAllChk(this)" style="accent-color:var(--accent)"></th><th>Todo</th><th style="width:100px">근거</th><th style="width:52px;text-align:center">우선순위</th><th style="width:48px;text-align:center">신뢰도</th><th style="width:72px;text-align:center">상태</th><th style="width:130px">액션</th></tr></thead>
+        <thead><tr><th style="width:28px"><input type="checkbox" id="chkAll" onchange="toggleAllChk(this)" style="accent-color:var(--accent)"></th><th>Todo</th><th style="width:130px">출처</th><th style="width:52px;text-align:center">우선순위</th><th style="width:72px;text-align:center">상태</th><th style="width:86px;text-align:center">기재일</th><th style="width:130px">액션</th></tr></thead>
         <tbody id="todoBody"></tbody>
       </table>
       <!-- 온보딩 가이드 (데이터 없을 때) -->

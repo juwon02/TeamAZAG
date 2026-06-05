@@ -768,16 +768,16 @@ function renderTodos() {
   if (!list.length){body.innerHTML='';empty.style.display='block';updateTodoCounts();return;}
   empty.style.display='none';
   body.innerHTML = list.map(t=>{
-    const sourceLabel = t.src ? `${escapeHtml(t.src)}${t.srcChunk ? ' · ' + escapeHtml(t.srcChunk) : ''}` : '수동 등록';
-    const shortSource = t.src ? escapeHtml(t.src) : '—';
-    const confidence = t.confidence!==null && t.confidence!==undefined ? `${t.confidence}%` : '—';
+    const sourceName = getTodoSourceName(t);
+    const sourceLabel = sourceName ? `출처: ${escapeHtml(sourceName)}` : '수동 등록';
+    const uploadDate = formatTodoUploadDate(t.sourceUploadedAt || t.createdAt);
     return `<tr class="todo-tr ${G.selectedTodoId===t.id?'selected':''} ${t.status}" onclick="selectTodo(${t.id})">
       <td class="todo-check-cell"><input type="checkbox" class="row-chk" id="chk-${t.id}" ${G.todoChecked[t.id]?'checked':''} onclick="event.stopPropagation();toggleTodoCheck(event,${t.id},true)" style="accent-color:var(--accent);cursor:pointer"></td>
       <td class="todo-main-cell"><div class="todo-title ${t.status==='rejected'?'done-text':''} text-content">${escapeHtml(t.title)}</div><div class="todo-src text-content">${sourceLabel}</div></td>
-      <td class="todo-source-cell text-content">${shortSource}</td>
+      <td class="todo-source-cell text-content" title="${escapeHtml(sourceName || '')}">${escapeHtml(sourceName || '—')}</td>
       <td class="todo-center-cell">${priB(t.priority)}</td>
-      <td class="todo-center-cell"><span class="todo-confidence" style="color:${confC(t.confidence)}">${confidence}</span></td>
       <td class="todo-center-cell">${statusB(t.status)}</td>
+      <td class="todo-center-cell"><span class="todo-upload-date">${escapeHtml(uploadDate)}</span></td>
       <td class="todo-action-cell">${actionB(t)}</td>
     </tr>`;
   }).join('');
@@ -787,6 +787,16 @@ function renderTodos() {
 function priB(p){return{high:'<span class="badge b-danger">높음</span>',medium:'<span class="badge b-warn">중간</span>',low:'<span class="badge b-gray">낮음</span>'}[p]||''}
 function statusB(s){return{pending:'<span class="badge b-warn">승인 대기</span>',approved:'<span class="badge b-accent">진행중</span>',done:'<span class="badge b-success">완료</span>',rejected:'<span class="badge b-gray">반려됨</span>'}[s]||''}
 function confC(c){if(c===null)return'var(--text3)';if(c>=85)return'var(--success)';if(c>=70)return'var(--warn)';return'var(--danger)';}
+function getTodoSourceName(t){return t.sourceFileName || (t.type==='manual' ? '수동 등록' : t.src) || null;}
+function formatTodoUploadDate(value, withTime=false){
+  if(!value)return'—';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return String(value).slice(0,10) || '—';
+  const date=d.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\. /g,'.').replace(/\.$/,'');
+  if(!withTime)return date;
+  const time=d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  return `${date} ${time}`;
+}
 function actionB(t){
   if(t.status==='pending')return`<div class="action-btns" onclick="event.stopPropagation()"><div class="ab ab-approve" onclick="approveTodo(${t.id})">승인</div><div class="ab ab-edit" onclick="openEditModal(${t.id})">수정</div><div class="ab ab-reject" onclick="rejectTodo(${t.id})">반려</div></div>`;
   if(t.status==='approved')return`<div class="action-btns" onclick="event.stopPropagation()"><div class="ab ab-approve" style="background:var(--success);border-color:var(--success)" onclick="doneTodo(${t.id})">완료</div><div class="ab ab-undo" onclick="undoTodo(${t.id})">↩</div></div>`;
@@ -808,17 +818,21 @@ function renderTodoDetail(id){
   document.getElementById('todoDetailEmpty').style.display='none';
   const dc=document.getElementById('todoDetailContent');
   dc.style.display='flex';dc.style.flexDirection='column';
+  const sourceName = getTodoSourceName(t);
+  const uploadDate = formatTodoUploadDate(t.sourceUploadedAt || t.createdAt, true);
   dc.innerHTML=`<div style="padding:14px;flex:1;overflow-y:auto">
     <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:12px;line-height:1.5">${t.title}</div>
     <div class="detail-grid">
       <div class="detail-cell"><div class="detail-label">우선순위</div>${priB(t.priority)}</div>
-      <div class="detail-cell"><div class="detail-label">신뢰도</div><div style="font-size:12px;font-weight:500;color:${confC(t.confidence)};font-family:var(--mono)">${t.confidence!==null?t.confidence+'%':'—'}</div></div>
       <div class="detail-cell"><div class="detail-label">상태</div>${statusB(t.status)}</div>
+      <div class="detail-cell"><div class="detail-label">기재일</div><div style="font-size:11px;font-weight:600;color:var(--text);font-family:var(--mono)">${escapeHtml(uploadDate)}</div></div>
       <div class="detail-cell"><div class="detail-label">담당자</div><div style="font-size:11px;font-weight:500;color:var(--text)">${t.assignee||'미지정'}</div></div>
     </div>
-    ${t.chunk?`<div class="detail-section">출처 청크 원문</div><div class="chunk-box"><div class="chunk-meta"><i class="ti ti-file-text" style="font-size:11px;color:var(--accent)"></i>${t.src} · ${t.srcChunk}</div>${t.chunk}</div>`:''}
-    <div class="detail-section">AI 분석 근거</div>
-    ${t.grounds.map(g=>`<div class="detail-item"><i class="ti ti-point"></i>${g}</div>`).join('')}
+    <div class="detail-section">출처</div>
+    <div class="detail-item"><i class="ti ti-file-text"></i>${escapeHtml(sourceName || '출처 없음')}</div>
+    ${t.documentId?`<div class="detail-item"><i class="ti ti-database"></i>문서 ID: ${escapeHtml(t.documentId)}</div>`:''}
+    ${t.srcChunk?`<div class="detail-item"><i class="ti ti-layers-subtract"></i>청크 ID: ${escapeHtml(t.srcChunk)}</div>`:''}
+    ${t.chunk?`<div class="detail-section">출처 청크 원문</div><div class="chunk-box"><div class="chunk-meta"><i class="ti ti-file-text" style="font-size:11px;color:var(--accent)"></i>${escapeHtml(sourceName || '')} · ${escapeHtml(t.srcChunk || '')}</div>${t.chunk}</div>`:''}
     ${t.risk?`<div class="detail-section">왜 위험한가</div><div class="risk-box">${t.risk}</div>`:''}
   </div>
   <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:5px">

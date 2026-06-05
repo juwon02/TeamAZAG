@@ -1,10 +1,10 @@
-"""Document AI pipeline service."""
+"""Document upload, parsing, chunking, and AI extraction pipeline."""
 
 from __future__ import annotations
 
+import json
 import shutil
 import uuid
-import json
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -13,8 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.chunker import chunk_text
 from app.ai.embedder import embed_texts
-from app.ai.file_parser import parse_file
-from app.ai.llm_client import AzureOpenAIConfigError
+from app.ai.file_parser import infer_doc_type, parse_file
 from app.ai.summarizer import extract_todos, summarize_document
 from app.core.config import PROJECT_ROOT, settings
 from app.core.database import AsyncSessionLocal
@@ -23,6 +22,25 @@ from app.vectorstores.faiss_store import FAISSStore
 
 
 UPLOAD_DIR = PROJECT_ROOT / "uploads"
+DB_DOCUMENT_FILE_TYPES = {"email", "meeting", "chat", "issue_log", "other"}
+
+
+def normalize_db_file_type(value: str | None, filename: str | None = None) -> str:
+    """Map upload/parser hints to values allowed by documents.file_type."""
+    raw = (value or "").strip().lower()
+    if raw in DB_DOCUMENT_FILE_TYPES:
+        return raw
+
+    name = (filename or "").lower()
+    if any(token in name for token in ("meeting", "minutes", "회의", "회의록")):
+        return "meeting"
+    if any(token in name for token in ("chat", "slack", "채팅")):
+        return "chat"
+    if any(token in name for token in ("email", "mail", "메일")):
+        return "email"
+    if any(token in name for token in ("issue", "incident", "error", "ops", "log", "운영", "로그", "장애", "이슈")):
+        return "issue_log"
+    return "other"
 
 
 async def resolve_project_id(db: AsyncSession, project_id: str | None) -> uuid.UUID:
@@ -54,7 +72,7 @@ async def create_upload_record(
         id=document_id,
         project_id=project_id,
         file_name=safe_name,
-        file_type=doc_type or save_path.suffix.lstrip(".") or "other",
+        file_type=normalize_db_file_type(doc_type or infer_doc_type(safe_name), safe_name),
         mime_type=file.content_type,
         storage_uri=str(save_path),
         analysis_status="uploaded",
@@ -74,22 +92,24 @@ async def run_document_pipeline(document_id: str) -> None:
         try:
             await _update_document(db, document, analysis_status="parsing", progress=10)
             text, inferred_type = parse_file(document.storage_uri)
-            doc_type = document.file_type or inferred_type
+            analysis_doc_type = inferred_type or document.file_type or "report"
+            db_file_type = normalize_db_file_type(document.file_type or inferred_type, document.file_name)
 
-            await _update_document(db, document, analysis_status="chunking", progress=35, file_type=doc_type)
+            await _update_document(db, document, analysis_status="chunking", progress=35, file_type=db_file_type)
             chunks = chunk_text(
                 text,
-                doc_type=doc_type,
+                doc_type=analysis_doc_type,
                 metadata={
                     "document_id": str(document.id),
                     "project_id": str(document.project_id),
                     "file_name": document.file_name,
                     "source": document.file_name,
-                    "doc_type": doc_type,
+                    "doc_type": analysis_doc_type,
+                    "db_file_type": db_file_type,
                 },
             )
 
-            chunk_rows = []
+            chunk_rows: list[DocumentChunk] = []
             for index, chunk in enumerate(chunks):
                 metadata = chunk.get("metadata", {})
                 row = DocumentChunk(
@@ -106,7 +126,7 @@ async def run_document_pipeline(document_id: str) -> None:
             await db.commit()
 
             await _update_document(db, document, analysis_status="embedding", progress=65)
-            embedding_note = None
+            notes: list[str] = []
             if settings.AI_PROVIDER.lower() == "azure":
                 try:
                     texts = [chunk["text"] for chunk in chunks]
@@ -114,23 +134,22 @@ async def run_document_pipeline(document_id: str) -> None:
                     metadatas = [chunk["metadata"] for chunk in chunks]
                     FAISSStore().add(texts, embeddings, metadatas)
                 except Exception as exc:
-                    embedding_note = f"embedding skipped: {exc}"
+                    notes.append(f"embedding skipped: {exc}")
             else:
-                embedding_note = "embedding skipped: AI_PROVIDER is not azure"
+                notes.append("embedding skipped: AI_PROVIDER is not azure")
 
             await _update_document(db, document, analysis_status="analyzing", progress=85)
-            if settings.AI_PROVIDER.lower() != "disabled":
-                summary = await summarize_document(text)
-                extracted = await extract_todos(text)
-                await _create_extracted_items(db, document, extracted)
-                await _create_ai_summary(db, document, summary, extracted)
+            summary = await summarize_document(text)
+            extracted = await extract_todos(text)
+            await _create_extracted_items(db, document, extracted, chunk_rows)
+            await _create_ai_summary(db, document, summary, extracted)
 
             await _update_document(
                 db,
                 document,
                 analysis_status="completed",
                 progress=100,
-                error_message=embedding_note,
+                error_message="; ".join(notes) if notes else None,
             )
         except Exception as exc:
             await _update_document(
@@ -142,35 +161,52 @@ async def run_document_pipeline(document_id: str) -> None:
             )
 
 
-async def _create_extracted_items(db: AsyncSession, document: Document, extracted: dict) -> None:
+async def _create_extracted_items(
+    db: AsyncSession,
+    document: Document,
+    extracted: dict,
+    chunk_rows: list[DocumentChunk] | None = None,
+) -> None:
+    source_chunk_id = chunk_rows[0].id if chunk_rows else None
+
     for item in extracted.get("todos", [])[:20]:
         title = item.get("content") or item.get("title")
         if title:
-            db.add(Todo(
-                id=uuid.uuid4(),
-                project_id=document.project_id,
-                source_document_id=document.id,
-                title=title[:500],
-                description=title,
-                source_type="ai",
-                approval_status="pending",
-                confidence_score=80,
-            ))
+            db.add(
+                Todo(
+                    id=uuid.uuid4(),
+                    project_id=document.project_id,
+                    source_document_id=document.id,
+                    source_chunk_id=source_chunk_id,
+                    title=str(title)[:500],
+                    description=str(title),
+                    status="pending",
+                    priority=item.get("priority") or "medium",
+                    source_type="ai",
+                    approval_status="pending",
+                    confidence_score=80,
+                )
+            )
+
     for item in extracted.get("issues", [])[:20]:
         title = item.get("title") or item.get("description")
         if title:
-            db.add(Issue(
-                id=uuid.uuid4(),
-                project_id=document.project_id,
-                source_document_id=document.id,
-                title=title[:500],
-                description=item.get("description"),
-                severity=item.get("severity", "medium"),
-                source_type="ai",
-                approval_status="pending",
-                confidence_score=80,
-                is_candidate=True,
-            ))
+            db.add(
+                Issue(
+                    id=uuid.uuid4(),
+                    project_id=document.project_id,
+                    source_document_id=document.id,
+                    source_chunk_id=source_chunk_id,
+                    title=str(title)[:500],
+                    description=item.get("description") or str(title),
+                    severity=item.get("severity", "medium"),
+                    status="open",
+                    source_type="ai",
+                    approval_status="pending",
+                    confidence_score=80,
+                    is_candidate=True,
+                )
+            )
     await db.commit()
 
 
