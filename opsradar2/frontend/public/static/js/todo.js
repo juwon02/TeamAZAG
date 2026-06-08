@@ -44,7 +44,7 @@
   });
 })();
 
-var todoState = window.todoState || { currentTodoTab: 'ai', selectedTodoId: null, todoChecked: {}, editTargetId: null };
+var todoState = window.todoState || { currentTodoTab: 'ai', selectedTodoId: null, todoChecked: {}, editTargetId: null, reviewFilter: null };
 window.todoState = todoState;
 
 // Migrated from legacy app.js by scripts/import-legacy.mjs.
@@ -123,9 +123,19 @@ async function saveManual(){
 
   function getFilteredTodoRows() {
     const tab = getTodoTab();
-    if (tab === 'ai') return todos.filter((todo) => todo.status === 'pending');
-    if (tab === 'inprogress') return todos.filter((todo) => todo.status === 'approved');
-    return todos.filter((todo) => todo.status === 'done' || todo.status === 'rejected');
+    let rows;
+    if (tab === 'ai') rows = todos.filter((todo) => todo.status === 'pending');
+    else if (tab === 'inprogress') rows = todos.filter((todo) => todo.status === 'approved');
+    else rows = todos.filter((todo) => todo.status === 'done' || todo.status === 'rejected');
+
+    const filter = todoState.reviewFilter;
+    if (filter === 'pending_review') {
+      return rows.filter((todo) => ['pending', 'needs_revision'].includes(todo.review?.approvalStatus));
+    }
+    if (filter === 'missing_evidence') return rows.filter((todo) => todo.review?.missingEvidence);
+    if (filter === 'missing_assignee') return rows.filter((todo) => todo.review?.missingAssignee);
+    if (filter === 'missing_due_date') return rows.filter((todo) => todo.review?.missingDueDate);
+    return rows;
   }
 
   function toTodoViewModel(todo) {
@@ -149,6 +159,7 @@ async function saveManual(){
       todos: filtered.map(toTodoViewModel),
       selectedTodo: selectedTodo ? toTodoViewModel(selectedTodo) : null,
       counts: getTodoCounts(),
+      reviewFilter: todoState.reviewFilter,
       allChecked: filtered.length > 0 && filtered.every((todo) => todoState.todoChecked[todo.id]),
     };
   }
@@ -177,6 +188,17 @@ async function saveManual(){
   window.switchTodoTab = function switchTodoTab(tab) {
     todoState.currentTodoTab = tab;
     todoState.selectedTodoId = null;
+    todoState.reviewFilter = null;
+    emitTodoState();
+  };
+  window.setTodoReviewFilter = function setTodoReviewFilter(filter) {
+    todoState.currentTodoTab = 'ai';
+    todoState.selectedTodoId = null;
+    todoState.reviewFilter = filter || null;
+    emitTodoState();
+  };
+  window.clearTodoReviewFilter = function clearTodoReviewFilter() {
+    todoState.reviewFilter = null;
     emitTodoState();
   };
   window.switchTodoView = function switchTodoView(mode) {

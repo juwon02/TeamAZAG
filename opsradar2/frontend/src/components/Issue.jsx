@@ -5,6 +5,7 @@ const emptySnapshot = {
   issues: [],
   selectedIssue: null,
   counts: { confirmed: 0, candidate: 0, resolved: 0 },
+  reviewFilter: null,
 };
 
 function callLegacy(name, ...args) {
@@ -29,10 +30,36 @@ function severityBadge(issue) {
 }
 
 function statusBadge(status) {
-  if (status === "in_progress") return <span className="badge b-warn">In Progress</span>;
-  if (status === "resolved") return <span className="badge b-success">Resolved</span>;
-  return <span className="badge b-gray">Open</span>;
+  if (status === "in_progress") return <span className="badge b-warn">진행 중</span>;
+  if (status === "resolved") return <span className="badge b-success">해결됨</span>;
+  if (status === "blocked") return <span className="badge b-danger">차단됨</span>;
+  return <span className="badge b-gray">열림</span>;
 }
+
+function ReviewBadges({ review }) {
+  if (!review) return null;
+  const badges = [
+    review.needsRevision || review.approvalStatus === "needs_revision" ? ["b-warn", "보완 필요"] : null,
+    review.approvalStatus === "pending" ? ["b-warn", "검토 대기"] : null,
+    review.approvalStatus === "approved" ? ["b-success", "승인됨"] : null,
+    review.hasEvidence ? ["b-success", "근거 있음"] : ["b-danger", "근거 부족"],
+    review.missingAssignee ? ["b-warn", "담당자 확인 필요"] : ["b-success", "담당자 확인"],
+    review.missingDueDate ? ["b-warn", "마감일 없음"] : ["b-success", "마감일 있음"],
+  ].filter(Boolean);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {badges.map(([className, label]) => (
+        <span className={`badge ${className}`} key={label}>{label}</span>
+      ))}
+    </div>
+  );
+}
+
+const reviewFilterLabels = {
+  high_risk: "High Risk",
+  pending_review: "검토 대기",
+  missing_evidence: "근거 부족",
+};
 
 function EmptyIssueList() {
   return (
@@ -103,10 +130,10 @@ function IssueCard({ issue }) {
                 style={{ fontSize: 10, padding: "4px 8px", color: "var(--text3)" }}
                 onClick={(event) => {
                   event.stopPropagation();
-                  callLegacy("doRemoveIssue", issue.id);
+                  callLegacy("markIssueNeedsRevision", issue.id);
                 }}
               >
-                무시
+                보완 필요
               </button>
             </>
           ) : issue.type === "resolved" ? null : (
@@ -142,24 +169,25 @@ function IssueDetail({ issue }) {
     );
   }
 
+  const evidence = issue.evidence || {};
+  const review = issue.review || {};
+
   return (
     <>
       <div id="issueDetailContent" className="fade-up" style={{ display: "block", padding: 14, overflowY: "auto", flex: 1 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", marginBottom: 10, lineHeight: 1.5 }}>
           {issue.title}
         </div>
-        {issue.chunk ? (
-          <>
-            <div className="detail-section">출처 청크</div>
-            <div className="chunk-box">
-              <div className="chunk-meta">
-                <i className="ti ti-file-text" style={{ fontSize: 11, color: "var(--accent)" }} />
-                {issue.src}
-              </div>
-              {issue.chunk}
-            </div>
-          </>
-        ) : null}
+        <div className="detail-section">검토 상태</div>
+        <ReviewBadges review={review} />
+        <div className="detail-section">근거 패널</div>
+        <div className="chunk-box">
+          <div className="chunk-meta">
+            <i className="ti ti-file-text" style={{ fontSize: 11, color: "var(--accent)" }} />
+            {evidence.fileName || issue.src || "출처 문서 없음"} {evidence.chunkId ? `· ${evidence.chunkId}` : ""}
+          </div>
+          {evidence.snippet || issue.chunk || "연결된 근거 문장이 없습니다. 보완 필요로 표시하세요."}
+        </div>
         {issue.domino?.length ? (
           <>
             <div className="detail-section">도미노 영향</div>
@@ -242,7 +270,10 @@ function IssueDetail({ issue }) {
               <i className="ti ti-alert-triangle" /> 이슈 확정
             </button>
             <button className="tbtn" type="button" onClick={() => callLegacy("doRemoveIssue", issue.id)} style={{ justifyContent: "center", color: "var(--text3)", marginTop: 4 }}>
-              무시
+              제외
+            </button>
+            <button className="tbtn" type="button" onClick={() => callLegacy("markIssueNeedsRevision", issue.id)} style={{ justifyContent: "center", color: "var(--warn)", marginTop: 4 }}>
+              보완 필요
             </button>
           </>
         </div>
@@ -270,11 +301,12 @@ export default function Issue() {
 
   const counts = snapshot.counts || emptySnapshot.counts;
   const currentTab = snapshot.currentTab || "confirmed";
+  const reviewFilter = snapshot.reviewFilter;
   const tabs = useMemo(
     () => [
       { id: "confirmed", label: "확정 이슈", count: counts.confirmed, badge: "b-danger" },
       { id: "candidate", label: "이슈 후보", count: counts.candidate, badge: "b-warn" },
-      { id: "resolved", label: "Resolved", count: counts.resolved, badge: "b-gray" },
+      { id: "resolved", label: "해결됨", count: counts.resolved, badge: "b-gray" },
     ],
     [counts.candidate, counts.confirmed, counts.resolved],
   );
@@ -309,6 +341,27 @@ export default function Issue() {
           </button>
         ))}
       </div>
+      {reviewFilter ? (
+        <div
+          style={{
+            background: "var(--warning-soft)",
+            borderBottom: "1px solid rgba(245,158,11,.18)",
+            padding: "8px 16px",
+            fontSize: 11,
+            color: "var(--warn)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexShrink: 0,
+          }}
+        >
+          <i className="ti ti-filter" style={{ fontSize: 13 }} />
+          <span>{reviewFilterLabels[reviewFilter] || "검토"} 항목만 보고 있습니다.</span>
+          <button className="tbtn" type="button" onClick={() => callLegacy("clearIssueReviewFilter")} style={{ marginLeft: "auto", fontSize: 10, padding: "3px 8px" }}>
+            필터 해제
+          </button>
+        </div>
+      ) : null}
       <div className="body-wrap">
         <div className="issue-list" style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }} id="issueList">
           {snapshot.issues?.length ? snapshot.issues.map((issue) => <IssueCard issue={issue} key={issue.id} />) : <EmptyIssueList />}

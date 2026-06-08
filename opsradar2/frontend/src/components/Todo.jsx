@@ -7,6 +7,7 @@ const emptySnapshot = {
   selectedTodo: null,
   counts: { ai: 0, inprogress: 0, done: 0 },
   allChecked: false,
+  reviewFilter: null,
 };
 
 function callLegacy(name, ...args) {
@@ -25,10 +26,10 @@ function priorityBadge(priority) {
 
 function statusBadge(status) {
   const map = {
-    pending: ["b-warn", "승인 대기"],
-    approved: ["b-accent", "진행중"],
-    done: ["b-success", "완료"],
-    rejected: ["b-gray", "반려됨"],
+    pending: ["b-warn", "검토 대기"],
+    approved: ["b-accent", "승인됨"],
+    done: ["b-success", "공식 반영"],
+    rejected: ["b-gray", "제외됨"],
   };
   const [className, label] = map[status] || ["b-gray", status || "미지정"];
   return <span className={`badge ${className}`}>{label}</span>;
@@ -41,6 +42,32 @@ function confidenceColor(confidence) {
   return "var(--danger)";
 }
 
+function ReviewBadges({ review }) {
+  if (!review) return null;
+  const badges = [
+    review.needsRevision || review.approvalStatus === "needs_revision" ? ["b-warn", "보완 필요"] : null,
+    review.approvalStatus === "pending" ? ["b-warn", "검토 대기"] : null,
+    review.approvalStatus === "approved" ? ["b-success", "승인됨"] : null,
+    review.hasEvidence ? ["b-success", "근거 있음"] : ["b-danger", "근거 부족"],
+    review.missingAssignee ? ["b-warn", "담당자 확인 필요"] : ["b-success", "담당자 확인"],
+    review.missingDueDate ? ["b-warn", "마감일 없음"] : ["b-success", "마감일 있음"],
+  ].filter(Boolean);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {badges.map(([className, label]) => (
+        <span className={`badge ${className}`} key={label}>{label}</span>
+      ))}
+    </div>
+  );
+}
+
+const reviewFilterLabels = {
+  pending_review: "검토 대기",
+  missing_evidence: "근거 부족",
+  missing_assignee: "담당자 누락",
+  missing_due_date: "마감일 누락",
+};
+
 function ActionButtons({ todo }) {
   if (todo.status === "pending") {
     return (
@@ -48,11 +75,11 @@ function ActionButtons({ todo }) {
         <button className="ab ab-approve" type="button" onClick={() => callLegacy("approveTodo", todo.id)}>
           승인
         </button>
+        <button className="ab ab-reject" type="button" onClick={() => callLegacy("markTodoNeedsRevision", todo.id)}>
+          보완 필요
+        </button>
         <button className="ab ab-edit" type="button" onClick={() => callLegacy("openEditModal", todo.id)}>
           수정
-        </button>
-        <button className="ab ab-reject" type="button" onClick={() => callLegacy("rejectTodo", todo.id)}>
-          반려
         </button>
       </div>
     );
@@ -67,10 +94,10 @@ function ActionButtons({ todo }) {
           style={{ background: "var(--success)", borderColor: "var(--success)" }}
           onClick={() => callLegacy("doneTodo", todo.id)}
         >
-          완료
+          공식 반영
         </button>
         <button className="ab ab-undo" type="button" onClick={() => callLegacy("undoTodo", todo.id)}>
-          ↩
+          되돌리기
         </button>
       </div>
     );
@@ -183,7 +210,7 @@ function EmptyTodoGuide() {
             <div className="og-num">2</div>AI 분석 완료 후 Todo 자동 추출
           </div>
           <div className="og-step">
-            <div className="og-num">3</div>여기서 확인 후 승인 또는 반려
+            <div className="og-num">3</div>여기서 근거 확인 후 승인 또는 보완 필요 표시
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
@@ -259,6 +286,8 @@ function TodoDetail({ todo }) {
   }
 
   const grounds = todo.grounds?.length ? todo.grounds : ["등록된 분석 근거가 없습니다."];
+  const evidence = todo.evidence || {};
+  const review = todo.review || {};
 
   return (
     <div id="todoDetailContent" style={{ display: "flex", flex: 1, flexDirection: "column", overflowY: "auto" }}>
@@ -288,18 +317,16 @@ function TodoDetail({ todo }) {
             </div>
           </div>
         </div>
-        {todo.chunk ? (
-          <>
-            <div className="detail-section">출처 청크 원문</div>
-            <div className="chunk-box">
-              <div className="chunk-meta">
-                <i className="ti ti-file-text" style={{ fontSize: 11, color: "var(--accent)" }} />
-                {todo.src} · {todo.srcChunk}
-              </div>
-              {todo.chunk}
-            </div>
-          </>
-        ) : null}
+        <div className="detail-section">검토 상태</div>
+        <ReviewBadges review={review} />
+        <div className="detail-section">근거 패널</div>
+        <div className="chunk-box">
+          <div className="chunk-meta">
+            <i className="ti ti-file-text" style={{ fontSize: 11, color: "var(--accent)" }} />
+            {evidence.fileName || todo.src || "출처 문서 없음"} {evidence.chunkId ? `· ${evidence.chunkId}` : ""}
+          </div>
+          {evidence.snippet || todo.chunk || "연결된 근거 문장이 없습니다. 보완 필요로 표시하세요."}
+        </div>
         <div className="detail-section">AI 분석 근거</div>
         {grounds.map((ground) => (
           <div className="detail-item" key={ground}>
@@ -346,11 +373,12 @@ export default function Todo() {
   const todos = snapshot.todos || [];
   const currentTab = snapshot.currentTab || "ai";
   const viewMode = snapshot.viewMode || "table";
+  const reviewFilter = snapshot.reviewFilter;
   const tabs = useMemo(
     () => [
       { id: "ai", label: "AI 제안", count: counts.ai, badge: counts.ai > 0 ? "b-warn" : "b-gray" },
-      { id: "inprogress", label: "진행 Todo", count: counts.inprogress, badge: "b-gray" },
-      { id: "done", label: "완료", count: counts.done, badge: "b-gray" },
+      { id: "inprogress", label: "승인됨", count: counts.inprogress, badge: "b-gray" },
+      { id: "done", label: "공식 반영", count: counts.done, badge: "b-gray" },
     ],
     [counts.ai, counts.done, counts.inprogress],
   );
@@ -404,7 +432,7 @@ export default function Todo() {
             건
           </div>
           <button className="tbtn" type="button" onClick={() => callLegacy("bulkApprove")}>
-            <i className="ti ti-checks" /> 전체 승인
+            <i className="ti ti-checks" /> 선택 승인
           </button>
           <button className="tbtn primary" type="button" onClick={() => callLegacy("openManualModal")}>
             <i className="ti ti-plus" /> 수동 등록
@@ -438,6 +466,28 @@ export default function Todo() {
         ))}
       </div>
 
+      {reviewFilter ? (
+        <div
+          style={{
+            background: "var(--warning-soft)",
+            borderBottom: "1px solid rgba(245,158,11,.18)",
+            padding: "8px 16px",
+            fontSize: 11,
+            color: "var(--warn)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexShrink: 0,
+          }}
+        >
+          <i className="ti ti-filter" style={{ fontSize: 13 }} />
+          <span>{reviewFilterLabels[reviewFilter] || "검토"} 항목만 보고 있습니다.</span>
+          <button className="tbtn" type="button" onClick={() => callLegacy("clearTodoReviewFilter")} style={{ marginLeft: "auto", fontSize: 10, padding: "3px 8px" }}>
+            필터 해제
+          </button>
+        </div>
+      ) : null}
+
       {currentTab === "ai" ? (
         <div
           style={{
@@ -453,7 +503,7 @@ export default function Todo() {
           }}
           id="todoAINotice"
         >
-          <i className="ti ti-sparkles" style={{ fontSize: 13 }} /> AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.
+          <i className="ti ti-sparkles" style={{ fontSize: 13 }} /> AI가 추출한 Todo 제안입니다. 근거를 확인한 뒤 승인하거나 보완 필요로 표시하세요.
         </div>
       ) : null}
 

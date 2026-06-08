@@ -45,46 +45,102 @@
     }[status] || status;
   }
 
+  function compactSnippet(value, limit = 260) {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    return text.length > limit ? `${text.slice(0, limit)}...` : text;
+  }
+
+  function normalizeReview(payload = {}) {
+    return {
+      approvalStatus: payload.approval_status || "approved",
+      needsRevision: payload.approval_status === "needs_revision",
+      hasEvidence: Boolean(payload.has_evidence),
+      missingEvidence: Boolean(payload.missing_evidence),
+      missingAssignee: Boolean(payload.missing_assignee),
+      missingDueDate: Boolean(payload.missing_due_date),
+    };
+  }
+
+  function normalizeEvidence(payload = {}) {
+    return {
+      documentId: payload.document_id || null,
+      fileName: payload.file_name || null,
+      chunkId: payload.chunk_id || null,
+      section: payload.section || null,
+      snippet: compactSnippet(payload.snippet || ""),
+    };
+  }
+
   function normalizeTodo(todo) {
+    const evidence = normalizeEvidence(todo.evidence || {});
+    const review = normalizeReview(todo.review || {});
+    const sourceLabel = evidence.fileName || todo.source_file_name || todo.document_id || null;
     return {
       id: uiId("todo", todo.id),
       apiId: todo.id,
       title: todo.title || "Untitled",
-      src: todo.document_id || null,
-      srcChunk: todo.source_chunk_id || null,
+      src: sourceLabel,
+      srcChunk: evidence.chunkId || todo.source_chunk_id || null,
       assignee: todo.assignee || null,
       priority: todo.priority || "medium",
       confidence: todo.confidence == null ? null : Number(todo.confidence),
       status: todo.approval_status === "rejected" ? "rejected" : apiStatusToUi(todo.status),
       type: todo.source || "manual",
-      chunk: null,
-      grounds: [todo.source === "ai" ? "DB AI analysis result" : "DB saved Todo"],
+      chunk: evidence.snippet || null,
+      grounds: [
+        review.hasEvidence ? "출처 문서와 근거 chunk가 연결되었습니다." : "근거 chunk 연결이 필요합니다.",
+        review.missingAssignee ? "담당자 확인이 필요합니다." : "담당자 정보가 확인되었습니다.",
+        review.missingDueDate ? "마감일이 아직 없습니다." : "마감일 정보가 있습니다.",
+      ],
       risk: "",
+      evidence,
+      review,
     };
   }
 
   function normalizeIssue(issue) {
     const status = issue.status || "open";
     const source = issue.source || "manual";
+    const evidence = normalizeEvidence(issue.evidence || {});
+    const review = normalizeReview(issue.review || {});
+    const sourceLabel = evidence.fileName || issue.source_file_name || issue.document_id || null;
+    const approvalStatus = review.approvalStatus;
+    const type =
+      status === "resolved"
+        ? "resolved"
+        : approvalStatus === "approved"
+          ? "confirmed"
+          : approvalStatus === "pending" || approvalStatus === "needs_revision"
+            ? "candidate"
+            : source === "ai"
+              ? "candidate"
+              : "confirmed";
     return {
       id: uiId("issue", issue.id),
       apiId: issue.id,
-      type: status === "resolved" ? "resolved" : source === "ai" ? "candidate" : "confirmed",
+      type,
       severity: issue.risk_level || issue.severity || "medium",
       status,
       confidence: issue.confidence == null ? null : Number(issue.confidence),
       title: issue.title || "Untitled issue",
-      src: issue.document_id || null,
+      src: sourceLabel,
+      srcChunk: evidence.chunkId || issue.source_chunk_id || null,
       assignee: issue.assignee || null,
       days: 0,
       desc: issue.description || issue.title || "",
-      chunk: "",
+      chunk: evidence.snippet || "",
       history: [],
-      domino: [],
+      domino: [
+        review.hasEvidence ? "출처 문서와 근거 chunk가 연결되었습니다." : "근거 chunk 연결이 필요합니다.",
+        review.missingAssignee ? "담당자 확인이 필요합니다." : "담당자 정보가 확인되었습니다.",
+        review.missingDueDate ? "마감일이 아직 없습니다." : "마감일 정보가 있습니다.",
+      ],
       dominoFinal: issue.domino_impact || "",
       suggestTodo: issue.title ? `${issue.title} follow-up` : null,
       suggestAssignee: issue.assignee || null,
       suggestPriority: (issue.risk_level || issue.severity) === "high" ? "high" : "medium",
+      evidence,
+      review,
     };
   }
 
@@ -167,10 +223,22 @@
     const barEl = document.getElementById("db-todo-bar");
     const blockedEl = document.getElementById("db-blocked");
     const pendingEl = document.getElementById("pendingCount");
+    const dashboardPendingEl = document.getElementById("db-pending");
+    const pendingReviewEl = document.getElementById("db-pending-review");
+    const highRiskEl = document.getElementById("db-high-risk");
+    const missingEvidenceEl = document.getElementById("db-missing-evidence");
+    const missingOwnerEl = document.getElementById("db-missing-owner");
+    const missingDueEl = document.getElementById("db-missing-due");
     if (rateEl) rateEl.textContent = `${data.done_todos || 0} / ${data.total_todos || 0}`;
     if (barEl) barEl.style.width = `${data.todo_completion_rate || 0}%`;
     if (blockedEl) blockedEl.textContent = `${data.blocked_count || 0} items`;
     if (pendingEl) pendingEl.textContent = data.pending_todos || 0;
+    if (dashboardPendingEl) dashboardPendingEl.textContent = data.pending_review_count || 0;
+    if (pendingReviewEl) pendingReviewEl.textContent = data.pending_review_count || 0;
+    if (highRiskEl) highRiskEl.textContent = data.high_risk_count || 0;
+    if (missingEvidenceEl) missingEvidenceEl.textContent = data.missing_evidence_count || 0;
+    if (missingOwnerEl) missingOwnerEl.textContent = data.missing_assignee_count || 0;
+    if (missingDueEl) missingDueEl.textContent = data.missing_due_date_count || 0;
   }
 
   async function loadTodosFromAPI() {
@@ -196,10 +264,14 @@
 
   async function loadReportsFromAPI() {
     if (typeof persistReports !== "function") return;
-    const data = await request("/reports");
+    const [data, reviewCheck] = await Promise.all([
+      request("/reports"),
+      request("/reports/review-check").catch(() => null),
+    ]);
     const reports = (data.reports || []).map(normalizeReport);
     persistReports(reports);
     window.setReportRuntimeReports?.(reports);
+    if (reviewCheck) window.setReportReviewCheck?.(reviewCheck);
     if (typeof renderReportList === "function") renderReportList();
   }
 
@@ -239,6 +311,18 @@
     ]),
   };
 
+  window.openOpsReviewQueue = function (queue) {
+    if (queue === "high_risk") {
+      window.setIssueReviewFilter?.("high_risk");
+      window.nav?.("issues");
+      showToast?.("High Risk 이슈 큐로 이동했습니다.", "info");
+      return;
+    }
+    window.setTodoReviewFilter?.(queue);
+    window.nav?.("todo");
+    showToast?.("검토 작업 큐로 이동했습니다.", "info");
+  };
+
   window.OpsRadarFrontend?.registerModule('api-integration', {
     file: 'js/api-integration.js',
     owns: [
@@ -267,6 +351,7 @@
           }
         }
         original(id);
+        await window.opsRadarApi?.reload?.();
       };
     }
 
@@ -287,6 +372,7 @@
           }
         }
         original(id);
+        await window.opsRadarApi?.reload?.();
       };
     }
 
@@ -307,8 +393,52 @@
           }
         }
         original(id);
+        await window.opsRadarApi?.reload?.();
       };
     }
+
+    window.markTodoNeedsRevision = async function (id) {
+      const todo = typeof todos === "undefined" ? null : todos.find((x) => x.id === id);
+      if (!todo) return;
+      if (todo.apiId) {
+        try {
+          await request(`/todos/${todo.apiId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ approval_status: "needs_revision" }),
+          });
+        } catch (error) {
+          console.warn("Todo needs-revision API failed", error);
+          showToast("Todo 보완 필요 저장에 실패했습니다.", "warn");
+          return;
+        }
+      }
+      todo.review = { ...(todo.review || {}), approvalStatus: "needs_revision", needsRevision: true };
+      showToast("보완 필요로 표시했습니다.", "warn");
+      await window.opsRadarApi?.reload?.();
+    };
+  }
+
+  function patchIssueActions() {
+    window.markIssueNeedsRevision = async function (id) {
+      const issue = typeof issues === "undefined" ? null : issues.find((x) => x.id === id);
+      if (!issue) return;
+      if (issue.apiId) {
+        try {
+          await request(`/issues/${issue.apiId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ approval_status: "needs_revision" }),
+          });
+        } catch (error) {
+          console.warn("Issue needs-revision API failed", error);
+          showToast("Issue 보완 필요 저장에 실패했습니다.", "warn");
+          return;
+        }
+      }
+      issue.review = { ...(issue.review || {}), approvalStatus: "needs_revision", needsRevision: true };
+      issue.type = "candidate";
+      showToast("보완 필요로 표시했습니다.", "warn");
+      await window.opsRadarApi?.reload?.();
+    };
   }
 
   function patchCreateActions() {
@@ -360,11 +490,37 @@
   function patchReportActions() {
     if (typeof saveReport !== "function") return;
     const original = saveReport;
+
+    function getReportReviewWarnings() {
+      const reviewCheck = window.getReportSnapshot?.().reviewCheck || {};
+      const warnings = [
+        ["근거 부족", Number(reviewCheck.missing_evidence || 0)],
+        ["담당자 누락", Number(reviewCheck.missing_assignee || 0)],
+        ["마감일 누락", Number(reviewCheck.missing_due_date || 0)],
+        ["상충 가능 기록", Number(reviewCheck.possible_conflicts || 0)],
+      ].filter(([, count]) => count > 0);
+      return warnings;
+    }
+
     window.saveReport = saveReport = async function (report) {
       const draft = report || window.G?.currentReportDraft || {};
       const period = draft.type === "monthly" ? "monthly" : "weekly";
       const editor = document.getElementById("reportEditor") || document.querySelector('#s-reports [contenteditable="true"]');
       const content = editor?.innerHTML || draft.html || "";
+      const warnings = getReportReviewWarnings();
+      if (warnings.length) {
+        const message = [
+          "아직 보완이 필요한 운영 데이터가 있습니다.",
+          "",
+          ...warnings.map(([label, count]) => `- ${label}: ${count}건`),
+          "",
+          "그래도 보고서를 최종 저장하시겠습니까?",
+        ].join("\n");
+        if (!window.confirm(message)) {
+          showToast("보고서 저장을 취소했습니다.", "info");
+          return null;
+        }
+      }
       try {
         let reportId = draft.apiId;
         if (!reportId) {
@@ -391,6 +547,7 @@
 
   function initialize() {
     patchTodoActions();
+    patchIssueActions();
     patchCreateActions();
     patchCalendarActions();
     patchReportActions();

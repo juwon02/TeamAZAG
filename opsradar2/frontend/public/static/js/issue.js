@@ -26,7 +26,7 @@
   });
 })();
 
-var issueState = window.issueState || { currentIssueTab: 'confirmed', selectedIssueId: null, createIssueId: null, confirmIssueId: null, createdTodosFromIssue: [] };
+var issueState = window.issueState || { currentIssueTab: 'confirmed', selectedIssueId: null, createIssueId: null, confirmIssueId: null, createdTodosFromIssue: [], reviewFilter: null };
 window.issueState = issueState;
 
 // Migrated from legacy app.js by scripts/import-legacy.mjs.
@@ -163,6 +163,19 @@ setTimeout(async () => { await fetchIssues(); renderIssues(); fetchDashboard(); 
     };
   }
 
+  function getFilteredIssues() {
+    const filter = issueState.reviewFilter;
+    let rows = filter === 'high_risk'
+      ? issues.filter((issue) => issue.type !== 'resolved')
+      : issues.filter((issue) => issue.type === getIssueTab());
+    if (filter === 'high_risk') return rows.filter((issue) => issue.severity === 'high' || issue.severity === 'critical');
+    if (filter === 'pending_review') {
+      return rows.filter((issue) => ['pending', 'needs_revision'].includes(issue.review?.approvalStatus));
+    }
+    if (filter === 'missing_evidence') return rows.filter((issue) => issue.review?.missingEvidence);
+    return rows;
+  }
+
   function toIssueViewModel(issue) {
     return {
       ...issue,
@@ -179,9 +192,10 @@ setTimeout(async () => { await fetchIssues(); renderIssues(); fetchDashboard(); 
     const selectedIssue = issues.find((issue) => issue.id === issueState.selectedIssueId);
     return {
       currentTab,
-      issues: issues.filter((issue) => issue.type === currentTab).map(toIssueViewModel),
+      issues: getFilteredIssues().map(toIssueViewModel),
       selectedIssue: selectedIssue ? toIssueViewModel(selectedIssue) : null,
       counts: getIssueCounts(),
+      reviewFilter: issueState.reviewFilter,
     };
   }
 
@@ -210,6 +224,17 @@ setTimeout(async () => { await fetchIssues(); renderIssues(); fetchDashboard(); 
   window.switchIssueTab = function switchIssueTab(tab) {
     issueState.currentIssueTab = tab;
     issueState.selectedIssueId = null;
+    issueState.reviewFilter = null;
+    emitIssueState();
+  };
+  window.setIssueReviewFilter = function setIssueReviewFilter(filter) {
+    issueState.currentIssueTab = filter === 'high_risk' ? 'confirmed' : 'candidate';
+    issueState.selectedIssueId = null;
+    issueState.reviewFilter = filter || null;
+    emitIssueState();
+  };
+  window.clearIssueReviewFilter = function clearIssueReviewFilter() {
+    issueState.reviewFilter = null;
     emitIssueState();
   };
   window.refreshIssueState = emitIssueState;
