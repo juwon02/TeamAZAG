@@ -29,7 +29,7 @@
 (function installReportReactBridge() {
   const REPORT_STORAGE_KEY = 'opsradar_reports_v1';
   const EMPTY_TEXT = '\ub370\uc774\ud130 \uc5f0\uacb0 \ud6c4 \ud45c\uc2dc\ub429\ub2c8\ub2e4.';
-  const reportState = { savedReports: [], reportSearchQuery: '', currentReportPeriod: 'weekly', selectedReportId: null, currentReportDraft: null, sharedReports: [] };
+  const reportState = { savedReports: [], reportSearchQuery: '', currentReportPeriod: 'weekly', selectedReportId: null, currentReportDraft: null, sharedReports: [], reviewCheck: null };
   const SECTION_LABELS = {
     completed: '\uc644\ub8cc\ub41c \uc5c5\ubb34',
     inProgress: '\uc9c4\ud589 \uc911\uc778 \uc5c5\ubb34',
@@ -214,6 +214,7 @@
       selectedReport,
       currentDraft: reportState.currentReportDraft || null,
       editorHtml: reportState.currentReportDraft ? (reportState.currentReportDraft.html || draftToEditorHtml(reportState.currentReportDraft)) : '',
+      reviewCheck: reportState.reviewCheck || null,
       labels: {
         type: { weekly: getReportTypeLabel('weekly'), monthly: getReportTypeLabel('monthly') },
       },
@@ -401,6 +402,7 @@
   window.bindRemainingActionButtons = bindRemainingActionButtons;
   window.initDocumentGenerationActions = initDocumentGenerationActions;
   window.setReportRuntimeReports = function setReportRuntimeReports(reports) { reportState.savedReports = Array.isArray(reports) ? reports : []; emitReportState(); };
+  window.setReportReviewCheck = function setReportReviewCheck(reviewCheck) { reportState.reviewCheck = reviewCheck || null; emitReportState(); };
   window.getReportSnapshot = getReportSnapshot;
   window.refreshReportState = emitReportState;
 

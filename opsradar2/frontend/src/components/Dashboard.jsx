@@ -251,6 +251,10 @@ function RiskCard({ risk, onIssueDetail, onNav }) {
 }
 
 function AdminDashboard({ risks, onIssueDetail, onNav }) {
+  function openQueue(queue) {
+    window.openOpsReviewQueue?.(queue);
+  }
+
   return (
     <div id="db-admin-view" className="ops-dashboard-view active">
       <section className="ops-ai-summary-card">
@@ -272,6 +276,81 @@ function AdminDashboard({ risks, onIssueDetail, onNav }) {
             <span className="ops-chip warn">Blocked Todo 0건</span>
             <span className="ops-chip green">승인 대기 0건</span>
           </div>
+        </div>
+      </section>
+
+      <section className="ops-bottom-grid">
+        <div className="ops-panel">
+          <div className="ops-panel-title">검토 대기</div>
+          <div className="ops-stat-row compact">
+            <div>
+              <span
+                className="ops-stat-num warn"
+                id="db-pending-review"
+                role="button"
+                tabIndex={0}
+                onClick={() => openQueue("pending_review")}
+                onKeyDown={(event) => event.key === "Enter" && openQueue("pending_review")}
+                style={{ cursor: "pointer" }}
+              >0</span>
+              <span className="ops-stat-label">AI 후보</span>
+            </div>
+            <div>
+              <span
+                className="ops-stat-num danger"
+                id="db-high-risk"
+                role="button"
+                tabIndex={0}
+                onClick={() => openQueue("high_risk")}
+                onKeyDown={(event) => event.key === "Enter" && openQueue("high_risk")}
+                style={{ cursor: "pointer" }}
+              >0</span>
+              <span className="ops-stat-label">High Risk</span>
+            </div>
+          </div>
+          <div className="ops-muted-line">승인된 항목만 공식 운영 데이터로 반영됩니다.</div>
+        </div>
+        <div className="ops-panel">
+          <div className="ops-panel-title">근거 부족</div>
+          <div className="ops-stat-row compact">
+            <div>
+              <span
+                className="ops-stat-num warn"
+                id="db-missing-evidence"
+                role="button"
+                tabIndex={0}
+                onClick={() => openQueue("missing_evidence")}
+                onKeyDown={(event) => event.key === "Enter" && openQueue("missing_evidence")}
+                style={{ cursor: "pointer" }}
+              >0</span>
+              <span className="ops-stat-label">근거 부족</span>
+            </div>
+            <div>
+              <span
+                className="ops-stat-num blue"
+                id="db-missing-owner"
+                role="button"
+                tabIndex={0}
+                onClick={() => openQueue("missing_assignee")}
+                onKeyDown={(event) => event.key === "Enter" && openQueue("missing_assignee")}
+                style={{ cursor: "pointer" }}
+              >0</span>
+              <span className="ops-stat-label">담당자 누락</span>
+            </div>
+            <div>
+              <span
+                className="ops-stat-num blue"
+                id="db-missing-due"
+                role="button"
+                tabIndex={0}
+                onClick={() => openQueue("missing_due_date")}
+                onKeyDown={(event) => event.key === "Enter" && openQueue("missing_due_date")}
+                style={{ cursor: "pointer" }}
+              >0</span>
+              <span className="ops-stat-label">마감일 누락</span>
+            </div>
+          </div>
+          <div className="ops-muted-line">보고서 저장 전 보완해야 할 운영 데이터입니다.</div>
         </div>
       </section>
 

@@ -7,6 +7,7 @@ const emptySnapshot = {
   selectedReport: null,
   currentDraft: null,
   editorHtml: "",
+  reviewCheck: null,
 };
 
 const sectionLabels = {
@@ -162,6 +163,7 @@ function ReportEditor({ snapshot }) {
 
   return (
     <div id="reportEditorWrap" className="report-editor-wrap">
+      <ReportReviewCheck reviewCheck={snapshot.reviewCheck} />
       <div className="report-editor-toolbar">
         <button className="tbtn" type="button" style={{ fontWeight: 700, padding: "3px 8px" }} onClick={() => callLegacy("formatReport", "bold")}>B</button>
         <button className="tbtn" type="button" style={{ fontStyle: "italic", padding: "3px 8px" }} onClick={() => callLegacy("formatReport", "italic")}>I</button>
@@ -187,8 +189,34 @@ function ReportEditor({ snapshot }) {
           <i className="ti ti-share" /> 공유
         </button>
         <button className="tbtn primary" type="button" onClick={() => callLegacy("saveReport")}>
-          <i className="ti ti-device-floppy" /> 저장
+          <i className="ti ti-device-floppy" /> 최종 저장
         </button>
+      </div>
+    </div>
+  );
+}
+
+function ReportReviewCheck({ reviewCheck }) {
+  const data = reviewCheck || {};
+  const rows = [
+    ["근거 있는 항목", data.with_evidence ?? 0, "b-success"],
+    ["근거 부족 항목", data.missing_evidence ?? 0, "b-warn"],
+    ["담당자 누락", data.missing_assignee ?? 0, "b-warn"],
+    ["마감일 누락", data.missing_due_date ?? 0, "b-warn"],
+    ["상충 가능 기록", data.possible_conflicts ?? 0, "b-danger"],
+  ];
+  return (
+    <div className="ops-panel" style={{ marginBottom: 12 }}>
+      <div className="ops-panel-title">보고서 검토 체크</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {rows.map(([label, count, className]) => (
+          <span className={`badge ${className}`} key={label}>
+            {label}: {count}건
+          </span>
+        ))}
+      </div>
+      <div className="ops-muted-line" style={{ marginTop: 8 }}>
+        최종 저장 시 보완 필요 항목이 남아 있으면 저장 전 확인을 요청합니다.
       </div>
     </div>
   );
