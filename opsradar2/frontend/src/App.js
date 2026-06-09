@@ -22,6 +22,7 @@ function clearOpsRadarSession() {
   window.localStorage.removeItem("access_token");
   window.localStorage.removeItem("token");
   window.localStorage.removeItem("auth");
+  window.sessionStorage.clear();
 }
 
 function syncDashboardRoleUi(role, name) {
@@ -85,18 +86,27 @@ function App() {
 
   useEffect(() => {
     if (!userRole || typeof window === "undefined") return undefined;
+    window.__workraderLogout = handleLogout;
+    window.logout = handleLogout;
+    const interceptLogoutClick = (event) => {
+      const target = event.target;
+      if (target?.closest?.(".settings-logout-btn, [data-workrader-logout='true']")) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleLogout();
+      }
+    };
+    document.addEventListener("click", interceptLogoutClick, true);
     const timer = window.setTimeout(() => {
       syncDashboardRoleUi(userRole, userName);
       if (typeof window.updateSettingsPage === "function") window.updateSettingsPage();
-      if (typeof window.logout === "function" && !window.logout.opsradarWrapped) {
-        const wrappedLogout = () => {
-          handleLogout();
-        };
-        wrappedLogout.opsradarWrapped = true;
-        window.logout = wrappedLogout;
-      }
+      window.__workraderLogout = handleLogout;
+      window.logout = handleLogout;
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("click", interceptLogoutClick, true);
+    };
   }, [userRole, userName]);
 
   function handleLogin(user) {

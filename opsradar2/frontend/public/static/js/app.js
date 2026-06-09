@@ -2998,6 +2998,7 @@ function clearOpsRadarSession(){
     localStorage.removeItem('access_token');
     localStorage.removeItem('token');
     localStorage.removeItem('auth');
+    sessionStorage.clear();
   }catch(e){}
 }
 function getStoredUserInfo(){
@@ -3060,6 +3061,10 @@ function updateSettingsPage(){
   setOpsRadarTheme(theme);
 }
 function logout(){
+  if(typeof window.__workraderLogout === 'function'){
+    window.__workraderLogout();
+    return;
+  }
   clearOpsRadarSession();
   document.body.classList.add('opsradar-login-required');
   window.location.reload();
