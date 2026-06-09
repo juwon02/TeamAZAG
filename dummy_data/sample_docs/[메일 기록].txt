@@ -1,0 +1,30 @@
+[메일 기록]
+문서 유형: 고객 메일
+보낸 사람: 김희진 <heejin.kim@opsradar-demo.com>
+받는 사람: Customer A Purchasing Team <purchasing@customer-a.com>
+참조: Overseas Sales Team, Logistics Team
+일자: 2026-06-04 16:20
+제목: Update on June Urgent Order Delivery Schedule
+
+Dear Customer A Team,
+
+We would like to provide an update regarding your urgent order scheduled for June delivery.
+
+Our supplier has informed us that there is a possible delay in the production completion due to raw material availability. The original shipment target was June 12, but the latest expected shipment date is now around June 18.
+
+We understand that your requested arrival date is June 20. Based on the updated shipment schedule, the standard air freight option may not be sufficient to meet the requested arrival date.
+
+We are currently checking an expedited air freight option with our logistics team. This option may help reduce the delay, but the freight cost is expected to increase by approximately 30–35%.
+
+We will share the confirmed shipment schedule and freight option by tomorrow.
+
+Action items:
+- Confirm final supplier shipment date
+- Confirm expedited air freight cost
+- Review whether partial shipment is acceptable
+
+We apologize for the inconvenience and will keep this matter as high priority.
+
+Best regards,
+Heejin Kim
+Overseas Sales Team
