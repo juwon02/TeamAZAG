@@ -7,12 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 
+_COLUMNS_CACHE: dict[str, set[str]] = {}
+
 
 class IssueRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def _columns(self, table_name: str) -> set[str]:
+        if table_name in _COLUMNS_CACHE:
+            return _COLUMNS_CACHE[table_name]
         result = await self.db.execute(
             text(
                 """
@@ -24,7 +28,8 @@ class IssueRepository:
             ),
             {"schema": settings.DB_SCHEMA, "table_name": table_name},
         )
-        return {row[0] for row in result.all()}
+        _COLUMNS_CACHE[table_name] = {row[0] for row in result.all()}
+        return _COLUMNS_CACHE[table_name]
 
     async def create(self, data: dict) -> dict:
         result = await self.db.execute(
