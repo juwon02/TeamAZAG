@@ -179,6 +179,15 @@ def test_ai_pipeline_is_integrated_under_opsradar2_app() -> None:
     assert '@router.post("/extract")' in chat
 
 
+def test_chat_member_matching_uses_database_members() -> None:
+    chat = read("app/api/v1/endpoints/chat.py")
+
+    assert "TEAM_MEMBERS" not in chat
+    assert "def _load_team_members" in chat
+    assert "FROM project_members pm" in chat
+    assert "_local_answer(payload.message, operational_context, team_members)" in chat
+
+
 def test_document_upload_has_size_limit_and_nonblocking_copy() -> None:
     config = read("app/core/config.py")
     service = read("app/services/document_service.py")
