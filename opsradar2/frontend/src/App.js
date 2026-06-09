@@ -29,17 +29,41 @@ function App() {
     return () => document.body.classList.remove("opsradar-login-required");
   }, [userRole]);
 
-  function handleLogin(role) {
-    const name = role === "admin" ? LABELS.adminName : LABELS.memberName;
-    window.localStorage.setItem("opsradar_user_role", role);
-    window.localStorage.setItem("opsradar_user_name", name);
-    setUserRole(role);
-    setUserName(name);
+  useEffect(() => {
+    if (!userRole || typeof window === "undefined") return undefined;
+    const targetRole = userRole === "member" ? "member" : "pm";
+    const timer = window.setTimeout(() => {
+      if (typeof window.switchDbRole === "function") window.switchDbRole(targetRole);
+      if (typeof window.updateSettingsPage === "function") window.updateSettingsPage();
+      if (typeof window.logout === "function" && !window.logout.opsradarWrapped) {
+        const staticLogout = window.logout;
+        const wrappedLogout = () => {
+          staticLogout();
+          handleLogout();
+        };
+        wrappedLogout.opsradarWrapped = true;
+        window.logout = wrappedLogout;
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [userRole]);
+
+  function handleLogin(user) {
+    window.localStorage.setItem("opsradar_user_role", user.role);
+    window.localStorage.setItem("opsradar_user_name", user.name);
+    window.localStorage.setItem("opsradar_user_id", user.id);
+    window.localStorage.setItem("role", user.role);
+    window.localStorage.setItem("user", JSON.stringify({ id: user.id, name: user.name, role: user.role }));
+    setUserRole(user.role);
+    setUserName(user.name);
   }
 
   function handleLogout() {
     window.localStorage.removeItem("opsradar_user_role");
     window.localStorage.removeItem("opsradar_user_name");
+    window.localStorage.removeItem("opsradar_user_id");
+    window.localStorage.removeItem("role");
+    window.localStorage.removeItem("user");
     setUserRole(null);
     setUserName("");
   }
