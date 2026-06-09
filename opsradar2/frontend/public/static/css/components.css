@@ -2760,9 +2760,10 @@ body[data-skin="light"] .toast{background:#172033;color:white}
   gap: 24px !important;
   box-sizing: border-box !important;
   width: 100% !important;
-  max-width: none !important;
+  max-width: 1440px !important;
   height: auto !important;
   min-height: 0 !important;
+  margin: 0 auto !important;
   padding: 24px 32px 88px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -2774,10 +2775,10 @@ body[data-skin="light"] .toast{background:#172033;color:white}
   display: block !important;
   box-sizing: border-box !important;
   width: 100% !important;
-  max-width: 1040px !important;
+  max-width: 100% !important;
   height: auto !important;
   min-height: 0 !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
   overflow: visible !important;
 }
 
@@ -2856,6 +2857,7 @@ body[data-skin="light"] .toast{background:#172033;color:white}
 
 @media (max-width: 760px) {
   #s-settings .content.settings-content {
+    max-width: 100% !important;
     padding: 16px 14px 80px !important;
     gap: 18px !important;
   }
