@@ -12,7 +12,7 @@ def test_database_uses_configured_schema() -> None:
     config = read("app/core/config.py")
     database = read("app/core/database.py")
 
-    assert 'DB_SCHEMA: str = os.getenv("DB_SCHEMA", "public")' in config
+    assert 'DB_SCHEMA: str = os.getenv("DB_SCHEMA", "opsradar2")' in config
     assert 'search_path": f"{settings.DB_SCHEMA},public"' in database
     assert "pool_pre_ping=True" in database
 
@@ -67,8 +67,10 @@ def test_react_frontend_runtime_settings_are_configurable() -> None:
 
     assert "FRONTEND_ORIGINS" in config
     assert "parse_csv_env" in config
+    assert "MAX_UPLOAD_BYTES" in config
     assert "allow_origins=list(settings.FRONTEND_ORIGINS)" in main
     assert "http://127.0.0.1:8002" in env_example
+    assert "http://127.0.0.1:5173" in env_example
     assert '"http://127.0.0.1:8002"' in vite_config
 
 
@@ -167,3 +169,26 @@ def test_ai_pipeline_is_integrated_under_opsradar2_app() -> None:
     assert "async def extract_todos" in summarizer
     assert "run_document_pipeline" in documents
     assert '@router.post("/extract")' in chat
+
+
+def test_document_upload_has_size_limit_and_nonblocking_copy() -> None:
+    config = read("app/core/config.py")
+    service = read("app/services/document_service.py")
+
+    assert "MAX_UPLOAD_BYTES" in config
+    assert "asyncio.to_thread" in service
+    assert "_copy_upload_file_with_limit" in service
+    assert "file is too large" in service
+    assert "shutil.copyfileobj" not in service
+
+
+def test_document_chunk_actions_use_pydantic_payloads() -> None:
+    schemas = read("app/schemas/document.py")
+    documents = read("app/api/v1/endpoints/documents.py")
+
+    assert "class ChunkTodoCreate" in schemas
+    assert "class ChunkIssueCreate" in schemas
+    assert 'ConfigDict(extra="forbid")' in schemas
+    assert "body: ChunkTodoCreate" in documents
+    assert "body: ChunkIssueCreate" in documents
+    assert "model_dump(exclude_none=True)" in documents
