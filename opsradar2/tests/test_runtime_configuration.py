@@ -45,8 +45,14 @@ def test_chat_ui_calls_backend_api() -> None:
 
 def test_frontend_api_uses_same_origin_by_default() -> None:
     adapter = read("frontend/js/api-integration.js")
+    app = read("frontend/js/app.js")
+    public_index = read("frontend/public/index.html")
 
     assert 'window.OPSRADAR_API_BASE || "/api/v1"' in adapter
+    assert 'window.OPSRADAR_API_BASE || "/api/v1"' in app
+    assert 'window.OPSRADAR_API_BASE || "/api/v1"' in public_index
+    assert "localhost:8000/api/v1" not in app
+    assert "127.0.0.1:8000/api/v1" not in public_index
 
 
 def test_calendar_state_is_exposed_to_api_adapter() -> None:
@@ -72,8 +78,9 @@ def test_react_frontend_runtime_settings_are_configurable() -> None:
 def test_fastapi_can_serve_react_build_output() -> None:
     main = read("app/main.py")
 
-    assert "FRONTEND_DIST = FRONTEND / \"dist\"" in main
+    assert "FRONTEND_BUILD = FRONTEND / \"build\"" in main
     assert "react_assets = FRONTEND_DIST / \"assets\"" in main
+    assert "def frontend_static_asset" in main
     assert 'app.mount("/assets"' in main
     assert "def spa_fallback" in main
 
