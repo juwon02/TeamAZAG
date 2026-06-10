@@ -54,6 +54,9 @@ class Settings:
         "",
     )
     FAISS_INDEX_PATH: str = os.getenv("FAISS_INDEX_PATH", "data/faiss/index.faiss")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-this-secret-in-production")
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_HOURS: int = parse_int_env("JWT_EXPIRE_HOURS", 8)
 
 
 settings = Settings()
