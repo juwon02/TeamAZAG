@@ -11,21 +11,24 @@ function Login({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.detail || "로그인에 실패했습니다.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.detail || "아이디 또는 비밀번호가 올바르지 않습니다.");
         return;
       }
+
       onLogin(data);
     } catch {
       setError("서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
@@ -38,7 +41,7 @@ function Login({ onLogin }) {
     <main className="opsradar-login">
       <section className="opsradar-login-copy" aria-labelledby="login-title">
         <div className="opsradar-login-mark">OR</div>
-        <p>AI Operational Intelligence</p>
+        <p className="opsradar-login-tagline">AI Operational Intelligence</p>
         <h1 id="login-title">OpsRadar</h1>
         <div className="opsradar-login-subtitle">
           운영 기록을 근거 있는 Todo · Issue · Report · Handoff 후보로 정리하고,
@@ -53,25 +56,33 @@ function Login({ onLogin }) {
           <p className="opsradar-login-form-desc">
             관리자로부터 발급받은 계정으로 로그인하세요.
           </p>
+
           <label htmlFor="opsradar-username">아이디</label>
           <input
             id="opsradar-username"
             type="text"
             autoComplete="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(event) => setUsername(event.target.value)}
             required
           />
+
           <label htmlFor="opsradar-password">비밀번호</label>
           <input
             id="opsradar-password"
             type="password"
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             required
           />
-          {error && <p className="opsradar-login-error" role="alert">{error}</p>}
+
+          {error && (
+            <p className="opsradar-login-error" role="alert">
+              {error}
+            </p>
+          )}
+
           <button type="submit" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </button>

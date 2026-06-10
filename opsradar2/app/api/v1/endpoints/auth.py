@@ -1,4 +1,4 @@
-"""Authentication endpoints — login only (no self-registration)."""
+"""Authentication endpoints - login only, no self-registration."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
