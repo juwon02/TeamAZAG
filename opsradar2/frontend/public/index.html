@@ -18,6 +18,7 @@ window.OPSRADAR_API_BASE = window.location.port === "8002"
   : `${window.location.protocol}//${window.location.hostname}:8002/api/v1`;
 </script>
 
+<div style="display:flex;flex:1;overflow:hidden">
 <!-- ══ 사이드바 ══ -->
 <div class="sidebar">
   <div class="sb-logo">
@@ -998,6 +999,7 @@ Content: API 연결 일정과 담당자 확인이 필요합니다.</pre></div>
   <button class="float-ai-btn" onclick="toggleFloatAI()" title="AI에게 질문">
     <i class="ti ti-message-dots"></i>
   </button>
+</div>
 </div>
 <script src="/static/js/app.js"></script>
 <script src="/static/js/api-integration.js"></script>
