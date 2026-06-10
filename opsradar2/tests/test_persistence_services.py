@@ -1,7 +1,7 @@
 """Focused service tests for persistence decisions."""
 
 import asyncio
-from datetime import datetime
+from datetime import date, datetime
 
 from app.repositories.todo_repository import _normalize_due_at
 from app.services.report_service import ReportService
@@ -77,6 +77,19 @@ def test_report_service_preserves_monthly_period():
 
     assert report == {"period": "monthly"}
     assert repo.generated_period == "monthly"
+
+
+def test_report_period_range_uses_selected_week_and_month():
+    from app.repositories.report_repository import ReportRepository
+
+    assert ReportRepository._period_range("weekly", "2026-06-10") == (
+        date(2026, 6, 8),
+        date(2026, 6, 14),
+    )
+    assert ReportRepository._period_range("monthly", "2026-05-17") == (
+        date(2026, 5, 1),
+        date(2026, 5, 31),
+    )
 
 
 def test_issue_service_links_created_todo_to_existing_issue():
