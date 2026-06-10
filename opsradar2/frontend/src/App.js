@@ -21,6 +21,22 @@ function App() {
     return () => document.body.classList.remove("opsradar-login-required");
   }, [session]);
 
+  useEffect(() => {
+    if (!session?.user) return;
+    const { user } = session;
+    const roleLabel = user.role === "admin" ? "관리자" : "팀원";
+    const roleDescription = user.role === "admin" ? "PM · 팀장" : "Team Member";
+
+    const sidebarName = document.getElementById("sidebarUserName");
+    const sidebarRole = document.getElementById("sidebarUserRole");
+    const sidebarDescription = document.getElementById("sidebarUserDescription");
+    const sidebarAvatar = document.getElementById("sidebarUserAvatar");
+    if (sidebarName) sidebarName.textContent = user.name;
+    if (sidebarRole) sidebarRole.textContent = roleLabel;
+    if (sidebarDescription) sidebarDescription.textContent = roleDescription;
+    if (sidebarAvatar) sidebarAvatar.textContent = (user.name || "U").trim().slice(0, 1);
+  }, [session]);
+
   function handleLogin(data) {
     const sessionData = {
       token: data.access_token,
@@ -29,6 +45,7 @@ function App() {
     window.localStorage.setItem("opsradar_session", JSON.stringify(sessionData));
     window.localStorage.setItem("opsradar_user_role", data.user.role);
     window.localStorage.setItem("opsradar_user_name", data.user.name);
+    document.body.classList.remove("opsradar-login-required");
     setSession(sessionData);
   }
 
