@@ -199,6 +199,7 @@ async def _create_extracted_items(
                 Todo(
                     id=uuid.uuid4(),
                     project_id=document.project_id,
+                    created_by_member_id=document.uploaded_by_member_id,
                     source_document_id=document.id,
                     source_chunk_id=source_chunk_id,
                     title=str(title)[:500],

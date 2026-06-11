@@ -72,7 +72,10 @@ async def extract_todos(document_text: str) -> dict:
 
     prompt = f"""
 다음 문서에서 todos, decisions, issues를 JSON으로만 추출하세요.
-문장 그대로 복사하기보다 업무 항목으로 정리하세요.
+문장 그대로 복사하지 말고 실행 가능한 업무 항목으로 정리하세요.
+Todo title은 담당자가 목록만 보고도 할 일을 즉시 이해하도록 핵심 행동과 대상을 짧고 직관적으로 작성하세요.
+Todo description은 title을 반복하지 말고 업무 배경, 수행 범위, 산출물 또는 완료 기준을 1~3문장으로 구체적으로 작성하세요.
+이미 완료되었거나 해결되었다고 명확히 표현된 문장은 Todo 또는 Issue 후보로 추출하지 마세요.
 이미 완료/해결/반영된 과거 작업은 todos 또는 issues에 포함하지 마세요. 완료 여부를 확인해야 하는 후속 작업만 포함하세요.
 
 형식:
@@ -113,10 +116,11 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
     normalized_todos = []
     for item in todos[:20]:
         if isinstance(item, str) and not _is_completed_statement(item):
+            concise_title = _concise_todo_title(item, item)
             normalized_todos.append(
                 {
-                    "title": str(item)[:160],
-                    "description": str(item),
+                    "title": concise_title,
+                    "description": _detailed_todo_description(concise_title, item),
                     "assignee": None,
                     "due_date": None,
                 }
@@ -125,10 +129,11 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
             title = item.get("title") or item.get("content")
             description = item.get("description") or item.get("content") or title
             if title and not _is_completed_statement(f"{title} {description}"):
+                concise_title = _concise_todo_title(str(title), str(description))
                 normalized_todos.append(
                     {
-                        "title": str(title)[:160],
-                        "description": str(description),
+                        "title": concise_title,
+                        "description": _detailed_todo_description(concise_title, str(description)),
                         "assignee": item.get("assignee"),
                         "due_date": item.get("due_date") or item.get("due_at"),
                     }
@@ -173,6 +178,33 @@ def _strip_issue_target_date(text: str) -> str:
     return re.sub(r"\s{2,}", " ", cleaned).strip(" \t\r\n-·,")
 
 
+def _concise_todo_title(title: str, description: str = "") -> str:
+    """Create a scannable action title instead of copying a full source sentence."""
+    cleaned = re.sub(r"^(?:[-*•]\s*)?(?:todo|할\s*일|액션\s*아이템)\s*[:：-]?\s*", "", title, flags=re.IGNORECASE)
+    cleaned = re.sub(r"(?:오늘|내일|이번\s*주|다음\s*주|이번\s*달|다음\s*달|\d{1,2}월\s*\d{1,2}일)(?:까지|내로)?\s*", "", cleaned)
+    cleaned = re.sub(r"(?:해야|하여야)\s*(?:합니다|한다|함|해요)?[.!?]?$", "", cleaned)
+    cleaned = re.sub(r"(?:할|할\s*것이)\s*필요(?:가\s*있습니다|합니다|함)?[.!?]?$", "", cleaned)
+    cleaned = re.sub(r"(?:바랍니다|해주세요|하십시오|예정입니다)[.!?]?$", "", cleaned)
+    cleaned = re.sub(r"(?:합니다|됩니다|입니다)[.!?]?$", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t\r\n-·,")
+    if len(cleaned) > 72:
+        clauses = re.split(r"[.!?。]|(?:\s*[-–—]\s*)|(?:하고|하며|해서|하여)\s+", cleaned)
+        cleaned = next((clause.strip() for clause in clauses if 8 <= len(clause.strip()) <= 72), cleaned[:72].rstrip())
+    if cleaned == description.strip() and len(cleaned) > 48:
+        cleaned = cleaned[:48].rstrip() + " 점검"
+    return cleaned[:80] or "업무 항목 확인"
+
+
+def _detailed_todo_description(title: str, description: str) -> str:
+    """Keep useful detail and prevent title/description duplication."""
+    cleaned = re.sub(r"\s+", " ", description).strip()
+    if not cleaned or cleaned == title:
+        return f"{title} 업무의 수행 범위와 필요한 산출물을 확인하고, 완료 기준에 따라 결과를 공유합니다."
+    if len(cleaned) < 45:
+        return f"{cleaned} 관련 작업 범위와 완료 기준을 확인하고 결과를 공유합니다."
+    return cleaned[:500]
+
+
 def _simple_summary(text: str) -> str:
     sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
     selected = [sentence.strip() for sentence in sentences if sentence.strip()][:3]
@@ -214,11 +246,11 @@ def _heuristic_extract(text: str) -> dict:
     issues = []
     for line in lines:
         if not _is_completed_statement(line) and any(token in line for token in ("해야", "필요", "담당", "마감", "TODO", "todo")):
-            title = re.sub(r"^(?:[-*•]\s*)?(?:todo|할\s*일|액션\s*아이템)\s*[:：-]?\s*", "", line, flags=re.IGNORECASE)
+            title = _concise_todo_title(line, line)
             todos.append(
                 {
-                    "title": title[:160],
-                    "description": line[:300],
+                    "title": title,
+                    "description": _detailed_todo_description(title, line[:500]),
                     "assignee": None,
                     "due_date": None,
                 }

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -231,6 +234,45 @@ async def get_documents(project_id: str | None = None, db: AsyncSession = Depend
     }
 
 
+@router.get("/{document_id}/download")
+async def download_document(document_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid document_id") from exc
+    document = await db.get(Document, doc_uuid)
+    if not document or document.deleted_at is not None or not document.storage_uri:
+        raise HTTPException(status_code=404, detail="document not found")
+    file_path = Path(document.storage_uri)
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="source file no longer exists")
+    return FileResponse(file_path, filename=document.file_name, media_type=document.mime_type)
+
+
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: str,
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    actor = await _resolve_actor(db, authorization)
+    if actor["username"] != "hj" and str(actor["role"]).lower() not in {"admin", "pm", "leader"}:
+        raise HTTPException(403, "lead role required")
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid document_id") from exc
+    document = await db.get(Document, doc_uuid)
+    if not document or document.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="document not found")
+    file_path = Path(document.storage_uri) if document.storage_uri else None
+    document.deleted_at = datetime.now(timezone.utc)
+    await db.commit()
+    if file_path and file_path.is_file():
+        file_path.unlink(missing_ok=True)
+    return {"status": "success", "document_id": document_id}
+
+
 async def _resolve_uploaded_by_member_id(
     db: AsyncSession,
     authorization: str | None,
@@ -256,6 +298,22 @@ async def _resolve_uploaded_by_member_id(
         {"project_id": project_id, "user_id": user_id},
     )
     return result.scalar_one_or_none()
+
+
+async def _resolve_actor(db: AsyncSession, authorization: str | None) -> dict:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "login required")
+    payload = decode_access_token(authorization.split(" ", 1)[1])
+    if not payload or not payload.get("sub"):
+        raise HTTPException(401, "invalid token")
+    result = await db.execute(
+        text("SELECT username, role FROM users WHERE id = CAST(:user_id AS uuid) AND deleted_at IS NULL"),
+        {"user_id": payload["sub"]},
+    )
+    actor = result.mappings().one_or_none()
+    if not actor:
+        raise HTTPException(403, "active user required")
+    return dict(actor)
 
 
 async def _get_chunk(db: AsyncSession, document_id: str, chunk_id: str) -> dict | None:

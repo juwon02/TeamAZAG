@@ -115,3 +115,16 @@ def test_ai_extraction_separates_todo_title_and_description():
     assert '"title": "해야 할 일"' in summarizer
     assert '"description": "업무 수행 방법과 완료 기준"' in summarizer
     assert 'description = item.get("description") or item.get("content") or str(title)' in document_service
+
+
+def test_member_review_actions_are_safe_and_sent_todos_reach_lead_queue():
+    frontend = read("frontend/public/static/js/workflow-v2.js")
+    endpoint = read("app/api/v1/endpoints/workflow.py")
+
+    assert 'const isLead = () => G.workflowReview?.role' in frontend
+    assert 'const selected = selectedReviewItems("todo")' in frontend
+    assert "Todo review delete failed" in frontend
+    assert 'api("/workflow/todos/send"' in frontend
+    assert "result.sent || selected.length" in frontend
+    assert ":is_lead AND t.reviewed_by_member_id IS NOT NULL" in endpoint
+    assert '"pending_todos": [item for item in todos if item["sent_by"]]' in endpoint
