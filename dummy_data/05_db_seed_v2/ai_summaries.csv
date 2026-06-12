@@ -29,21 +29,22 @@ SUM-DOC-0027,PROJ-001,document,DOC-0027,문서ID: DOC-0027 작성일: 2025-08-17
 SUM-DOC-0028,PROJ-001,document,DOC-0028,문서ID: DOC-0028 작성일: 2025-08-17 문서유형: Todo 노출 대화 작성자: 이민재 관련팀: 영업관리팀 고객사: Hyundai Mobis Tier2 구매처: KET Supplier 품목: AP-WH-220 와이어하네스 관련이슈: ISS-2025-008 / KET Supplier 재고 부족으로 납기 지연 ,관련 이슈: ISS-2025-008; 관련팀: 영업관리팀,2026-06-01T09:00:00,2026-06-01T09:00:00
 SUM-DOC-0029,PROJ-001,document,DOC-0029,문서ID: DOC-0029 작성일: 2025-08-20 문서유형: 개선대책 요청 작성자: 송태현 관련팀: 품질 클레임팀 고객사: Hyundai Mobis Tier2 구매처: KET Supplier 품목: AP-WH-220 와이어하네스 관련이슈: ISS-2025-008 / KET Supplier 재고 부족으로 납기 지연 가,관련 이슈: ISS-2025-008; 관련팀: 품질 클레임팀,2026-06-01T09:00:00,2026-06-01T09:00:00
 SUM-DOC-0030,PROJ-001,document,DOC-0030,문서ID: DOC-0030 작성일: 2025-08-05 문서유형: 고객 불만 메일 작성자: 박서연 관련팀: 영업관리팀 고객사: Hyundai Mobis Tier2 구매처: KET Supplier 품목: AP-WH-220 와이어하네스 관련이슈: ISS-2025-008 / KET Supplier 재고 부족으로 납기 지연 가능,관련 이슈: ISS-2025-008; 관련팀: 영업관리팀,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0001,PROJ-001,issue,AI-ISSUE-006,"Daesung Automotive가 AP-CN-204 5,000개 긴급 납품을 요청하여 재고 확인, 구매처 협의, 출고 우선순위 조정이 발생함",severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0002,PROJ-001,issue,AI-ISSUE-008,KET Supplier의 AP-WH-220 재고 부족으로 Hyundai Mobis Tier2 납기 지연 위험이 발생함,severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0003,PROJ-001,issue,AI-ISSUE-009,Global Harness Vietnam 출하 건에서 원산지 증명 서류 누락으로 통관 지연이 발생함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0004,PROJ-001,issue,AI-ISSUE-011,Mirae EV Systems에서 AP-SC-330 센서 케이블 접촉 불량 클레임이 반복 접수됨,severity=High; status=monitoring,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0005,PROJ-001,issue,AI-ISSUE-012,Yazaki Parts Asia가 AP-RL-450 리드타임을 8주에서 12주로 변경 공지함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0006,PROJ-001,issue,AI-ISSUE-002,Hyundai Mobis Tier2 납기 대응을 위해 AP-TM-118 일부 수량을 항공 긴급 이송함,severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0007,PROJ-001,issue,AI-ISSUE-004,TE Connectivity Korea가 주요 커넥터 단가 7% 인상을 통보하여 고객 단가 협상이 필요함,severity=Medium; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0008,PROJ-001,issue,AI-ISSUE-005,박서연 담당 Hyundai Mobis Tier2와 Daesung Automotive 업무 일부를 이민재에게 인수인계해야 함,severity=High; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0009,PROJ-001,issue,AI-ISSUE-007,Hanil Motors가 7월 정기 발주 수량을 일부 조정함,severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0010,PROJ-001,issue,AI-ISSUE-010,센서 케이블 대체 출하 가능성을 검토함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0011,PROJ-001,issue,AI-ISSUE-001,월초 재고 실사에서 시스템 수량과 실물 수량 차이를 조정함,severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0012,PROJ-001,issue,AI-ISSUE-003,개선대책서 회신 일정이 지연되어 고객 후속 안내가 필요함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0013,PROJ-001,issue,AI-ISSUE-006,Global Harness Vietnam향 박스 라벨에 PO 번호 표기 방식 변경 요청이 접수됨,severity=Low; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0014,PROJ-001,issue,AI-ISSUE-013,KET Supplier 월말 입고가 두 차례로 분할됨,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0015,PROJ-001,issue,AI-ISSUE-007,월간 보고서용 고객별 리스크 태그를 정리함,severity=Low; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0016,PROJ-001,issue,AI-ISSUE-014,검사 성적서 항목 누락에 대한 보완 요청이 진행됨,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0017,PROJ-001,issue,AI-ISSUE-008,긴급 발주 재발 방지를 위해 고객별 안전재고 기준을 협의함,severity=Medium; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
-SUM-ISSUE-0018,PROJ-001,issue,AI-ISSUE-009,"분기 공급사 납기, 품질, 단가 변동 데이터를 취합함",severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0001,PROJ-001,issue,AI-ISS-2025-006,"Daesung Automotive가 AP-CN-204 5,000개 긴급 납품을 요청하여 재고 확인, 구매처 협의, 출고 우선순위 조정이 발생함",severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0002,PROJ-001,issue,AI-ISS-2025-008,KET Supplier의 AP-WH-220 재고 부족으로 Hyundai Mobis Tier2 납기 지연 위험이 발생함,severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0003,PROJ-001,issue,AI-ISS-2025-009,Global Harness Vietnam 출하 건에서 원산지 증명 서류 누락으로 통관 지연이 발생함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0004,PROJ-001,issue,AI-ISS-2025-011,Mirae EV Systems에서 AP-SC-330 센서 케이블 접촉 불량 클레임이 반복 접수됨,severity=High; status=monitoring,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0005,PROJ-001,issue,AI-ISS-2025-012,Yazaki Parts Asia가 AP-RL-450 리드타임을 8주에서 12주로 변경 공지함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0006,PROJ-001,issue,AI-ISS-2026-002,Hyundai Mobis Tier2 납기 대응을 위해 AP-TM-118 일부 수량을 항공 긴급 이송함,severity=High; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0007,PROJ-001,issue,AI-ISS-2026-004,TE Connectivity Korea가 주요 커넥터 단가 7% 인상을 통보하여 고객 단가 협상이 필요함,severity=Medium; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0008,PROJ-001,issue,AI-ISS-2026-005,박서연 담당 Hyundai Mobis Tier2와 Daesung Automotive 업무 일부를 이민재에게 인수인계해야 함,severity=High; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0009,PROJ-001,issue,AI-ISS-2025-007,Hanil Motors가 7월 정기 발주 수량을 일부 조정함,severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0010,PROJ-001,issue,AI-ISS-2025-010,센서 케이블 대체 출하 가능성을 검토함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0011,PROJ-001,issue,AI-ISS-2026-001,월초 재고 실사에서 시스템 수량과 실물 수량 차이를 조정함,severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0012,PROJ-001,issue,AI-ISS-2026-003,개선대책서 회신 일정이 지연되어 고객 후속 안내가 필요함,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0013,PROJ-001,issue,AI-ISS-2026-006,Global Harness Vietnam향 박스 라벨에 PO 번호 표기 방식 변경 요청이 접수됨,severity=Low; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0014,PROJ-001,issue,AI-ISS-2025-013,KET Supplier 월말 입고가 두 차례로 분할됨,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0015,PROJ-001,issue,AI-ISS-2026-007,월간 보고서용 고객별 리스크 태그를 정리함,severity=Low; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0016,PROJ-001,issue,AI-ISS-2025-014,검사 성적서 항목 누락에 대한 보완 요청이 진행됨,severity=Medium; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0017,PROJ-001,issue,AI-ISS-2026-008,긴급 발주 재발 방지를 위해 고객별 안전재고 기준을 협의함,severity=Medium; status=open,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0018,PROJ-001,issue,AI-ISS-2026-009,"분기 공급사 납기, 품질, 단가 변동 데이터를 취합함",severity=Low; status=closed,2026-06-01T09:00:00,2026-06-01T09:00:00
+SUM-ISSUE-0019,PROJ-001,issue,AI-ISSUE-2026-009,고객 입고 검사 수량과 내부 출고 처리 수량이 일치하지 않아 확인 및 재출고 또는 차액 조정 검토가 필요한 이슈,severity=Medium; status=in_progress,2026-06-01T09:00:00,2026-06-01T09:00:00

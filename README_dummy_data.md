@@ -1,18 +1,16 @@
 # AutoParts One Korea 더미 데이터
 
-## 1. 목적
-이 데이터셋은 자동차 부품 유통/공급 운영 시나리오에서 AI가 보고서와 인수인계서 초안을 생성하는 기능을 테스트하기 위한 1년치 더미 데이터입니다. 실제 서비스 입력 대상은 `02_raw_documents`와 `03_structured_csv`입니다.
+## 목적
+이 데이터셋은 자동차 부품 B2B 운영관리 시나리오에서 AI가 보고서, Todo, 리스크, 인수인계서 초안을 생성하는 기능을 검증하기 위한 더미 데이터입니다.
 
-## 2. 폴더 구조
+## 폴더 구조
 - `01_master_data`: 직원, 고객사, 구매처, 품목 기준정보
-- `02_raw_documents`: 메일, 클레임, 물류 로그, 회의록, 채팅 로그 원천 문서
+- `02_raw_documents`: 메일, 품질 클레임, 물류 로그, 회의록, 채팅 로그 원천 문서
 - `03_structured_csv`: 주문, 구매, 출하, 클레임, 이슈 이벤트, 문서 인덱스 CSV
-- `04_expected_outputs_for_test`: 개발 검증용 샘플 결과물 3개
+- `04_expected_outputs_for_test`: 개발 검증용 결과 샘플이며 실제 서비스 업로드 대상이 아닙니다.
+- `05_db_seed_v2`: OpsRadar2 v2 MVP DB seed CSV
 
-## 3. 서비스 입력 데이터와 expected output의 차이
-`02_raw_documents`와 `03_structured_csv`는 AI가 실제로 분석해야 하는 입력 데이터입니다. `04_expected_outputs_for_test`는 모델이 만들 수 있는 결과 형태를 확인하기 위한 정답 예시이며, 실제 업로드 또는 분석 대상에 포함하면 안 됩니다.
-
-## 4. 특수 시나리오 8개
+## 특수 시나리오 9개
 1. 2025년 6월 Daesung Automotive 긴급 발주 대응
 2. 2025년 8월 KET Supplier 재고 부족과 납기 지연 가능성
 3. 2025년 9월 Global Harness Vietnam 수출 서류 누락과 통관 지연
@@ -21,17 +19,16 @@
 6. 2026년 2월 Hyundai Mobis Tier2 긴급 항공 이송
 7. 2026년 4월 TE Connectivity Korea 단가 7% 인상 통보
 8. 2026년 5~6월 박서연 담당 고객 업무 일부 인수인계
+9. 2026년 5월 Hanil Motors 수량 불일치 클레임
 
-## 5. 인수인계 테스트 방법
-1. `02_raw_documents`와 `03_structured_csv`만 업로드합니다.
-2. 박서연 담당 고객인 Hyundai Mobis Tier2와 Daesung Automotive를 대상으로 인수인계서 생성을 요청합니다.
-3. 결과에 고객별 미완료 Todo, 주요 이슈, 리스크, 담당자, 마감일, 다음 액션이 포함되는지 확인합니다.
-4. `04_expected_outputs_for_test/expected_handover_sample.md`는 비교용으로만 사용합니다.
+## 신규 시나리오 9 설명
+Hanil Motors 입고 검사에서 AP-CB-510 케이블 어셈블리 2,000개 중 1,850개만 확인되어 내부 출고 수량과 고객 입고 수량이 불일치한 상황입니다. 영업관리팀, 물류팀, 품질 클레임팀이 공동으로 출고 검수표, 패킹 리스트, 운송장 인수증, 고객 입고 검수 결과를 대조해야 합니다. 인수인계서에는 출고 검증, 재출고 가능성, 고객 회신 일정, 차액 조정 검토가 추출되어야 합니다.
 
-## 6. 주의사항
-`04_expected_outputs_for_test`는 실제 업로드 대상이 아닙니다. 이 폴더를 AI 입력에 포함하면 평가가 오염될 수 있습니다.
+## 서비스 입력 데이터와 expected output의 차이
+`02_raw_documents`와 `03_structured_csv`는 실제 서비스 업로드 및 분석 대상입니다. `04_expected_outputs_for_test`는 검증용 샘플 결과물이므로 실제 서비스 입력에 포함하면 안 됩니다.
 
-## 재생성
+## 재생성 명령어
 ```bash
 python scripts/generate_dummy_data.py
+python scripts/convert_dummy_to_seed_v2.py
 ```

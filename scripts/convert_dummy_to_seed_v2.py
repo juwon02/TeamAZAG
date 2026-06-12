@@ -124,6 +124,10 @@ def split_ids(value: str) -> list[str]:
     return [x.strip() for x in (value or "").split(";") if x.strip()]
 
 
+def ai_issue_id(issue_id: str) -> str:
+    return f"AI-{issue_id.replace('_', '-').upper()}"
+
+
 def priority_from_severity(severity: str) -> str:
     severity = (severity or "").lower()
     if severity == "high":
@@ -481,7 +485,7 @@ def main() -> None:
     issues = []
     for row in issues_src:
         issues.append({
-            "id": f"AI-ISSUE-{row['issue_id'].split('-')[-1]}",
+            "id": ai_issue_id(row["issue_id"]),
             "project_id": PROJECT_ID,
             "title": row["issue_title"],
             "issue_type": row["issue_type"],
@@ -517,7 +521,7 @@ def main() -> None:
                 "owner_member_id": owner,
                 "due_at": due_at,
                 "source_type": "issue",
-                "source_id": f"AI-ISSUE-{issue['issue_id'].split('-')[-1]}",
+                "source_id": ai_issue_id(issue["issue_id"]),
                 "related_issue_id": issue["issue_id"],
                 "created_at": dtstr(issue["start_date"]),
                 "updated_at": NOW,

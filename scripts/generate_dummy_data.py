@@ -413,6 +413,337 @@ def write_expected_outputs() -> None:
     (base / "expected_handover_sample.md").write_text(handover, encoding="utf-8")
 
 
+def append_scenario_9_outputs() -> None:
+    issue_id = "ISSUE-2026-009"
+    customer_id = "CUS-004"
+    supplier_id = "SUP-005"
+    product_id = "AP-CB-510"
+
+    def append_csv(path: Path, row: dict[str, str], key: str) -> None:
+        with path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            headers = reader.fieldnames or []
+        if any(existing.get(key) == row[key] for existing in rows):
+            return
+        rows.append(row)
+        with path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    docs = [
+        {
+            "doc_id": "DOC-2026-0513-SALES-009-001",
+            "folder": "sales_emails",
+            "filename": "DOC-2026-0513-SALES-009-001_hanil_quantity_mismatch_claim.md",
+            "doc_type": "고객 수량 불일치 클레임 접수 메일",
+            "created_date": "2026-05-13",
+            "author": "정하늘",
+            "related_team": "영업관리팀",
+            "summary_hint": "Hanil Motors AP-CB-510 입고 수량 1,850개와 출고 처리 2,000개 불일치 클레임 접수",
+            "body": [
+                "Hanil Motors에서 AP-CB-510 케이블 어셈블리 입고 검사 결과 수량 불일치가 발생했다고 접수했습니다.",
+                "고객 검수 기준 입고 확인 수량은 1,850개이며 당사 출고 로그에는 2,000개가 처리된 것으로 표시되어 있습니다.",
+                "부족 수량 150개가 실제 미출고인지, 포장 단위 오류인지, 운송 중 분실인지 확인이 필요합니다.",
+                "고객은 월말 생산 일정 영향 가능성을 언급하며 2026-05-16 오전까지 1차 확인 결과를 요청했습니다.",
+                "담당자 정하늘은 물류팀에 출고 검수표, 패킹 리스트, 운송장 인수증 대조를 요청했습니다.",
+                "리스크는 Medium이며, 확인 지연 시 고객 라인 투입 일정과 추가 재출고 판단에 영향이 있습니다.",
+                "다음 액션은 물류팀 확인 결과를 취합해 고객 중간 회신 초안을 작성하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0513-LOG-009-002",
+            "folder": "logistics_logs",
+            "filename": "DOC-2026-0513-LOG-009-002_internal_shipment_log.md",
+            "doc_type": "내부 출고 로그",
+            "created_date": "2026-05-13",
+            "author": "윤예린",
+            "related_team": "물류팀",
+            "summary_hint": "AP-CB-510 2,000개 출고 처리와 패킹 리스트 실물 대조 필요",
+            "body": [
+                "2026-05-12 출고 시스템에는 Hanil Motors향 AP-CB-510 케이블 어셈블리 2,000개가 출고 처리되어 있습니다.",
+                "출고 reference는 SHP-00111이며 운송사는 CJ Logistics, 배송 방식은 Truck으로 기록되어 있습니다.",
+                "출고 검수표에는 박스 20개 기준으로 박스당 100개 포장으로 표기되어 있습니다.",
+                "고객 입고 검수 결과 1,850개만 확인되었다는 클레임이 접수되어 패킹 리스트와 실제 박스 수량 재확인이 필요합니다.",
+                "물류팀은 CCTV 기록, 출고 검수표 서명, 운송장 인수증을 2026-05-16까지 확인하기로 했습니다.",
+                "리스크는 출고 검수 누락 또는 운송 중 일부 분실 가능성입니다.",
+                "다음 액션은 부족분 150개 재출고 가능 여부와 차액 조정 필요성을 함께 검토하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0514-CHAT-009-003",
+            "folder": "chat_logs",
+            "filename": "DOC-2026-0514-CHAT-009-003_sales_logistics_quality_check.md",
+            "doc_type": "영업 물류 품질 확인 대화",
+            "created_date": "2026-05-14",
+            "author": "정하늘",
+            "related_team": "영업관리팀",
+            "summary_hint": "수량 불일치 클레임에 대한 영업관리팀, 물류팀, 품질 클레임팀 확인 대화",
+            "body": [
+                "[정하늘] Hanil Motors에서 AP-CB-510 입고 수량이 1,850개만 확인됐다고 클레임을 공유했습니다.",
+                "[윤예린] 내부 출고 로그는 2,000개 처리로 되어 있어 출고 검수표와 패킹 리스트를 먼저 확인하겠습니다.",
+                "[한지우] 제품 품질 불량은 아니지만 quantity_mismatch 클레임으로 접수하고 원인 분류를 열어두겠습니다.",
+                "[정하늘] 고객은 월말 생산 일정 영향 가능성을 말해서 중간 회신 일정이 필요합니다.",
+                "[윤예린] 운송장 인수증과 박스 수량 사진이 남아 있는지 확인하겠습니다.",
+                "[한지우] 원인은 패킹 오류, 출고 검수 누락, 운송 중 분실, 고객 입고 검수 오류 네 가지로 분류하겠습니다.",
+                "다음 액션은 2026-05-16 오전까지 부서별 확인 결과를 모아 고객에게 1차 회신하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0516-CLAIM-009-004",
+            "folder": "quality_claims",
+            "filename": "DOC-2026-0516-CLAIM-009-004_quantity_mismatch_claim.md",
+            "doc_type": "수량 불일치 클레임 접수표",
+            "created_date": "2026-05-16",
+            "author": "한지우",
+            "related_team": "품질 클레임팀",
+            "summary_hint": "shipment_quantity_mismatch 클레임 접수 및 원인 후보 분류",
+            "body": [
+                "클레임 유형은 shipment_quantity_mismatch로 분류했습니다.",
+                "대상 고객은 Hanil Motors이며 대상 품목은 AP-CB-510 케이블 어셈블리입니다.",
+                "고객 입고 확인 수량은 1,850개이고 내부 출고 처리 수량은 2,000개로 차이는 150개입니다.",
+                "현재까지 제품 기능 또는 외관 품질 불량 증거는 확인되지 않았습니다.",
+                "원인 후보는 패킹 오류, 출고 검수 누락, 운송 중 분실, 고객 입고 검수 오류입니다.",
+                "품질 클레임팀은 물류팀의 출고 검수표와 운송 증빙을 근거로 원인 분류를 확정해야 합니다.",
+                "다음 액션은 부족분 재출고 필요 여부와 고객 회신 문구를 영업관리팀과 함께 확정하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0517-MEET-009-005",
+            "folder": "meeting_notes",
+            "filename": "DOC-2026-0517-MEET-009-005_quantity_mismatch_response.md",
+            "doc_type": "수량 불일치 대응 회의록",
+            "created_date": "2026-05-17",
+            "author": "김도윤",
+            "related_team": "운영총괄팀",
+            "summary_hint": "Hanil Motors 수량 불일치 대응 회의 및 부서별 액션 정리",
+            "body": [
+                "회의에서는 Hanil Motors AP-CB-510 수량 불일치 클레임의 고객 영향도와 부서별 확인 항목을 정리했습니다.",
+                "영업관리팀은 고객 회신 일정과 월말 생산 영향도를 관리하기로 했습니다.",
+                "물류팀은 출고 검수표, CCTV 기록, 패킹 리스트, 운송장 인수증을 대조하기로 했습니다.",
+                "품질 클레임팀은 수량 불일치 클레임을 제품 불량과 분리해 원인 후보를 관리하기로 했습니다.",
+                "부족분 150개는 재출고 가능 재고가 확인되면 임시 보완 출고를 검토합니다.",
+                "차액 조정은 고객 입고 검수 오류 가능성이 배제된 뒤 논의하기로 했습니다.",
+                "다음 액션은 2026-05-20까지 고객 중간 회신과 재출고 가능 여부를 확정하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0520-SALES-009-006",
+            "folder": "sales_emails",
+            "filename": "DOC-2026-0520-SALES-009-006_customer_interim_reply.md",
+            "doc_type": "고객 중간 회신 초안",
+            "created_date": "2026-05-20",
+            "author": "정하늘",
+            "related_team": "영업관리팀",
+            "summary_hint": "출고 검수표와 패킹 리스트 대조 중이며 재출고 또는 차액 조정 가능성 안내",
+            "body": [
+                "Hanil Motors에 전달할 중간 회신 초안입니다.",
+                "당사는 내부 출고 로그 기준 AP-CB-510 2,000개 출고 처리 사실을 확인했습니다.",
+                "고객 입고 확인 수량 1,850개와 차이가 있어 출고 검수표, 패킹 리스트, 운송장 인수증을 대조 중입니다.",
+                "부족분 150개에 대해서는 원인 확인 후 재출고 또는 차액 조정 가능성을 안내합니다.",
+                "월말 생산 일정에 영향이 없도록 2026-05-21까지 재고 가능 수량을 우선 확인합니다.",
+                "리스크는 최종 원인 확정 전 고객 신뢰도 저하와 긴급 출고 비용 발생 가능성입니다.",
+                "다음 액션은 물류팀 증빙 확인 결과와 재출고 가능 재고를 반영해 최종 회신을 발송하는 것입니다.",
+            ],
+        },
+        {
+            "doc_id": "DOC-2026-0521-PURCHASE-009-007",
+            "folder": "purchase_emails",
+            "filename": "DOC-2026-0521-PURCHASE-009-007_reshipment_stock_check.md",
+            "doc_type": "부족분 재출고 가능 재고 확인 메일",
+            "created_date": "2026-05-21",
+            "author": "최유진",
+            "related_team": "구매팀",
+            "summary_hint": "AP-CB-510 부족분 150개 이상 즉시 출고 가능 재고 확인",
+            "body": [
+                "Local Cable Works에 AP-CB-510 케이블 어셈블리 재출고 가능 재고를 확인했습니다.",
+                "부족분 150개 이상은 긴급 출고 가능한 재고로 확인되었습니다.",
+                "단, 재출고 실행 여부는 물류팀의 출고 검수표 대조 결과와 고객 입고 검수 재확인 결과에 따라 결정합니다.",
+                "재출고가 필요한 경우 예상 출고일은 2026-05-22이며 고객 도착 예정일은 2026-05-24입니다.",
+                "구매팀은 추가 비용 발생 가능성과 공급처 긴급 대응 가능 여부를 기록했습니다.",
+                "리스크는 원인 확정 전 재출고 시 중복 보상으로 처리될 가능성입니다.",
+                "다음 액션은 운영총괄팀 승인 후 재출고 또는 차액 조정 중 하나를 선택하는 것입니다.",
+            ],
+        },
+    ]
+
+    for doc in docs:
+        path = OUT / "02_raw_documents" / doc["folder"] / doc["filename"]
+        body = "\n".join([
+            f"문서ID: {doc['doc_id']}",
+            f"작성일: {doc['created_date']}",
+            f"문서유형: {doc['doc_type']}",
+            f"작성자: {doc['author']}",
+            f"관련팀: {doc['related_team']}",
+            "고객사: Hanil Motors",
+            "구매처: Local Cable Works",
+            "품목: AP-CB-510 케이블 어셈블리",
+            f"관련이슈: {issue_id} / Hanil Motors 수량 불일치 클레임",
+            "",
+            *doc["body"],
+            "",
+        ])
+        path.write_text(body, encoding="utf-8")
+
+    append_csv(
+        OUT / "03_structured_csv" / "issue_events.csv",
+        {
+            "issue_id": issue_id,
+            "issue_title": "Hanil Motors 수량 불일치 클레임",
+            "issue_type": "quantity_mismatch_claim",
+            "start_date": "2026-05-13",
+            "end_date": "2026-05-24",
+            "related_customer_id": customer_id,
+            "related_supplier_id": supplier_id,
+            "related_product_id": product_id,
+            "related_teams": "영업관리팀;물류팀;품질 클레임팀",
+            "severity": "Medium",
+            "status": "in_progress",
+            "description": "고객 입고 검사 수량과 내부 출고 처리 수량이 일치하지 않아 확인 및 재출고 또는 차액 조정 검토가 필요한 이슈",
+        },
+        "issue_id",
+    )
+    append_csv(
+        OUT / "03_structured_csv" / "orders.csv",
+        {
+            "order_id": "ORD-00131",
+            "order_date": "2026-05-02",
+            "customer_id": customer_id,
+            "product_id": product_id,
+            "quantity": "2000",
+            "requested_delivery_date": "2026-05-15",
+            "order_status": "issue_reported",
+            "sales_owner": "정하늘",
+            "related_issue_id": issue_id,
+        },
+        "order_id",
+    )
+    append_csv(
+        OUT / "03_structured_csv" / "shipments.csv",
+        {
+            "shipment_id": "SHP-00111",
+            "shipment_date": "2026-05-12",
+            "customer_id": customer_id,
+            "product_id": product_id,
+            "quantity": "2000",
+            "carrier": "CJ Logistics",
+            "shipping_method": "Truck",
+            "expected_delivery_date": "2026-05-15",
+            "actual_delivery_date": "2026-05-15",
+            "shipment_status": "issue_reported",
+            "logistics_owner": "윤예린",
+            "related_issue_id": issue_id,
+        },
+        "shipment_id",
+    )
+    append_csv(
+        OUT / "03_structured_csv" / "claims.csv",
+        {
+            "claim_id": "CLM-00031",
+            "claim_date": "2026-05-16",
+            "customer_id": customer_id,
+            "product_id": product_id,
+            "defect_type": "quantity_mismatch",
+            "defect_quantity": "150",
+            "severity": "Medium",
+            "claim_status": "in_progress",
+            "quality_owner": "한지우",
+            "related_issue_id": issue_id,
+        },
+        "claim_id",
+    )
+
+    for doc in docs:
+        append_csv(
+            OUT / "03_structured_csv" / "source_document_index.csv",
+            {
+                "doc_id": doc["doc_id"],
+                "file_path": f"02_raw_documents/{doc['folder']}/{doc['filename']}",
+                "doc_type": doc["doc_type"],
+                "created_date": doc["created_date"],
+                "author": doc["author"],
+                "related_team": doc["related_team"],
+                "related_customer_id": customer_id,
+                "related_supplier_id": supplier_id,
+                "related_product_id": product_id,
+                "related_issue_id": issue_id,
+                "summary_hint": doc["summary_hint"],
+            },
+            "doc_id",
+        )
+
+    expected = """# 이슈 인수인계서 - Hanil Motors 수량 불일치 클레임
+
+## 현재 진행 중 업무
+- Hanil Motors AP-CB-510 케이블 어셈블리 2,000개 출고 건에서 고객 입고 확인 수량이 1,850개로 보고되었습니다.
+- 내부 출고 로그, 패킹 리스트, 운송장 인수증, 고객 입고 검수 결과를 대조 중입니다.
+- 부족분 150개에 대해 재출고 또는 차액 조정 가능성을 검토하고 있습니다.
+
+## 미해결 리스크
+- 출고 검수 누락, 패킹 오류, 운송 중 분실, 고객 입고 검수 오류 중 원인이 확정되지 않았습니다.
+- 월말 생산 일정에 영향이 있을 수 있어 고객 중간 회신 일정 관리가 필요합니다.
+
+## 관련 부서별 확인사항
+- 영업관리팀: 고객 회신 일정과 최종 안내 문구 관리
+- 물류팀: 출고 검수표, CCTV, 패킹 리스트, 운송장 인수증 대조
+- 품질 클레임팀: quantity_mismatch 클레임 접수 및 원인 분류
+- 구매팀: 부족분 150개 이상 재출고 가능 재고 확인
+
+## 참고 자료
+- DOC-2026-0513-SALES-009-001
+- DOC-2026-0513-LOG-009-002
+- DOC-2026-0516-CLAIM-009-004
+- SHP-00111, CLM-00031, ORD-00131
+
+## 다음 액션
+- 2026-05-21까지 고객 중간 회신 발송
+- 2026-05-22까지 부족분 재출고 또는 차액 조정 방향 결정
+- 2026-05-24까지 이슈 상태를 in_progress에서 closed 또는 monitoring으로 변경
+
+## 인수자 주의사항
+이 파일은 검증용 expected output 샘플이며 실제 서비스 업로드 대상이 아닙니다. 실제 입력에는 raw_documents와 structured_csv만 사용해야 합니다.
+"""
+    (OUT / "04_expected_outputs_for_test" / "expected_handoff_quantity_mismatch_sample.md").write_text(expected, encoding="utf-8")
+
+    readme = """# AutoParts One Korea 더미 데이터
+
+## 목적
+이 데이터셋은 자동차 부품 B2B 운영관리 시나리오에서 AI가 보고서, Todo, 리스크, 인수인계서 초안을 생성하는 기능을 검증하기 위한 더미 데이터입니다.
+
+## 폴더 구조
+- `01_master_data`: 직원, 고객사, 구매처, 품목 기준정보
+- `02_raw_documents`: 메일, 품질 클레임, 물류 로그, 회의록, 채팅 로그 원천 문서
+- `03_structured_csv`: 주문, 구매, 출하, 클레임, 이슈 이벤트, 문서 인덱스 CSV
+- `04_expected_outputs_for_test`: 개발 검증용 결과 샘플이며 실제 서비스 업로드 대상이 아닙니다.
+- `05_db_seed_v2`: OpsRadar2 v2 MVP DB seed CSV
+
+## 특수 시나리오 9개
+1. 2025년 6월 Daesung Automotive 긴급 발주 대응
+2. 2025년 8월 KET Supplier 재고 부족과 납기 지연 가능성
+3. 2025년 9월 Global Harness Vietnam 수출 서류 누락과 통관 지연
+4. 2025년 11월 Mirae EV Systems 센서 케이블 반복 클레임
+5. 2025년 12월 Yazaki Parts Asia 리드타임 8주에서 12주 증가
+6. 2026년 2월 Hyundai Mobis Tier2 긴급 항공 이송
+7. 2026년 4월 TE Connectivity Korea 단가 7% 인상 통보
+8. 2026년 5~6월 박서연 담당 고객 업무 일부 인수인계
+9. 2026년 5월 Hanil Motors 수량 불일치 클레임
+
+## 신규 시나리오 9 설명
+Hanil Motors 입고 검사에서 AP-CB-510 케이블 어셈블리 2,000개 중 1,850개만 확인되어 내부 출고 수량과 고객 입고 수량이 불일치한 상황입니다. 영업관리팀, 물류팀, 품질 클레임팀이 공동으로 출고 검수표, 패킹 리스트, 운송장 인수증, 고객 입고 검수 결과를 대조해야 합니다. 인수인계서에는 출고 검증, 재출고 가능성, 고객 회신 일정, 차액 조정 검토가 추출되어야 합니다.
+
+## 서비스 입력 데이터와 expected output의 차이
+`02_raw_documents`와 `03_structured_csv`는 실제 서비스 업로드 및 분석 대상입니다. `04_expected_outputs_for_test`는 검증용 샘플 결과물이므로 실제 서비스 입력에 포함하면 안 됩니다.
+
+## 재생성 명령어
+```bash
+python scripts/generate_dummy_data.py
+python scripts/convert_dummy_to_seed_v2.py
+```
+"""
+    (ROOT / "README_dummy_data.md").write_text(readme, encoding="utf-8")
+
+
 def write_readme() -> None:
     readme = """# AutoParts One Korea 더미 데이터
 
@@ -452,7 +783,7 @@ def write_readme() -> None:
 python scripts/generate_dummy_data.py
 ```
 """
-    (ROOT / "README.md").write_text(readme, encoding="utf-8")
+    (ROOT / "README_dummy_data.md").write_text(readme, encoding="utf-8")
 
 
 def main() -> None:
@@ -475,6 +806,7 @@ def main() -> None:
     )
     write_expected_outputs()
     write_readme()
+    append_scenario_9_outputs()
 
     csv_files = list(OUT.rglob("*.csv"))
     docs_count = len(list((OUT / "02_raw_documents").rglob("*.md")))
