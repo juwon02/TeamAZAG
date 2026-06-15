@@ -245,15 +245,33 @@ async def get_document_todos(document_id: str, db: AsyncSession = Depends(get_db
     if not document or document.deleted_at is not None:
         raise HTTPException(status_code=404, detail="document not found")
 
-    service = TodoService(TodoRepository(db))
-    todos = await service.list_todos(limit=10000, offset=0)
-    return {
-        "todos": [
-            todo
-            for todo in todos
-            if str(todo.get("document_id") or "") == str(doc_uuid)
-        ]
-    }
+    result = await db.execute(
+        text(
+            """
+            SELECT
+              t.id::text AS id,
+              t.title,
+              t.description,
+              t.status,
+              t.priority,
+              t.approval_status,
+              t.due_at,
+              t.source_type AS source,
+              t.source_document_id::text AS document_id,
+              t.source_chunk_id::text AS source_chunk_id,
+              u.name AS assignee,
+              t.created_at,
+              COALESCE(t.updated_at, t.created_at) AS updated_at
+            FROM todos t
+            LEFT JOIN project_members pm ON pm.id = t.assignee_member_id
+            LEFT JOIN users u ON u.id = pm.user_id
+            WHERE t.source_document_id = CAST(:doc_id AS uuid)
+            ORDER BY COALESCE(t.updated_at, t.created_at) DESC
+            """
+        ),
+        {"doc_id": str(doc_uuid)},
+    )
+    return {"todos": [dict(row) for row in result.mappings().all()]}
 
 
 @router.get("/{document_id}/issues")
@@ -267,15 +285,35 @@ async def get_document_issues(document_id: str, db: AsyncSession = Depends(get_d
     if not document or document.deleted_at is not None:
         raise HTTPException(status_code=404, detail="document not found")
 
-    service = IssueService(IssueRepository(db))
-    issues = await service.list_issues(limit=10000, offset=0)
-    return {
-        "issues": [
-            issue
-            for issue in issues
-            if str(issue.get("document_id") or "") == str(doc_uuid)
-        ]
-    }
+    result = await db.execute(
+        text(
+            """
+            SELECT
+              i.id::text AS id,
+              i.title,
+              i.description,
+              i.status,
+              i.severity,
+              i.severity AS risk_level,
+              i.approval_status,
+              i.due_at,
+              i.source_type AS source,
+              i.source_document_id::text AS document_id,
+              i.source_chunk_id::text AS source_chunk_id,
+              i.risk_reason,
+              u.name AS assignee,
+              i.created_at,
+              COALESCE(i.updated_at, i.created_at) AS updated_at
+            FROM issues i
+            LEFT JOIN project_members pm ON pm.id = i.assignee_member_id
+            LEFT JOIN users u ON u.id = pm.user_id
+            WHERE i.source_document_id = CAST(:doc_id AS uuid)
+            ORDER BY COALESCE(i.updated_at, i.created_at) DESC
+            """
+        ),
+        {"doc_id": str(doc_uuid)},
+    )
+    return {"issues": [dict(row) for row in result.mappings().all()]}
 
 
 @router.get("/{document_id}/download")

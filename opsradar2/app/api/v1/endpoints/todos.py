@@ -50,6 +50,8 @@ async def update_todo(todo_id: str, body: TodoUpdate, db: AsyncSession = Depends
     if not updated:
         raise HTTPException(404, "todo not found")
     return {"status": "success", "todo_id": todo_id}
+
+
 @router.delete("/{todo_id}")
 async def delete_todo(todo_id: str, db: AsyncSession = Depends(get_db)):
     service = TodoService(TodoRepository(db))

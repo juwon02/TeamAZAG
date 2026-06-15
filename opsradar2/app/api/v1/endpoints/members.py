@@ -12,19 +12,29 @@ router = APIRouter()
 
 
 async def _default_project(db: AsyncSession, project_id: str | None = None):
-    result = await db.execute(
-        text(
-            """
-            SELECT id, team_id
-            FROM projects
-            WHERE (:project_id IS NULL OR id = CAST(:project_id AS uuid))
-              AND COALESCE(status, 'active') <> 'deleted'
-            ORDER BY created_at
-            LIMIT 1
-            """
-        ),
-        {"project_id": project_id},
-    )
+    if project_id:
+        result = await db.execute(
+            text(
+                """
+                SELECT id, team_id FROM projects
+                WHERE id = CAST(:project_id AS uuid)
+                  AND COALESCE(status, 'active') <> 'deleted'
+                LIMIT 1
+                """
+            ),
+            {"project_id": project_id},
+        )
+    else:
+        result = await db.execute(
+            text(
+                """
+                SELECT id, team_id FROM projects
+                WHERE COALESCE(status, 'active') <> 'deleted'
+                ORDER BY created_at
+                LIMIT 1
+                """
+            ),
+        )
     row = result.mappings().first()
     if not row:
         raise HTTPException(404, "project not found")

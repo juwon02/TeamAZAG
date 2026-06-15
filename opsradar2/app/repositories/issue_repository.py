@@ -327,6 +327,7 @@ class IssueRepository:
         )
         await self.db.commit()
         return result.rowcount > 0
+
     async def resolve(self, issue_id: str) -> bool:
         return await self.update(issue_id, {"status": "resolved"})
 
