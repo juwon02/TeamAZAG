@@ -5,7 +5,22 @@
     try { return JSON.parse(localStorage.getItem("opsradar_session") || "{}"); } catch (_) { return {}; }
   };
   const actor = () => session().user || {};
-  const isLead = () => G.workflowReview?.role ? G.workflowReview.role === "lead" : actor().username === "hj" || ["admin", "pm", "leader"].includes(String(actor().role || "").toLowerCase());
+  const LEAD_ROLES = ["admin", "pm", "leader", "lead", "시스템 관리자"];
+  const isLead = () => {
+    const a = actor();
+    if (a.username === "hj" || a.username === "admin") return true;
+    if (LEAD_ROLES.includes(String(a.role || "").toLowerCase())) return true;
+    const stored = (
+      localStorage.getItem("opsradar_user_role") ||
+      localStorage.getItem("role") ||
+      ""
+    ).toLowerCase();
+    if (LEAD_ROLES.includes(stored)) return true;
+    if (G.workflowReview?.role) return LEAD_ROLES.includes(G.workflowReview.role.toLowerCase());
+    if (document.getElementById("db-tab-pm")?.classList.contains("active")) return true;
+    const isMemberTab = document.getElementById("db-tab-member")?.classList.contains("active");
+    return !isMemberTab;
+  };
   const memberName = () => actor().name || "";
   const keyOf = (item) => String(item?.apiId || item?.id || "");
   const esc = (value) => escapeHtml(String(value ?? ""));
@@ -21,7 +36,24 @@
     return date.toISOString().slice(0, 10);
   }
 
+  function hasAuthToken() {
+    if (localStorage.getItem("access_token") || localStorage.getItem("token")) return true;
+    try {
+      const storedSession = JSON.parse(localStorage.getItem("opsradar_session") || "null");
+      if (storedSession?.access_token || storedSession?.token) return true;
+    } catch (_) {}
+    try {
+      return Boolean(JSON.parse(localStorage.getItem("auth") || "null")?.token);
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function loadWorkflow() {
+    if (!hasAuthToken()) {
+      G.workflowReview = { todo_drafts: [], pending_todos: [], risk_drafts: [], pending_risks: [] };
+      return G.workflowReview;
+    }
     try {
       G.workflowReview = await api("/workflow/review");
     } catch (error) {
@@ -31,7 +63,7 @@
     return G.workflowReview;
   }
 
-  window.downloadSource = async function (documentId) {
+  window.downloadSource = async function (documentId, fileName) {
     if (!documentId) return showToast("다운로드할 출처 파일이 없습니다.", "warn");
     try {
       const response = await fetch(`/api/v1/documents/${encodeURIComponent(documentId)}/download`);
@@ -40,8 +72,13 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = response.headers.get("content-disposition")?.match(/filename=\"?([^\";]+)\"?/)?.[1] || "source";
+      const cd = response.headers.get("content-disposition") || "";
+      const cdName = cd.match(/filename\*=UTF-8''([^\s;]+)/i)?.[1]
+        || cd.match(/filename="?([^";]+)"?/i)?.[1];
+      link.download = cdName ? decodeURIComponent(cdName) : (fileName || "source");
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (_) { showToast("출처 파일이 삭제되었거나 다운로드할 수 없습니다.", "warn"); }
   };
@@ -174,7 +211,7 @@
     await loadWorkflow();
     if (window.opsRadarApi?.reload) await window.opsRadarApi.reload();
     configureRoleScreen();
-    if (isLead() && G.currentIssueTab === "candidate") renderPendingRisks();
+    if (G.currentIssueTab === "pending") renderPendingIssues();
   }
 
   function queueDetail(item, kind) {
@@ -224,7 +261,11 @@
   window.rejectPendingItem = async function (kind, id) {
     const reason = prompt("반려 사유를 입력하세요.");
     if (!reason) return;
-    if (kind === "risk") await api(`/workflow/risks/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) });
+    if (kind === "risk") {
+      const workflowItem = G.workflowReview?.pending_risks?.find((row) => String(row.id) === String(id));
+      if (workflowItem) await api(`/workflow/risks/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) });
+      else await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "rejected" }) });
+    }
     else await api(`/todos/${id}`, { method: "PATCH", body: JSON.stringify({ status: "pending", approval_status: "rejected" }) });
     await refreshWorkflowViews();
     if (kind === "risk" && G.currentIssueTab === "candidate") renderPendingRisks();
@@ -233,7 +274,10 @@
   };
   window.editPendingItem = async function (kind, id) {
     const source = kind === "todo" ? G.workflowReview?.pending_todos : G.workflowReview?.pending_risks;
-    const item = source?.find((row) => String(row.id) === String(id));
+    const item = source?.find((row) => String(row.id) === String(id))
+      || (kind === "risk" && typeof issues !== "undefined"
+        ? issues.find((row) => String(row.apiId || row.id) === String(id))
+        : null);
     if (!item) return;
     const title = prompt("제목", item.title);
     if (!title) return;
@@ -288,12 +332,9 @@
   function configureIssueTabs() {
     const tabs = document.querySelector("#s-issues .tabs");
     if (!tabs || !isLead()) return;
-    const confirmed = tabs.querySelector(".tab[onclick*=\"'confirmed'\"]");
     const pending = tabs.querySelector(".tab[onclick*=\"'candidate'\"]");
-    const resolved = tabs.querySelector(".tab[onclick*=\"'resolved'\"]");
     const rejected = document.getElementById("issueRejectedTab");
-    if (pending) pending.childNodes[0].nodeValue = "승인 대기 이슈 ";
-    [pending, confirmed, resolved, rejected].filter(Boolean).forEach((node) => tabs.appendChild(node));
+    [pending, rejected].filter(Boolean).forEach((node) => tabs.appendChild(node));
   }
 
   function removeObsoleteAnalysisUi() {
@@ -304,7 +345,7 @@
       Array.from(footer.children).filter((node) => node.textContent.includes("Dashboard 반영")).forEach((node) => node.remove());
       Array.from(footer.children).forEach((node) => {
         if (node.textContent.includes("Todo 확인")) node.onclick = () => { nav("todo"); switchTodoTab("inprogress"); };
-        if (node.textContent.includes("이슈 확인")) node.onclick = () => { nav("issues"); switchIssueTab("confirmed"); };
+        if (node.textContent.includes("이슈 확인")) node.onclick = () => { nav("issues"); switchIssueTab("inprogress"); };
       });
     }
     if (!isLead()) {
@@ -482,7 +523,7 @@
     host.querySelector(".wr-detail-description")?.remove();
     host.insertAdjacentHTML("afterbegin", `<section class="wr-detail-description"><b>업무 내용</b><p>${esc(description(item))}</p></section>`);
     host.querySelector(".wr-todo-source")?.remove();
-    host.insertAdjacentHTML("beforeend", `<div class="wr-todo-source"><b>출처</b>${item.src ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.src)}')"><i class="ti ti-download"></i> ${esc(item.sourceFileName || "출처 파일")}</button>` : "<span>수동 등록</span>"}</div>`);
+    host.insertAdjacentHTML("beforeend", `<div class="wr-todo-source"><b>출처</b>${item.src ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.src)}','${esc(item.sourceFileName || "")}')"><i class="ti ti-download"></i> ${esc(item.sourceFileName || "출처 파일")}</button>` : "<span>수동 등록</span>"}</div>`);
   };
 
   const baseIssueDetail = window.renderIssueDetail;
@@ -491,7 +532,7 @@
     const item = issues.find((issue) => String(issue.id) === String(id));
     const host = document.getElementById("issueDetailContent");
     if (!item || !host || host.querySelector(".wr-issue-source")) return;
-    host.insertAdjacentHTML("beforeend", `<div class="wr-todo-source wr-issue-source"><b>출처</b>${item.src ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.src)}')"><i class="ti ti-download"></i> ${esc(item.sourceFileName || "출처 파일")}</button>` : "<span>수동 등록</span>"}</div>`);
+    host.insertAdjacentHTML("beforeend", `<div class="wr-todo-source wr-issue-source"><b>출처</b>${item.src ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.src)}','${esc(item.sourceFileName || "")}')"><i class="ti ti-download"></i> ${esc(item.sourceFileName || "출처 파일")}</button>` : "<span>수동 등록</span>"}</div>`);
   };
 
   window.renderHistory = async function () {
@@ -499,12 +540,84 @@
     if (!host) return;
     try {
       const result = await api("/documents");
-      host.innerHTML = (result.documents || []).map((doc) => `<div class="wr-history-row"><button class="wr-source-link" onclick="downloadSource('${esc(doc.id || doc.document_id)}')"><i class="ti ti-file-download"></i>${esc(doc.file_name)}</button><span>${esc(doc.uploaded_by || "-")} · ${esc(String(doc.created_at || "").slice(0,10))}</span>${isLead() ? `<button class="tbtn danger" onclick="deleteUploadedDocument('${esc(doc.id || doc.document_id)}')"><i class="ti ti-trash"></i> 삭제</button>` : ""}</div>`).join("") || '<div class="wr-empty">업로드 이력이 없습니다.</div>';
+      const docs = result.documents || [];
+      if (!docs.length) { host.innerHTML = '<div class="wr-empty">업로드 이력이 없습니다.</div>'; return; }
+      const admin = isLead();
+      const toolbar = admin
+        ? `<div style="display:flex;align-items:center;gap:10px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:6px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)">
+              <input type="checkbox" id="historySelectAll" onchange="toggleAllHistorySelect(this)"> 전체 선택
+            </label>
+            <button class="tbtn danger" onclick="deleteCheckedDocuments()" style="font-size:11px;padding:3px 10px;margin-left:auto">
+              <i class="ti ti-trash"></i> 선택 삭제
+            </button>
+          </div>`
+        : "";
+      const rows = docs.map((doc) => {
+        const id = esc(doc.id || doc.document_id);
+        const name = esc(doc.file_name);
+        return `<div class="wr-history-row" style="display:flex;align-items:center;gap:8px">
+          ${admin ? `<input type="checkbox" class="history-doc-check" value="${id}" style="flex-shrink:0;accent-color:var(--danger)">` : ""}
+          <button class="wr-source-link" onclick="downloadSource('${id}','${name}')" style="flex:1;text-align:left">
+            <i class="ti ti-file-download"></i>${name}
+          </button>
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">${esc(doc.uploaded_by || "-")} · ${esc(String(doc.created_at || "").slice(0, 10))}</span>
+          ${admin ? `<button class="tbtn danger" onclick="deleteUploadedDocument('${id}')" style="font-size:11px;padding:3px 8px;flex-shrink:0"><i class="ti ti-trash"></i></button>` : ""}
+        </div>`;
+      }).join("");
+      host.innerHTML = toolbar + rows;
     } catch (error) { host.innerHTML = '<div class="wr-empty">업로드 이력을 불러오지 못했습니다.</div>'; }
   };
+  function showAdminPasswordModal(onConfirm) {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay show";
+    overlay.style.zIndex = "10000";
+    overlay.innerHTML = `
+      <div class="modal" style="width:320px">
+        <div class="modal-title"><i class="ti ti-lock" style="color:var(--danger)"></i> 관리자 인증</div>
+        <div class="modal-sub">삭제를 진행하려면 관리자 비밀번호를 입력하세요.</div>
+        <input type="password" id="adminPwInput" class="form-input" placeholder="비밀번호 입력">
+        <div id="adminPwError" style="font-size:11px;color:var(--danger);margin-top:6px;display:none">비밀번호가 올바르지 않습니다.</div>
+        <div class="modal-actions">
+          <button class="tbtn" id="adminPwCancelBtn">취소</button>
+          <button class="tbtn danger" id="adminPwConfirmBtn"><i class="ti ti-lock-open"></i> 확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector("#adminPwInput");
+    const errorEl = overlay.querySelector("#adminPwError");
+    const close = () => overlay.remove();
+    const verify = () => {
+      if (input.value === "1234") { close(); onConfirm(); }
+      else { errorEl.style.display = "block"; input.value = ""; input.focus(); }
+    };
+    overlay.querySelector("#adminPwConfirmBtn").addEventListener("click", verify);
+    overlay.querySelector("#adminPwCancelBtn").addEventListener("click", close);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") verify(); if (e.key === "Escape") close(); });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    setTimeout(() => input.focus(), 50);
+  }
+
   window.deleteUploadedDocument = async function (id) {
-    if (!confirm("업로드 파일을 삭제하면 출처 다운로드가 불가능합니다. 삭제하시겠습니까?")) return;
-    await api(`/documents/${id}`, { method: "DELETE" }); renderHistory(); showToast("업로드 파일을 삭제했습니다.", "success");
+    showAdminPasswordModal(async () => {
+      try {
+        await api(`/documents/${id}`, { method: "DELETE" });
+        renderHistory();
+        showToast("업로드 파일을 삭제했습니다.", "success");
+      } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
+    });
+  };
+  window.toggleAllHistorySelect = function (checkbox) {
+    document.querySelectorAll(".history-doc-check").forEach((cb) => { cb.checked = checkbox.checked; });
+  };
+  window.deleteCheckedDocuments = async function () {
+    const checked = Array.from(document.querySelectorAll(".history-doc-check:checked")).map((cb) => cb.value);
+    if (!checked.length) return showToast("삭제할 파일을 선택해주세요.", "info");
+    showAdminPasswordModal(async () => {
+      await Promise.all(checked.map((id) => api(`/documents/${id}`, { method: "DELETE" }).catch(() => {})));
+      renderHistory();
+      showToast(`${checked.length}개 파일을 삭제했습니다.`, "success");
+    });
   };
 
   function calendarText() {
@@ -563,6 +676,7 @@
     tab.onclick = () => switchIssueTab("rejected");
     tabs.appendChild(tab);
     tab.style.display = isLead() ? "" : "none";
+
   }
 
   const baseSwitchIssue = window.switchIssueTab;
@@ -583,19 +697,61 @@
 
   function renderPendingRisks() {
     const host = document.getElementById("issueList");
-    const items = G.workflowReview?.pending_risks || [];
+    const pendingRisks = G.workflowReview?.pending_risks || [];
+    const candidateIssues = typeof issues !== "undefined" ? issues.filter((i) => i.type === "candidate") : [];
+    const allItems = [
+      ...pendingRisks.map((item) => ({ ...item, _source: "workflow" })),
+      ...candidateIssues.filter((i) => !pendingRisks.some((r) => String(r.id) === String(i.apiId))).map((i) => ({ ...i, _source: "local" })),
+    ];
     const badge = document.getElementById("i-cand-cnt");
-    if (badge) badge.textContent = items.length;
-    host.innerHTML = items.map((item) => `<article class="issue-card candidate" onclick="showPendingRiskDetail('${esc(item.id)}')"><div class="issue-hd"><span class="badge b-warn">승인 대기</span><div class="issue-title">${esc(item.title)}</div><span class="badge b-gray">${esc(item.sent_by || "팀원 전송")}</span></div><div class="issue-desc">${esc(description(item))}</div><div class="issue-footer"><span>마감일 ${esc(due(item))}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn primary" onclick="approvePendingRisk('${esc(item.id)}')">이슈 확정</button><button class="tbtn" onclick="editPendingItem('risk','${esc(item.id)}')">수정</button><button class="tbtn danger" onclick="rejectPendingItem('risk','${esc(item.id)}')">반려</button></div></div></article>`).join("") || '<div class="wr-empty">승인 대기 이슈가 없습니다.</div>';
+    if (badge) badge.textContent = allItems.length;
+    host.innerHTML = allItems.map((item) => {
+      const id = esc(item.apiId || item.id);
+      return `<article class="issue-card candidate" onclick="showPendingRiskDetail('${id}')"><div class="issue-hd"><span class="badge b-warn">승인 대기</span><div class="issue-title">${esc(item.title)}</div><span class="badge b-gray">${esc(item.sent_by || item.assignee || "팀원 전송")}</span></div><div class="issue-desc">${esc(description(item))}</div><div class="issue-footer"><span>마감일 ${esc(due(item))}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn primary" onclick="approvePendingRisk('${id}')">이슈 확정</button><button class="tbtn" onclick="editPendingItem('risk','${id}')">수정</button><button class="tbtn danger" onclick="rejectPendingItem('risk','${id}')">반려</button></div></div></article>`;
+    }).join("") || '<div class="wr-empty">승인 대기 이슈가 없습니다.</div>';
   }
   window.showPendingRiskDetail = function (id) {
-    const item = G.workflowReview?.pending_risks?.find((row) => String(row.id) === String(id));
+    const item = G.workflowReview?.pending_risks?.find((row) => String(row.id) === String(id))
+      || (typeof issues !== "undefined"
+        ? issues.find((row) => String(row.apiId || row.id) === String(id))
+        : null);
     if (!item) return;
     const host = document.getElementById("issueDetailContent");
     document.getElementById("issueDetailEmpty").style.display = "none";
     host.style.display = "block";
-    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span><span>마감일 <b>${esc(due(item))}</b></span><span>전송자 <b>${esc(item.sent_by || "-")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}')">${esc(item.source_file_name || "출처 파일")}</button>` : "<span>출처 없음</span>"}</div>`;
+    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span><span>마감일 <b>${esc(due(item))}</b></span><span>전송자 <b>${esc(item.sent_by || "-")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}','${esc(item.source_file_name || "")}')">${esc(item.source_file_name || "출처 파일")}</button>` : "<span>출처 없음</span>"}</div>`;
   };
+
+  function renderPendingIssues() {
+    const host = document.getElementById("issueList");
+    if (!host) return;
+    const pendingRisks = G.workflowReview?.pending_risks || [];
+    const candidateIssues = issues.filter((i) => i.type === "candidate");
+    const allItems = [
+      ...pendingRisks.map((item) => ({ ...item, _source: "workflow" })),
+      ...candidateIssues.filter((i) => !pendingRisks.some((r) => String(r.id) === String(i.apiId))).map((i) => ({ ...i, _source: "local" })),
+    ];
+    const badge = document.getElementById("i-pending-cnt");
+    if (badge) badge.textContent = allItems.length;
+    if (!allItems.length) { host.innerHTML = '<div class="wr-empty">승인 대기 이슈가 없습니다.</div>'; return; }
+    host.innerHTML = allItems.map((item) => {
+      const id = esc(item.apiId || item.id);
+      const title = esc(item.title || "제목 없음");
+      const sentBy = esc(item.sent_by || item.assignee || "팀원");
+      const desc = esc(item.description || item.desc || "");
+      const dueDate = esc(due(item));
+      return `<article class="issue-card candidate" onclick="showPendingRiskDetail('${id}')">
+        <div class="issue-hd"><span class="badge b-warn">승인 대기</span><div class="issue-title">${title}</div><span class="badge b-gray">${sentBy}</span></div>
+        <div class="issue-desc">${desc}</div>
+        <div class="issue-footer"><span>마감일 ${dueDate}</span>
+          <div class="wr-queue-actions" onclick="event.stopPropagation()">
+            <button class="tbtn primary" onclick="approvePendingRisk('${id}')">이슈 확정</button>
+            <button class="tbtn danger" onclick="rejectPendingItem('risk','${id}')">반려</button>
+          </div>
+        </div>
+      </article>`;
+    }).join("");
+  }
 
   function renderRejectedRisks() {
     const host = document.getElementById("issueList");
@@ -609,7 +765,7 @@
     const host = document.getElementById("issueDetailContent");
     document.getElementById("issueDetailEmpty").style.display = "none";
     host.style.display = "block";
-    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>상태 <b>반려</b></span><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}')">출처 파일 다운로드</button>` : "<span>출처 없음</span>"}</div>`;
+    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>상태 <b>반려</b></span><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}','${esc(item.source_file_name || "")}')">${esc(item.source_file_name || "출처 파일 다운로드")}</button>` : "<span>출처 없음</span>"}</div>`;
   };
   window.restoreRejectedRisk = async function (id) {
     await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "pending" }) });

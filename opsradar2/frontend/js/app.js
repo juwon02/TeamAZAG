@@ -1993,8 +1993,8 @@ function kContentOnboarding() {
         <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 중요한가:</strong> 프로젝트 전체 맥락을 모르면 개별 업무가 왜 필요한지 이해 못 함.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">확인 항목</div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">OpsRadar 서비스 정의 — 운영 인텔리전스 AI 시스템</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">기술스택: FastAPI · PostgreSQL · FAISS · React · Azure OpenAI</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">팀 구성 및 역할 (PM·AI·인프라·백엔드·프론트)</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">기술 구성: FastAPI · PostgreSQL · pgvector · React · Azure OpenAI</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">업무 조직 (영업관리·구매·물류·품질 클레임·운영총괄)</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">8주 MVP 로드맵 및 현재 주차 확인</div></div>
         <div style="margin-top:12px;display:flex;gap:6px">
           <div class="tbtn primary" style="font-size:11px"><i class="ti ti-wand"></i> AI 요약 문서 생성</div>
@@ -2105,7 +2105,7 @@ function kContentAbsence() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge b-warn">Mid</span>
-            <span style="color:var(--text)">FAISS 재인덱싱 테스트</span>
+            <span style="color:var(--text)">pgvector 재임베딩 테스트</span>
             <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:var(--mono)">5/20</span>
           </div>
         </div>
@@ -2198,7 +2198,7 @@ function kContentOffboard() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge b-warn">Mid</span>
-            <span style="color:var(--text)">FAISS 재인덱싱 테스트</span>
+            <span style="color:var(--text)">pgvector 재임베딩 테스트</span>
             <span style="font-size:10px;color:var(--text3);margin-left:auto">미완료</span>
           </div>
         </div>
@@ -2217,8 +2217,8 @@ function kContentOffboard() {
         <i class="ti ti-chevron-down kcard-arrow"></i>
       </div>
       <div class="kcard-body">
-        <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 FAISS를 썼는가:</strong> ChromaDB는 Windows에서 DLL 충돌 발생. faiss-cpu로 전환 후 안정적으로 동작 중.</div></div>
-        <div class="kb-now"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div><strong>현재 상태:</strong> 청크 700자, 임계값 0.41, top_k=3으로 최적화 완료. FastAPI 연동만 남은 상태.</div></div>
+        <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 pgvector를 쓰는가:</strong> 문서·권한·업무 객체와 벡터 검색을 PostgreSQL에서 일관되게 관리합니다.</div></div>
+        <div class="kb-now"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div><strong>현재 상태:</strong> Markdown 원문을 제목 단위로 청킹하고 프로젝트 범위에서 유사 문서를 검색합니다.</div></div>
         <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>내가 먼저 할 것:</strong> ai_interface.py의 analyze_document() 확인 → FastAPI /documents/upload에 연결.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:8px 0 6px">핵심 참고 문서 (AI 추출)</div>
         <div class="kb-item"><i class="ti ti-file-text"></i>handover_2026_05_13.txt — 기술스택·아키텍처 전반</div>
@@ -2241,7 +2241,7 @@ function kContentOffboard() {
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">GitHub SeongWoo 브랜치 클론 및 접근 확인</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">pip install -r requirements.txt 완료</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">.env 파일 API 키 유효성 확인</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">python -m app.ai.embedder 실행 (FAISS DB 생성)</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">pgvector 임베딩 적재 상태 확인</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">python -m app.ai.retriever 로 검색 테스트</div></div>
       </div>
     </div>

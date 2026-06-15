@@ -234,6 +234,50 @@ async def get_documents(project_id: str | None = None, db: AsyncSession = Depend
     }
 
 
+@router.get("/{document_id}/todos")
+async def get_document_todos(document_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid document_id") from exc
+
+    document = await db.get(Document, doc_uuid)
+    if not document or document.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    service = TodoService(TodoRepository(db))
+    todos = await service.list_todos(limit=10000, offset=0)
+    return {
+        "todos": [
+            todo
+            for todo in todos
+            if str(todo.get("document_id") or "") == str(doc_uuid)
+        ]
+    }
+
+
+@router.get("/{document_id}/issues")
+async def get_document_issues(document_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid document_id") from exc
+
+    document = await db.get(Document, doc_uuid)
+    if not document or document.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    service = IssueService(IssueRepository(db))
+    issues = await service.list_issues(limit=10000, offset=0)
+    return {
+        "issues": [
+            issue
+            for issue in issues
+            if str(issue.get("document_id") or "") == str(doc_uuid)
+        ]
+    }
+
+
 @router.get("/{document_id}/download")
 async def download_document(document_id: str, db: AsyncSession = Depends(get_db)):
     try:

@@ -188,7 +188,7 @@
   };
   window.openDashboardIssue = function (id) {
     nav("issues");
-    switchIssueTab("confirmed");
+    switchIssueTab("inprogress");
     selectIssue(id);
   };
 

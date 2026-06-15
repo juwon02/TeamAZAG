@@ -3,8 +3,8 @@
 // ════════════════════════════════════════════════
 const G = {
   currentScreen: 'dashboard',
-  currentTodoTab: 'ai',
-  currentIssueTab: 'confirmed',
+  currentTodoTab: 'inprogress',
+  currentIssueTab: 'inprogress',
   selectedTodoId: null,
   selectedIssueId: null,
   selectedCalDay: null,
@@ -605,7 +605,7 @@ function getUploadErrorMessage(reason){
 function validateUploadedFile(file){
   if(!file) return { ok:false, reason:'general' };
   const ext = (file.name.split('.').pop() || '').toLowerCase();
-  const allowed = ['txt','csv','docx','pdf'];
+  const allowed = ['txt','md','markdown','csv','docx','pdf'];
   if(!allowed.includes(ext)) return { ok:false, reason:'unsupported' };
   if(file.size === 0) return { ok:false, reason:'empty' };
   return { ok:true, reason:null };
@@ -654,7 +654,7 @@ function showUploadError(reason){
       <div class="upload-error-reason"><i class="ti ti-point"></i><span>업무 기록이 아닌 일반 문서는 분석 정확도가 낮습니다.</span></div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:4px">지원 파일 형식</div>
-    <div class="upload-supported"><span>txt</span><span>csv</span><span>docx</span><span>pdf</span></div>
+    <div class="upload-supported"><span>txt</span><span>md</span><span>csv</span><span>docx</span><span>pdf</span></div>
     <div class="upload-error-actions"><div class="tbtn primary" onclick="retryUpload()"><i class="ti ti-upload"></i> 다시 업로드</div><div class="tbtn" onclick="showUploadGuide()"><i class="ti ti-file-description"></i> 지원 양식 보기</div></div>`;
   card.style.display = 'block';
   document.getElementById('analysisGuide').style.display = 'flex';
@@ -779,8 +779,8 @@ function resetFlow() {
 
 function resetUpload(){G.uploadedFiles=[];document.getElementById('fileList').style.display='none';document.getElementById('stepBar').style.display='none';document.getElementById('uploadSection').style.display='block';document.getElementById('analysisSection').style.display='none';document.getElementById('resultSection').style.display='none';document.getElementById('analysisGuide').style.display='flex';hideUploadError();resetUploadInput();}
 function setStepBar(n){['s1lbl','s2lbl','s3lbl'].forEach((id,i)=>{const el=document.getElementById(id);el.className=i+1===n?'badge b-accent':'';el.style.color=i+1===n?'':'';})}
-function toggleHistory(){const s=document.getElementById('historySection');s.style.display=s.style.display==='none'?'block':'none';renderHistory();}
-function renderHistory(){document.getElementById('historyList').innerHTML=G.analysisHistory.map(h=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px"><i class="ti ti-file-text" style="font-size:14px;color:var(--accent)"></i><div style="flex:1">${h.name}</div><div style="display:flex;gap:4px"><span class="badge b-accent" style="font-size:9px">Todo ${h.todo}</span><span class="badge b-danger" style="font-size:9px">Risk ${h.issue}</span></div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${h.date}</div></div>`).join('');}
+function toggleHistory(){const s=document.getElementById('historySection');s.style.display=s.style.display==='none'?'block':'none';if(typeof window.renderHistory==='function')window.renderHistory();else renderHistory();}
+function renderHistory(){document.getElementById('historyList').innerHTML=(G.analysisHistory.length?G.analysisHistory.map(h=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px"><i class="ti ti-file-text" style="font-size:14px;color:var(--accent)"></i><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(h.name)}</div><div style="display:flex;gap:4px"><span class="badge b-accent" style="font-size:9px">Todo ${h.todo}</span><span class="badge b-danger" style="font-size:9px">Risk ${h.issue}</span></div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${escapeHtml(h.date)}</div>${h.documentId?`<button type="button" title="삭제" onclick="deleteDocumentFromHistory('${escapeHtml(h.documentId)}')" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:0 2px;font-size:13px;line-height:1"><i class="ti ti-trash"></i></button>`:''}</div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:12px;text-align:center">업로드 이력이 없습니다.</div>');}
 
 function analysisTodoKey(item){return String(item?.apiId||item?.id||'');}
 function analysisTodoAssigneeOptions(selected){
@@ -833,6 +833,7 @@ async function moveCheckedAnalysisTodosToProgress(){
     showToast(`${selected.length}개 Todo를 진행 Todo로 이동했습니다.`,'success');
     renderAnalysisTodoReview();
     if(!getAnalysisTodoItems().length)closeModal('analysisTodoModal');
+    nav('todo');switchTodoTab('inprogress');
   }catch(error){console.warn('analysis todo approve failed',error);showToast('진행 Todo 이동에 실패했습니다.','warn');}
 }
 async function deleteCheckedAnalysisTodos(){
@@ -909,9 +910,12 @@ function toggleAnalysisRiskChecked(key,checked){G.analysisRiskChecked=G.analysis
 function setAllAnalysisRiskChecked(checked){G.analysisRiskChecked=G.analysisRiskChecked||{};getAnalysisRiskItems().forEach(item=>{G.analysisRiskChecked[analysisRiskKey(item)]=checked;});renderAnalysisRiskReview();}
 function selectedAnalysisRisks(){return getAnalysisRiskItems().filter(item=>G.analysisRiskChecked?.[analysisRiskKey(item)]!==false);}
 function updateAnalysisRiskCheckedCount(){const el=document.getElementById('analysisRiskCheckedCount');if(el)el.textContent=selectedAnalysisRisks().length;}
-function moveCheckedAnalysisRisksToConfirmed(){
+async function moveCheckedAnalysisRisksToConfirmed(){
   const selected=selectedAnalysisRisks();
   if(!selected.length){showToast('선택된 Risk 후보가 없습니다.','info');return;}
+  try{
+    await Promise.all(selected.filter(item=>item.apiId).map(item=>window.opsRadarApi.request(`/issues/${item.apiId}`,{method:'PATCH',body:JSON.stringify({approval_status:'approved'})})));
+  }catch(e){console.warn('analysis risk approve failed',e);showToast('이슈 저장에 실패했습니다.','warn');return;}
   const selectedKeys=new Set(selected.map(analysisRiskKey));
   selected.forEach(item=>{
     const existing=issues.find(issue=>issue.id===item.id||issue.apiId===item.apiId);
@@ -920,10 +924,12 @@ function moveCheckedAnalysisRisksToConfirmed(){
   });
   G.analysisRiskReview=getAnalysisRiskItems().filter(item=>!selectedKeys.has(analysisRiskKey(item)));
   selectedKeys.forEach(key=>delete G.analysisRiskChecked[key]);
+  if(window.opsRadarApi)await window.opsRadarApi.loadIssues();
   renderAnalysisRiskReview();
   renderIssues();
   showToast(`${selected.length}개 Risk 후보를 확정 이슈로 이동했습니다.`,'success');
   if(!getAnalysisRiskItems().length)closeModal('analysisRiskModal');
+  nav('issues');switchIssueTab('inprogress');
 }
 function deleteCheckedAnalysisRisks(){
   const selected=selectedAnalysisRisks();
@@ -1093,9 +1099,9 @@ function updateTodoCounts(){
   document.getElementById('t-done-cnt').textContent=dn;
   const rej=document.getElementById('t-rej-cnt');if(rej)rej.textContent=rj;
   document.getElementById('pendingCount').textContent=ai;
-  ['t-ai-cnt','t-in-cnt','t-done-cnt','t-rej-cnt'].forEach((id,i)=>{const el=document.getElementById(id);if(!el)return;el.className=i===0&&ai>0?'badge b-warn':'badge b-gray';});
+  ['t-ai-cnt','t-in-cnt','t-done-cnt','t-rej-cnt'].forEach((id)=>{const el=document.getElementById(id);if(!el)return;el.className=(id==='t-ai-cnt'&&ai>0)?'badge b-warn':'badge b-gray';});
 }
-function switchTodoTab(tab){G.currentTodoTab=tab;G.todoPage[tab]=1;G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['ai','inprogress','done','rejected'][i]===tab);});const notice=document.getElementById('todoAINotice');const isAi=tab==='ai';const isProgress=tab==='inprogress';notice.style.display=(isAi||isProgress)?'flex':'none';document.getElementById('todoNoticeIcon').className=isAi?'ti ti-sparkles':'ti ti-rotate-2';document.getElementById('todoNoticeText').textContent=isAi?'AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.':'체크한 진행 Todo를 AI 제안으로 되돌릴 수 있습니다.';document.getElementById('todoBulkApproveBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkRejectBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkUndoBtn').style.display=isProgress?'flex':'none';renderTodos();}
+function switchTodoTab(tab){G.currentTodoTab=tab;G.todoPage[tab]=1;G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['inprogress','ai','done','rejected'][i]===tab);});const notice=document.getElementById('todoAINotice');const isAi=tab==='ai';const isProgress=tab==='inprogress';notice.style.display=(isAi||isProgress)?'flex':'none';document.getElementById('todoNoticeIcon').className=isAi?'ti ti-sparkles':'ti ti-rotate-2';document.getElementById('todoNoticeText').textContent=isAi?'AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.':'체크한 진행 Todo를 AI 제안으로 되돌릴 수 있습니다.';document.getElementById('todoBulkApproveBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkRejectBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkUndoBtn').style.display=isProgress?'flex':'none';renderTodos();}
 function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=cleanTodoTitle(t.title);document.getElementById('editDescription').value=briefTodoText(t);document.getElementById('editAssignee').value=t.assignee||t.recommendedAssignee||((window.opsRadarMembers||[])[0]?.name)||'이성우';document.getElementById('editModal').classList.add('show');}
 function saveEdit(){const t=todos.find(x=>x.id===G.editTargetId);t.title=document.getElementById('editTitle').value.trim();t.description=document.getElementById('editDescription').value.trim();t.assignee=document.getElementById('editAssignee').value;closeModal('editModal');renderTodos();if(G.selectedTodoId===G.editTargetId)renderTodoDetail(G.editTargetId);showToast('수정되었습니다.','info');}
 function openManualModal(){document.getElementById('manualModal').classList.add('show');}
@@ -1128,9 +1134,11 @@ async function saveManual(){
 // ════════════════════════════════════════════════
 // 흐름 3 — 이슈 → 대응 Todo 생성
 // ════════════════════════════════════════════════
-function switchIssueTab(tab){G.currentIssueTab=tab;G.selectedIssueId=null;hideIssueDetail();document.querySelectorAll('#s-issues .tab').forEach((el,i)=>el.classList.toggle('active',['confirmed','candidate','resolved'][i]===tab));renderIssues();}
+function switchIssueTab(tab){G.currentIssueTab=tab;G.selectedIssueId=null;hideIssueDetail();document.querySelectorAll('#s-issues .tab').forEach((el,i)=>el.classList.toggle('active',['inprogress','candidate'][i]===tab));renderIssues();}
 function renderIssues(){
-  const list=issues.filter(i=>i.type===G.currentIssueTab);
+  const list=G.currentIssueTab==='inprogress'
+    ?issues.filter(i=>i.type==='confirmed'||i.type==='resolved')
+    :issues.filter(i=>i.type===G.currentIssueTab);
   const el=document.getElementById('issueList');
   if(!list.length){el.innerHTML=`<div style="padding:40px;text-align:center;color:var(--text3);font-size:12px"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>이 탭에 항목이 없습니다.</div>`;return;}
   el.innerHTML=list.map(issue=>{
@@ -1160,8 +1168,9 @@ function renderIssues(){
       </div>
     </div>`;
   }).join('');
-  document.getElementById('i-conf-cnt').textContent=issues.filter(i=>i.type==='confirmed').length;
-  document.getElementById('i-cand-cnt').textContent=issues.filter(i=>i.type==='candidate').length;
+  const progCnt=document.getElementById('i-prog-cnt');if(progCnt)progCnt.textContent=issues.filter(i=>i.type==='confirmed'||i.type==='resolved').length;
+  const candCnt=document.getElementById('i-cand-cnt');if(candCnt)candCnt.textContent=issues.filter(i=>i.type==='candidate').length;
+  const pendingCnt=document.getElementById('i-pending-cnt');if(pendingCnt)pendingCnt.textContent=issues.filter(i=>i.type==='candidate').length;
 }
 
 function selectIssue(id){G.selectedIssueId=id;renderIssues();renderIssueDetail(id);}
@@ -1180,7 +1189,7 @@ function renderIssueDetail(id){
   const actions=document.getElementById('issueDetailActions');
   actions.style.display='flex';
   if(issue.type==='confirmed'&&issue.status!=='resolved'){
-    actions.innerHTML=`<div class="tbtn primary" onclick="openTodoCreate(${id})" style="justify-content:center"><i class="ti ti-plus"></i> 대응 Todo 생성</div><div style="display:flex;gap:5px;margin-top:4px"><div class="tbtn" style="flex:1;justify-content:center;color:var(--success)" onclick="resolveIssue(${id})"><i class="ti ti-check"></i> 해결 완료</div></div>`;
+    actions.innerHTML=`<div class="tbtn primary" onclick="openTodoCreate(${id})" style="justify-content:center"><i class="ti ti-plus"></i> 대응 Todo 생성</div><div style="display:flex;gap:5px;margin-top:4px"><div class="tbtn" style="flex:1;justify-content:center;color:var(--success)" onclick="resolveIssue(${id})"><i class="ti ti-check"></i> 해결 완료</div><div class="tbtn" style="flex:1;justify-content:center;color:var(--warn)" onclick="revertIssue(${id})">↩ 되돌리기</div></div>`;
   } else if(issue.type==='candidate'){
     actions.innerHTML=`<div class="tbtn primary" onclick="openConfirmIssue(${id})" style="justify-content:center;background:var(--danger);border-color:var(--danger)"><i class="ti ti-alert-triangle"></i> 이슈 확정</div><div class="tbtn" onclick="doRemoveIssue(${id})" style="justify-content:center;color:var(--text3);margin-top:4px">무시</div>`;
   } else { actions.style.display='none'; }
@@ -1247,9 +1256,10 @@ function getIssueApiId(issue){
   return typeof issue.id==='string'&&/^[0-9a-f-]{36}$/i.test(issue.id)?issue.id:null;
 }
 async function resolveIssue(id){const issue=issues.find(i=>i.id===id);const apiId=getIssueApiId(issue);if(apiId){try{await requestApi(`/issues/${apiId}/resolve`,{method:'PATCH'});}catch(e){showToast('이슈 저장에 실패했습니다.','warn');return;}}issue.status='resolved';issue.type='resolved';renderIssues();hideIssueDetail();showToast('이슈가 해결 완료 처리되었습니다.','success');}
+async function revertIssue(id){const issue=issues.find(i=>i.id===id);if(!issue)return;const apiId=getIssueApiId(issue);if(apiId){try{await requestApi(`/issues/${apiId}`,{method:'PATCH',body:JSON.stringify({approval_status:'pending',status:'open'})});}catch(e){showToast('이슈 저장에 실패했습니다.','warn');return;}}issue.type='candidate';issue.status='open';issue.approvalStatus='pending';renderIssues();hideIssueDetail();switchIssueTab('candidate');showToast('이슈가 승인 대기로 되돌려졌습니다.','info');}
 function openConfirmIssue(id){G.confirmIssueId=id;const issue=issues.find(i=>i.id===id);document.getElementById('confirmIssueText').textContent=`"${issue.title}"을 확정 이슈로 전환합니다. 대응 Todo를 생성할 수 있습니다.`;document.getElementById('confirmIssueModal').classList.add('show');}
 
-async function doConfirmIssue(){const issue=issues.find(i=>i.id===G.confirmIssueId);if(issue){const apiId=getIssueApiId(issue);if(apiId){try{await requestApi(`/issues/${apiId}`,{method:'PATCH',body:JSON.stringify({approval_status:'approved'})});}catch(e){showToast('이슈 저장에 실패했습니다.','warn');return;}}issue.type='confirmed';closeModal('confirmIssueModal');switchIssueTab('confirmed');showToast('이슈가 확정되었습니다.','warn');}}
+async function doConfirmIssue(){const issue=issues.find(i=>i.id===G.confirmIssueId);if(issue){const apiId=getIssueApiId(issue);if(apiId){try{await requestApi(`/issues/${apiId}`,{method:'PATCH',body:JSON.stringify({approval_status:'approved'})});}catch(e){showToast('이슈 저장에 실패했습니다.','warn');return;}}issue.type='confirmed';closeModal('confirmIssueModal');switchIssueTab('inprogress');showToast('이슈가 확정되었습니다.','warn');}}
 async function dismissIssue(){await doRemoveIssue(G.confirmIssueId);closeModal('confirmIssueModal');}
 async function doRemoveIssue(id){const idx=issues.findIndex(i=>i.id===id);const issue=idx===-1?null:issues[idx];const apiId=getIssueApiId(issue);if(apiId){try{await requestApi(`/issues/${apiId}`,{method:'PATCH',body:JSON.stringify({approval_status:'rejected'})});}catch(e){showToast('이슈 저장에 실패했습니다.','warn');return;}}if(idx!==-1)issues.splice(idx,1);renderIssues();hideIssueDetail();showToast('이슈 후보가 무시되었습니다.','info');}
 
@@ -1384,8 +1394,8 @@ async function saveIssueCreate(){
     issues.unshift(issue);
     persistIssues();
     closeIssueCreateModal();
-    G.currentIssueTab = issue.type;
-    document.querySelectorAll('#s-issues .tab').forEach((el,i)=>el.classList.toggle('active',['confirmed','candidate','resolved'][i]===G.currentIssueTab));
+    G.currentIssueTab = issue.type === 'candidate' ? 'candidate' : 'inprogress';
+    document.querySelectorAll('#s-issues .tab').forEach((el,i)=>el.classList.toggle('active',['inprogress','candidate'][i]===G.currentIssueTab));
     renderIssues();
     fetchDashboard();
     showToast('이슈가 등록되었습니다.', 'success');
@@ -2097,8 +2107,8 @@ function kContentOnboarding() {
         <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 중요한가:</strong> 프로젝트 전체 맥락을 모르면 개별 업무가 왜 필요한지 이해 못 함.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">확인 항목</div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">WorkRader 서비스 정의 — 운영 인텔리전스 AI 시스템</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">기술스택: FastAPI · PostgreSQL · FAISS · React · Azure OpenAI</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">팀 구성 및 역할 (PM·AI·인프라·백엔드·프론트)</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">기술 구성: FastAPI · PostgreSQL · pgvector · React · Azure OpenAI</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">업무 조직 (영업관리·구매·물류·품질 클레임·운영총괄)</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">8주 MVP 로드맵 및 현재 주차 확인</div></div>
         <div style="margin-top:12px;display:flex;gap:6px">
           <div class="tbtn primary" style="font-size:11px"><i class="ti ti-wand"></i> AI 요약 문서 생성</div>
@@ -2209,7 +2219,7 @@ function kContentAbsence() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge b-warn">Mid</span>
-            <span style="color:var(--text)">FAISS 재인덱싱 테스트</span>
+            <span style="color:var(--text)">pgvector 재임베딩 테스트</span>
             <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:var(--mono)">5/20</span>
           </div>
         </div>
@@ -2302,7 +2312,7 @@ function kContentOffboard() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge b-warn">Mid</span>
-            <span style="color:var(--text)">FAISS 재인덱싱 테스트</span>
+            <span style="color:var(--text)">pgvector 재임베딩 테스트</span>
             <span style="font-size:10px;color:var(--text3);margin-left:auto">미완료</span>
           </div>
         </div>
@@ -2321,8 +2331,8 @@ function kContentOffboard() {
         <i class="ti ti-chevron-down kcard-arrow"></i>
       </div>
       <div class="kcard-body">
-        <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 FAISS를 썼는가:</strong> ChromaDB는 Windows에서 DLL 충돌 발생. faiss-cpu로 전환 후 안정적으로 동작 중.</div></div>
-        <div class="kb-now"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div><strong>현재 상태:</strong> 청크 700자, 임계값 0.41, top_k=3으로 최적화 완료. FastAPI 연동만 남은 상태.</div></div>
+        <div class="kb-why"><i class="ti ti-info-circle" style="font-size:13px;flex-shrink:0"></i><div><strong>왜 pgvector를 쓰는가:</strong> 문서·권한·업무 객체와 벡터 검색을 PostgreSQL에서 일관되게 관리합니다.</div></div>
+        <div class="kb-now"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i><div><strong>현재 상태:</strong> Markdown 원문을 제목 단위로 청킹하고 프로젝트 범위에서 유사 문서를 검색합니다.</div></div>
         <div class="kb-next"><i class="ti ti-arrow-right" style="font-size:13px;flex-shrink:0"></i><div><strong>내가 먼저 할 것:</strong> ai_interface.py의 analyze_document() 확인 → FastAPI /documents/upload에 연결.</div></div>
         <div style="font-size:11px;font-weight:500;color:var(--text);margin:8px 0 6px">핵심 참고 문서 (AI 추출)</div>
         <div class="kb-item"><i class="ti ti-file-text"></i>handover_2026_05_13.txt — 기술스택·아키텍처 전반</div>
@@ -2345,7 +2355,7 @@ function kContentOffboard() {
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">GitHub SeongWoo 브랜치 클론 및 접근 확인</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">pip install -r requirements.txt 완료</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">.env 파일 API 키 유효성 확인</div></div>
-        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">python -m app.ai.embedder 실행 (FAISS DB 생성)</div></div>
+        <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">pgvector 임베딩 적재 상태 확인</div></div>
         <div class="checklist-item"><div class="cl-box"></div><div class="cl-text" style="flex:1">python -m app.ai.retriever 로 검색 테스트</div></div>
       </div>
     </div>

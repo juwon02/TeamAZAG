@@ -11,7 +11,7 @@
   const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
   const session = () => read("opsradar_session", {});
   const user = () => session().user || {};
-  const isLead = () => user().username === "hj" || ["admin", "pm", "leader"].includes(String(user().role || "").toLowerCase());
+  const isLead = () => user().username === "hj" || user().username === "admin" || ["admin", "pm", "leader", "시스템 관리자"].includes(String(user().role || "").toLowerCase());
   const memberName = () => user().name || localStorage.getItem("opsradar_user_name") || "";
   const todoKey = (todo) => String(todo?.apiId || todo?.id || "");
   const issueKey = (issue) => String(issue?.apiId || issue?.id || "");
@@ -198,9 +198,9 @@
     document.body.classList.toggle("wr-team-member", !lead);
     document.querySelector(".app-session-control")?.remove();
     document.querySelector(".ops-role-switch")?.remove();
-    const aiTab = document.querySelector("#todoTabs .tab:first-child");
+    const aiTab = document.querySelector("#todoTabs .tab[onclick*=\"'ai'\"]");
     if (aiTab) aiTab.style.display = lead ? "" : "none";
-    const candidateTab = document.querySelector("#s-issues .tabs .tab:nth-child(2)");
+    const candidateTab = document.querySelector("#s-issues .tabs .tab[onclick*=\"'candidate'\"]");
     if (candidateTab) candidateTab.style.display = lead ? "" : "none";
     const memberPanel = document.getElementById("memberAdminPanel");
     if (memberPanel) memberPanel.style.display = lead ? "" : "none";
@@ -208,7 +208,7 @@
     reflect?.remove();
     switchDbRole(lead ? "pm" : "member");
     if (!lead && G.currentTodoTab === "ai") switchTodoTab("inprogress");
-    if (!lead && G.currentIssueTab === "candidate") switchIssueTab("confirmed");
+    if (!lead && G.currentIssueTab === "candidate") switchIssueTab("inprogress");
   }
 
   function renderMemberDashboard() {
@@ -284,7 +284,7 @@
   };
   const baseSwitchIssueTab = window.switchIssueTab;
   window.switchIssueTab = switchIssueTab = function (tab) {
-    return baseSwitchIssueTab(!isLead() && tab === "candidate" ? "confirmed" : tab);
+    return baseSwitchIssueTab(!isLead() && tab === "candidate" ? "inprogress" : tab);
   };
 
   function ensureApprovalCenter() {

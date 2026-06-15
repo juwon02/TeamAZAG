@@ -12,7 +12,14 @@
   async function request(path, options = {}) {
     let token = localStorage.getItem("access_token");
     if (!token) {
-      try { token = JSON.parse(localStorage.getItem("opsradar_session") || "null")?.token || null; } catch (_) {}
+      try {
+        const sess = JSON.parse(localStorage.getItem("opsradar_session") || "null");
+        token = sess?.access_token || sess?.token || null;
+      } catch (_) {}
+    }
+    if (!token) token = localStorage.getItem("token") || null;
+    if (!token) {
+      try { token = JSON.parse(localStorage.getItem("auth") || "null")?.token || null; } catch (_) {}
     }
     const headers = options.body instanceof FormData
       ? { ...(options.headers || {}) }
@@ -419,6 +426,41 @@
     if (typeof renderCalendar === "function") renderCalendar();
   }
 
+  async function loadDocumentsFromAPI() {
+    if (!window.G) return;
+    const data = await request("/documents");
+    const docs = data.documents || [];
+    const existingIds = new Set((window.G.analysisHistory || []).map((h) => h.documentId).filter(Boolean));
+    docs.forEach((doc) => {
+      if (!existingIds.has(doc.document_id)) {
+        (window.G.analysisHistory = window.G.analysisHistory || []).push({
+          name: doc.file_name,
+          type: "document",
+          documentId: doc.document_id,
+          date: doc.created_at ? new Date(doc.created_at).toLocaleDateString("ko-KR") : "-",
+          todo: doc.pending_todo_count || 0,
+          issue: doc.pending_issue_count || 0,
+          blocked: doc.blocked_count || 0,
+        });
+      }
+    });
+    if (typeof renderHistory === "function") renderHistory();
+  }
+
+  window.deleteDocumentFromHistory = async function (documentId) {
+    if (!confirm("이 파일과 관련 분석 데이터를 삭제할까요?")) return;
+    try {
+      await request(`/documents/${documentId}`, { method: "DELETE" });
+      if (window.G?.analysisHistory) {
+        window.G.analysisHistory = window.G.analysisHistory.filter((h) => h.documentId !== documentId);
+      }
+      if (typeof renderHistory === "function") renderHistory();
+      if (typeof showToast === "function") showToast("파일이 삭제되었습니다.", "success");
+    } catch (error) {
+      if (typeof showToast === "function") showToast(`삭제 실패: ${error.message}`, "warn");
+    }
+  };
+
   async function loadReportsFromAPI() {
     if (typeof persistReports !== "function") return;
     const data = await request("/reports");
@@ -556,6 +598,7 @@
       window.G.analysisHistory.unshift({
         name: file.name,
         type: "document",
+        documentId,
         date: typeof formatOpsDate === "function" ? formatOpsDate("short") : new Date().toLocaleDateString("ko-KR"),
         todo: todoCount,
         issue: issueCount,
@@ -589,10 +632,10 @@
     }
 
     const chunkData = await getDocumentChunks(documentId);
-    const todoData = await request("/todos");
-    const issueData = await request("/issues");
-    const docTodos = byDocumentId(todoData.todos, documentId);
-    const docIssues = byDocumentId(issueData.issues, documentId);
+    const todoData = await request(`/documents/${documentId}/todos`);
+    const issueData = await request(`/documents/${documentId}/issues`);
+    const docTodos = todoData.todos || [];
+    const docIssues = issueData.issues || [];
     prepareAnalysisTodoReview(documentId, docTodos);
     prepareAnalysisRiskReview(documentId, docIssues);
 
@@ -649,6 +692,7 @@
       loadCalendarFromAPI(),
       loadReportsFromAPI(),
       loadMembersFromAPI(),
+      loadDocumentsFromAPI(),
     ]),
   };
 
@@ -729,7 +773,7 @@
           try {
             await request(`/todos/${todo.apiId}`, {
               method: "PATCH",
-              body: JSON.stringify({ status: "pending", approval_status: "pending", assignee: null }),
+              body: JSON.stringify({ status: "pending", approval_status: "approved" }),
             });
           } catch (error) {
             console.warn("Todo undo API failed", error);
