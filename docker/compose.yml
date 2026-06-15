@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: opsradar-db
+    environment:
+      POSTGRES_DB: opsradar
+      POSTGRES_USER: opsradar
+      POSTGRES_PASSWORD: opsradar
+    ports:
+      - "5432:5432"
+    volumes:
+      - opsradar-postgres-data:/var/lib/postgresql/data
+      - ./postgres-init/001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ../opsradar2/schema.sql:/docker-entrypoint-initdb.d/002-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opsradar -d opsradar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    container_name: opsradar-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://opsradar:opsradar@db:5432/opsradar
+      DB_SCHEMA: opsradar2
+      FRONTEND_ORIGINS: http://localhost:8002,http://127.0.0.1:8002
+      MAX_UPLOAD_BYTES: 26214400
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      AZURE_OPENAI_CHAT_DEPLOYMENT: ${AZURE_OPENAI_CHAT_DEPLOYMENT:-}
+      AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-}
+      FAISS_INDEX_PATH: /app/data/faiss/index.faiss
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-secret-in-production}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-8}
+    ports:
+      - "8002:8002"
+    volumes:
+      - opsradar-faiss-data:/app/data/faiss
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  opsradar-postgres-data:
+  opsradar-faiss-data:
