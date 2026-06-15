@@ -1,0 +1,3 @@
+﻿id,project_id,title,from_member_id,to_member_id,scope_summary,generated_summary,status,source,created_at,updated_at
+DUMMY-HANDOFF-001,DUMMY-PROJ-OPS-2026,[DUMMY] 영업-구매-물류 인수인계,DUMMY-PM-001,DUMMY-PM-002,"[DUMMY] 미해결 이슈, 다음 액션, 담당자, 리스크 범위",[DUMMY] 문서와 issue_events 기반 인수인계 데모 요약,ready,dummy_current_seed,2026-06-01T09:00:00,2026-06-01T09:00:00
+DUMMY-HANDOFF-002,DUMMY-PROJ-OPS-2026,[DUMMY] 품질 클레임 후속 인수인계,DUMMY-PM-001,DUMMY-PM-003,"[DUMMY] 미해결 이슈, 다음 액션, 담당자, 리스크 범위",[DUMMY] 문서와 issue_events 기반 인수인계 데모 요약,ready,dummy_current_seed,2026-06-01T09:00:00,2026-06-01T09:00:00
