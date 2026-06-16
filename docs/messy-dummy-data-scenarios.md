@@ -3,11 +3,16 @@
 ## Purpose
 This extension adds July to December 2026 source materials that are intentionally less tidy than the original dummy data. The goal is to test whether OpsRadar2 can produce reports and handoff drafts without flattening ambiguous operational evidence into overly clean conclusions.
 
+Current density target:
+- Messy issues: 6
+- Messy source documents: 84
+- Messy structured CSV rows: 114
+
 ## Difference From The Original Dummy Data
 - Original data focuses on well-structured operating events from 2025-06-01 to 2026-06-01.
 - This extension adds separate 2026-07-01 to 2026-12-31 messy scenarios.
 - Existing source documents and CSV rows are preserved.
-- New IDs use `ISSUE-2026-010` through `ISSUE-2026-014` and `DOC-2026-*-MESSY-*`.
+- New IDs use `ISSUE-2026-010` through `ISSUE-2026-015` and `DOC-2026-*-MESSY-*`.
 - `dummy_data/05_db_seed_v2` is not modified.
 
 ## Added Scenarios
@@ -16,6 +21,7 @@ This extension adds July to December 2026 source materials that are intentionall
 - `ISSUE-2026-012`: TE Connectivity Korea price increase notice conflicting with prior verbal agreement.
 - `ISSUE-2026-013`: Global Harness Vietnam month-end shipment confirmation gap.
 - `ISSUE-2026-014`: Mirae EV Systems temporary coverage gap during owner vacation.
+- `ISSUE-2026-015`: Hanil Motors substitute approval and original part restock schedule conflict.
 
 ## Messy Elements
 - Ambiguous language such as "maybe", "tentative", "probably", "checking", and "not final".

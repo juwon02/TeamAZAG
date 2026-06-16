@@ -18,7 +18,7 @@ PROJECT_ID = "DUMMY-PROJ-OPS-2026"
 NOW = "2026-06-01T09:00:00"
 START_DATE = date(2025, 6, 1)
 END_DATE = date(2026, 12, 31)
-MESSY_ISSUE_IDS = {f"ISSUE-2026-{idx:03d}" for idx in range(10, 15)}
+MESSY_ISSUE_IDS = {f"ISSUE-2026-{idx:03d}" for idx in range(10, 16)}
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -172,7 +172,7 @@ def main() -> None:
     docs_by_issue: dict[str, list[dict[str, str]]] = defaultdict(list)
     for doc in source_docs:
         issue_id = doc.get("related_issue_id", "")
-        if issue_id in issue_ids and len(docs_by_issue[issue_id]) < 4:
+        if issue_id in issue_ids and len(docs_by_issue[issue_id]) < 6:
             docs_by_issue[issue_id].append(doc)
 
     selected_docs: list[dict[str, str]] = []
@@ -186,7 +186,7 @@ def main() -> None:
                 used.add(doc["doc_id"])
             if len(selected_docs) >= 32:
                 break
-    selected_docs = selected_docs[:64]
+    selected_docs = selected_docs[:96]
 
     documents = []
     for idx, doc in enumerate(selected_docs, 1):

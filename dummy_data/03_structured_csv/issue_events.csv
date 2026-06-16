@@ -23,3 +23,4 @@ ISSUE-2026-011,Daesung Automotive 케이블 클레임 원인 불명확,messy_cla
 ISSUE-2026-012,TE Connectivity Korea 단가 인상 공지와 구두 합의 충돌,messy_price_conflict,2026-09-01,2026-09-26,CUS-004,SUP-001,AP-CN-204,구매팀;영업관리팀;운영총괄팀,High,in_progress,공식 단가 인상 공지와 이전 구두 합의가 충돌하여 고객 단가 제안 기준과 마진 영향 계산이 불확실한 이슈
 ISSUE-2026-013,Global Harness Vietnam 월말 출고 확인 누락,messy_month_end_shipment_confirmation,2026-10-24,2026-11-05,CUS-005,SUP-004,AP-TM-118,물류팀;영업관리팀;운영총괄팀,Medium,closed,시스템상 출고 완료이나 고객 수령 확인이 늦게 도착해 월말 매출 인식 여부가 흔들린 이슈
 ISSUE-2026-014,Mirae EV Systems 담당자 휴가 중 임시 인수인계 누락,messy_temporary_coverage_gap,2026-12-05,2026-12-20,CUS-003,SUP-002,AP-RL-450,영업관리팀;구매팀,Medium,in_progress,담당자 휴가 중 고객 요청 일부가 임시 담당자에게 전달되지 않아 회신 지연과 Todo 누락이 발생한 인수인계 이슈
+ISSUE-2026-015,Hanil Motors 대체품 승인과 원품 재입고 일정 혼선,messy_substitute_approval_conflict,2026-11-18,2026-12-28,CUS-004,SUP-005,AP-CB-510,영업관리팀;구매팀;품질 클레임팀;물류팀,High,in_progress,"대체품 선출고 가능성, 원품 재입고 일정, 고객 승인 조건이 문서마다 다르게 남아 확정 가능한 조치가 불명확한 상황"

@@ -35,3 +35,4 @@ CLM-MESSY-2026-011,2026-08-22,CUS-002,AP-CB-510,messy_claim_or_logistics_damage,
 CLM-MESSY-2026-012,2026-09-26,CUS-004,AP-CN-204,messy_price_conflict,0,High,in_progress,김도윤,ISSUE-2026-012
 CLM-MESSY-2026-013,2026-11-05,CUS-005,AP-TM-118,messy_month_end_shipment_confirmation,24,Medium,closed,한지우,ISSUE-2026-013
 CLM-MESSY-2026-014,2026-12-20,CUS-003,AP-RL-450,messy_temporary_coverage_gap,0,Medium,in_progress,한지우,ISSUE-2026-014
+CLM-MESSY-2026-015,2026-12-28,CUS-004,AP-CB-510,messy_substitute_approval_conflict,24,High,in_progress,한지우,ISSUE-2026-015
