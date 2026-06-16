@@ -288,3 +288,6 @@ db/local_pg_teamazag.log
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local migration backups (insurance copies, not for commit)
+.backups/
