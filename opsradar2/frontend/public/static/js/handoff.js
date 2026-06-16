@@ -653,6 +653,10 @@
       .hf-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;background:var(--accent-soft);border-bottom:1px solid var(--border)}
       .hf-result-eyebrow{font-size:10px;font-weight:900;color:var(--accent);letter-spacing:.08em;margin-bottom:4px}
       .hf-result-title{font-size:17px;font-weight:900;color:var(--text);line-height:1.35}
+      .hf-result-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+      .hf-result-meta-item{border:1px solid var(--border2);background:var(--surface2);border-radius:8px;padding:10px;min-width:0}
+      .hf-result-meta-item b{display:block;font-size:11px;font-weight:900;color:var(--accent);margin-bottom:5px}
+      .hf-result-meta-item span{display:block;font-size:12px;line-height:1.45;color:var(--text2);overflow-wrap:anywhere}
       .hf-result-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:16px}
       .hf-result-row{border:1px solid var(--border);background:var(--surface2);border-radius:8px;padding:13px;min-height:104px}
       .hf-result-row--full{grid-column:1/-1;min-height:auto}
@@ -683,8 +687,8 @@
       .hf-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
       .hf-check{display:flex;gap:9px;align-items:flex-start;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:11px;font-size:12px;color:var(--text2);line-height:1.45}
       .hf-check i{color:var(--success);font-size:16px;margin-top:1px}
-      @media(max-width:1320px){.hf-result-body{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-center-strip,.hf-pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:960px){.hf-home,.hf-home-metrics,.hf-detail-layout,.hf-result-body,.hf-form-grid.two,.hf-center-strip,.hf-pipeline,.hf-lanes,.hf-checks{grid-template-columns:1fr}.hf-home{height:auto}.hf-home-card{min-height:420px}.hf-home-card h2{font-size:32px}.hf-hero h2{font-size:26px}}
+      @media(max-width:1320px){.hf-result-body{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-result-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-center-strip,.hf-pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:960px){.hf-home,.hf-home-metrics,.hf-detail-layout,.hf-result-body,.hf-result-meta,.hf-form-grid.two,.hf-center-strip,.hf-pipeline,.hf-lanes,.hf-checks{grid-template-columns:1fr}.hf-home{height:auto}.hf-home-card{min-height:420px}.hf-home-card h2{font-size:32px}.hf-hero h2{font-size:26px}}
       .hf-step-tabs{display:flex;align-items:center;gap:6px;padding:14px 18px;border:1px solid var(--border);background:var(--surface);border-radius:8px;margin-bottom:0}
       .hf-step-tab{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
       .hf-step-tab.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -843,8 +847,39 @@
   // "팀장 확인 항목"처럼 선택적 섹션은 전체 너비로 렌더
   const FULL_WIDTH_SECTIONS = new Set(["팀장 확인 항목", "사수/팀장 확인 항목", "인수인계 개요"]);
 
+  function resultMetaRows() {
+    if (state.mode === "onboarding") {
+      return [
+        ["대상자", state.onboardingTarget],
+        ["배정 팀", state.onboardingTeam],
+        ["참고 기간", state.period],
+        ["선택 자료", `${checkedOnboardingTitles("customers").length}개 고객 · ${checkedOnboardingTitles("todos").length}개 Todo`],
+      ];
+    }
+    if (isIssueScope()) {
+      const issue = selectedIssue();
+      return [
+        ["기존 담당자", state.owner],
+        ["신규 담당자", state.nextOwner],
+        ["선택 이슈", `${issue.status} · ${issue.title}`],
+        ["업무 범위", state.scope],
+      ];
+    }
+    return [
+      ["기존 담당자", state.owner],
+      ["신규 담당자", state.nextOwner],
+      ["소속 팀", state.handoffDepartment],
+      ["업무 범위", state.scope],
+      ["고객사", state.customer],
+      ["구매처", state.supplier],
+      ["참고 기간", state.period],
+      ["선택 후보", `${checkedTitles("todos").length}개 Todo · ${checkedTitles("issues").length}개 이슈`],
+    ];
+  }
+
   function resultCard(title, rows) {
     const normalized = normalizeRows(rows);
+    const metaRows = resultMetaRows();
     return `
       <div class="hf-result-card" id="handoffResultCard">
         <div class="hf-result-head">
@@ -854,6 +889,13 @@
           </div>
           <span class="hf-status"><i class="ti ti-sparkles"></i>생성 대기</span>
         </div>
+        <div class="hf-result-meta">
+          ${metaRows.map((row) => `
+            <div class="hf-result-meta-item">
+              <b>${esc(row[0])}</b>
+              <span>${esc(row[1])}</span>
+            </div>`).join("")}
+        </div>
         <div class="hf-result-body">
           ${normalized.map((row) => `
             <div class="hf-result-row${FULL_WIDTH_SECTIONS.has(row[0]) ? " hf-result-row--full" : ""}">
@@ -862,9 +904,10 @@
             </div>`).join("")}
         </div>
         <div class="hf-actions">
-          <button class="tbtn" type="button" onclick="saveHandoffDraft()"><i class="ti ti-device-floppy"></i> 초안 저장</button>
           <button class="tbtn" type="button" onclick="editHandoffDraft()"><i class="ti ti-edit"></i> 수정하기</button>
-          <button class="tbtn primary" type="button" onclick="openHandoffPreview(G.currentKnowledgeType || 'handoff')"><i class="ti ti-eye"></i> 슬라이드 미리보기</button>
+          <button class="tbtn" type="button" onclick="regenerateHandoffPreview(G.currentKnowledgeType || 'handoff')"><i class="ti ti-refresh"></i> 다시 생성</button>
+          <button class="tbtn" type="button" onclick="shareHandoffDraft()"><i class="ti ti-share"></i> 공유하기</button>
+          <button class="tbtn primary" type="button" onclick="saveHandoffDraft()"><i class="ti ti-device-floppy"></i> 초안 저장</button>
         </div>
       </div>`;
   }
@@ -1299,13 +1342,27 @@
     renderHandoffDetail(selected);
   }
 
+  function refreshMainPreview(type, toastMessage) {
+    const selected = normalizeMode(type || state.mode);
+    state.mode = selected;
+    if (window.G) window.G.currentKnowledgeType = selected;
+    state.activeDetailStep = "preview";
+    const area = document.getElementById("handoffStepContent");
+    if (area) area.innerHTML = renderPreviewStep(selected);
+    document.querySelectorAll(".hf-step-tab").forEach((tab, index) => {
+      tab.classList.toggle("active", index === 2);
+    });
+    const card = document.getElementById("handoffResultCard");
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    const data = window.getHandoffPreviewData(selected);
+    if (typeof window.showToast === "function" && toastMessage) window.showToast(toastMessage, "success");
+    return data;
+  }
+
   const originalGeneratePreview = window.generateHandoffPreview;
   window.generateHandoffPreview = function (type) {
     if (["handoff", "onboarding", "absence", "offboard", undefined, null].includes(type)) {
-      const data = window.getHandoffPreviewData(type || state.mode);
-      if (typeof window.renderHandoffPreview === "function") window.renderHandoffPreview(data);
-      if (typeof window.showToast === "function") window.showToast(`${data.title} 미리보기를 생성했습니다.`, "success");
-      return data;
+      return refreshMainPreview(type || state.mode, "문서 미리보기를 본문에서 갱신했습니다.");
     }
     return typeof originalGeneratePreview === "function" ? originalGeneratePreview(type) : null;
   };
@@ -1314,19 +1371,30 @@
     return window.generateHandoffPreview(type || state.mode);
   };
 
+  window.regenerateHandoffPreview = function (type) {
+    return refreshMainPreview(type || state.mode, "문서 미리보기를 다시 생성했습니다.");
+  };
+
   window.saveHandoffDraft = function () {
     window.G = window.G || {};
     G.currentHandoffDraft = window.getHandoffPreviewData(state.mode);
     G.savedHandoffDraft = { ...G.currentHandoffDraft, savedAt: new Date().toISOString() };
-    if (typeof window.showToast === "function") window.showToast("초안을 임시 저장했습니다.", "success");
+    try {
+      localStorage.setItem("handoffDraftPreview", JSON.stringify(G.savedHandoffDraft));
+    } catch (error) {
+      console.warn("handoff draft localStorage save skipped", error);
+    }
+    if (typeof window.showToast === "function") window.showToast("초안이 저장되었습니다.", "success");
   };
 
   window.editHandoffDraft = function () {
-    if (typeof window.showToast === "function") window.showToast("수정 모드는 실제 문서 편집 API 연결 후 제공됩니다.", "info");
+    if (typeof window.showToast === "function") window.showToast("현재는 mock 수정 모드입니다. 본문 내용을 확인한 뒤 초안을 저장해 주세요.", "info");
   };
 
   window.shareHandoffDraft = function () {
-    if (typeof window.showToast === "function") window.showToast("공유 기능은 실제 권한/API 연결 후 제공됩니다.", "info");
+    window.G = window.G || {};
+    G.currentHandoffShareLink = `mock://handoff-preview/${Date.now()}`;
+    if (typeof window.showToast === "function") window.showToast("공유 링크가 생성되었습니다. 현재는 mock 공유입니다.", "success");
   };
 
   function initHandoffCenter() {
