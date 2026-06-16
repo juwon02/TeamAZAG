@@ -11,6 +11,9 @@
 # production
 /build
 
+# Vite strangler-fig build output (generated, not source — see MIGRATION_LOG.md)
+/public/static/react/
+
 # misc
 .DS_Store
 .env.local
