@@ -1,2 +1,0 @@
-"""OpsRadar AI backend package."""
-

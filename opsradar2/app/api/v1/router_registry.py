@@ -9,16 +9,19 @@ from dataclasses import dataclass
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    auth,
     calendar,
     chat,
     dashboard,
     documents,
     issues,
     knowledge,
+    members,
     projects,
     reports,
     system,
     todos,
+    workflow,
 )
 
 
@@ -30,6 +33,7 @@ class RouterSpec:
 
 
 API_ROUTERS: tuple[RouterSpec, ...] = (
+    RouterSpec(auth.router, "/auth", "auth"),
     RouterSpec(calendar.router, "/calendar", "calendar"),
     RouterSpec(projects.router, "/projects", "projects"),
     RouterSpec(documents.router, "/documents", "documents"),
@@ -38,8 +42,10 @@ API_ROUTERS: tuple[RouterSpec, ...] = (
     RouterSpec(dashboard.router, "/dashboard", "dashboard"),
     RouterSpec(reports.router, "/reports", "reports"),
     RouterSpec(knowledge.router, "/knowledge", "knowledge"),
+    RouterSpec(members.router, "/members", "members"),
     RouterSpec(chat.router, "/chat", "chat"),
     RouterSpec(system.router, "/system", "system"),
+    RouterSpec(workflow.router, "/workflow", "workflow"),
 )
 
 
