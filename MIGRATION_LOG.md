@@ -29,7 +29,7 @@
 | 이슈 로그 | s-issues | app.js + workflow-v2.js | 기존바닐라 |
 | 캘린더 | s-calendar | app.js + todo-calendar-enhancements.js | 기존바닐라 |
 | 인수인계 센터 | s-knowledge | handoff.js (504줄·월요일작업 03b02ca) | 기존바닐라 |
-| 보고서 | s-reports | report.js | 기존바닐라 |
+| 보고서 | s-reports | React(ReportsScreen.jsx) + report.js/app.js 동작 vanilla 공존 | **전환완료** |
 | AI Assistant | s-chat | app.js | 기존바닐라 |
 | 설정 | s-settings | React(SettingsScreen.jsx) + 멤버패널 vanilla 공존 | **전환완료** (e6ff5a4) |
 (상태값: 기존바닐라 / 전환중 / 전환완료)
@@ -80,6 +80,19 @@
     렌더하고 리스트(`#memberAdminList`)/CRUD 는 vanilla 가 그대로 소유. api-integration.js 무수정.
   - 폴백: localStorage.opsradar_react_settings='off' +새로고침 → 바닐라 복귀.
   - 검증(사용자 직접): 깜빡임 없음, 멤버 CRUD/테마/로그아웃/프로필 정상, 타화면(인수인계 등) 무영향.
+- 2026-06-16, 박주원, 보고서(s-reports) 화면 React 전환 — 스트랭글러 2번째:
+  - ReportsScreen.jsx: 기존 `#s-reports` 노드 안에 `createRoot` 로 렌더 → ID 스코프 CSS 상속(픽셀 동일).
+    기존 HTML class·구조·텍스트 100% 복제.
+  - **app.js 무수정**(1줄 노출도 없음). 핵심: `nav('reports')` 가 매번 `initReportsScreen()` 를 호출해
+    탭/툴바/저장 리스너를 idempotent(dataset 가드)하게 (재)바인딩 + `renderReportList()`. 따라서 React 는
+    동일 구조를 **memo 로 1회만 렌더**하고, 보고서로 이동할 때 vanilla 가 그 React 노드에 바인딩한다.
+  - 트랩① `#reportEditor`(contenteditable): api-integration.js `saveReport` 가 innerHTML 을 읽고
+    app.js `renderReportDraft` 가 씀 → React 가 1회 렌더 후 재렌더 안 함 + `suppressContentEditableWarning`
+    (uncontrolled) 으로 보호. 트랩② 주간/월간 탭 `.active`: React state 로 이중관리하지 않고 DOM 의
+    `.active` 를 단일 소스로 두어 vanilla(`getActiveReportPeriod`/`setReportPeriod`)가 토글.
+  - 폴백: localStorage.opsradar_react_reports='off' +새로고침 → 바닐라 복귀.
+  - 검증(헤드리스 Chrome 실측): 픽셀 동일, React 마운트(설정·보고서 둘 다), 목록 3건/탭 전환/선택/AI초안
+    버튼 정상, 9개 화면 무영향(설정 안 깨짐), 콘솔/페이지/HTTP 4xx·5xx 에러 0.
 
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
@@ -89,11 +102,11 @@
   504줄본이 이를 인수인계 센터 전면(퇴사자/신규입사자 카드 + AI 파이프라인 데모/보드)으로 확장함.
 
 ## 다음 작업 (다음 AI가 할 일)
-- 2번째 화면 전환 — 다음 단순 화면 선정.
-  - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부까지** 조사할 것(아래 교훈 참고).
-    설정처럼 "Front-end only"로 보여도 API 패널이 숨어있을 수 있음.
-  - 패턴은 설정과 동일: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용,
-    MutationObserver로 active 감지, 복잡/주입 패널은 React.memo 껍데기 + vanilla 공존.
+- 3번째 화면 전환 — 대상 미정(사용자와 상의).
+  - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부 + 바닐라 리스너 바인딩 방식까지** 조사할 것(아래 교훈 참고).
+  - 패턴: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용.
+    화면 전체가 vanilla 소유면 보고서처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면
+    설정처럼 MutationObserver + memo 껍데기 혼용. 복잡/주입 패널은 React.memo 껍데기 + vanilla 공존.
   - 빌드: `npm run vite:build` (dist/ 절대 생성 금지). 폴백 스위치 패턴 유지.
 - 그 외 화면(인수인계 센터 포함)은 계속 바닐라 유지, 한 번에 한 화면씩.
 
@@ -108,6 +121,13 @@
   화면 조사 시 **index.html 정적 HTML뿐 아니라 api-integration.js(및 *-enhancements.js)의
   런타임 DOM 주입까지 반드시 확인**할 것. 놓치면 React가 노드를 덮어써 깜빡임 발생.
   → 주입형 API 패널은 React.memo 껍데기 + vanilla 리스트 공존 패턴으로 처리.
+- ★교훈(보고서 전환에서 배움): `nav(screen)`(app.js)은 화면 진입 시 화면별 init을 호출한다
+  (예: `if(screen==='reports') initReportsScreen()`). 이 init이 **리스너를 dataset 가드로 idempotent
+  하게 바인딩**(textContent/속성 스캔)하면, React가 동일 구조를 **1회만** 렌더해 두기만 하면 진입 시
+  vanilla가 그 React 노드에 그대로 바인딩된다 → **app.js 무수정**으로 전환 가능(인라인 onClick도 불필요).
+  단 React가 재렌더하면 vanilla가 채운 DOM(목록/contenteditable/탭 active)을 되돌릴 수 있으니
+  **memo + 재렌더 0**(MutationObserver 미사용)으로 둘 것. contenteditable은 uncontrolled(+
+  suppressContentEditableWarning)로 두어 vanilla의 innerHTML 읽기/쓰기를 방해하지 말 것.
 - app.js(3305줄)에 거의 모든 화면 로직이 몰려있음. 화면 전환 = app.js에서 해당 부분 추출.
 - workflow-v2.js는 이슈/리스크 검토(renderPendingIssues 등). 이슈 화면 전환 시 반드시 함께 보존.
 - frontend/build/ = 어제의 CRA 전면교체 시도본(깨짐). 삭제 금지, 무시만. main.py가 이미 무시함.
