@@ -1,0 +1,16 @@
+# sales request: Mirae EV Systems 담당자 휴가 중 임시 인수인계 누락
+
+## 메타데이터
+- doc_id: DOC-2026-014-MESSY-001
+- related_issue_id: ISSUE-2026-014
+- created_date: 2026-12-05
+- customer: Mirae EV Systems
+- supplier: KET Supplier
+- product: AP-RL-450 릴레이
+
+## 본문
+Mirae EV Systems / AP-RL-450 릴레이 건입니다. 아마 담당자 휴가 중 고객 요청 일부가 임시 담당자에게 전달되지 않아 회신 지연과 Todo 누락이 발생한 인수인계 이슈
+담당자는 이민재으로 보고 있는데, 구매 쪽은 최유진, 물류는 윤예린가 따로 확인 중입니다.
+요청사항은 납기와 수량을 다시 맞추자는 쪽인데, 같은 요청이 메일과 채팅에 중복으로 남아 있습니다.
+리스크는 확정 정보와 임시 정보가 섞여 보고서에서 단정하면 안 된다는 점입니다.
+다음 액션: 고객에게 확정 가능한 범위를 회신하고, 구매처 회신과 출고 가능일을 다시 대조해야 합니다.

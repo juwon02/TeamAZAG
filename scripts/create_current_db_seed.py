@@ -17,7 +17,8 @@ TEAM_ID = "DUMMY-TEAM-OPS"
 PROJECT_ID = "DUMMY-PROJ-OPS-2026"
 NOW = "2026-06-01T09:00:00"
 START_DATE = date(2025, 6, 1)
-END_DATE = date(2026, 6, 1)
+END_DATE = date(2026, 12, 31)
+MESSY_ISSUE_IDS = {f"ISSUE-2026-{idx:03d}" for idx in range(10, 15)}
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -164,7 +165,9 @@ def main() -> None:
         "updated_at": NOW,
     }]
 
-    selected_issues = issue_events[:9]
+    base_issues = issue_events[:9]
+    messy_issues = [row for row in issue_events if row["issue_id"] in MESSY_ISSUE_IDS]
+    selected_issues = base_issues + messy_issues
     issue_ids = {row["issue_id"] for row in selected_issues}
     docs_by_issue: dict[str, list[dict[str, str]]] = defaultdict(list)
     for doc in source_docs:
@@ -183,7 +186,7 @@ def main() -> None:
                 used.add(doc["doc_id"])
             if len(selected_docs) >= 32:
                 break
-    selected_docs = selected_docs[:36]
+    selected_docs = selected_docs[:64]
 
     documents = []
     for idx, doc in enumerate(selected_docs, 1):
@@ -278,14 +281,18 @@ def main() -> None:
         })
 
     monthly_reports = []
-    for idx, month_start in enumerate(["2025-11-01", "2026-04-01"], 1):
+    monthly_specs = [
+        ("2026-09-01", "[DUMMY] 2026-09 단가 인상 공지와 구두 합의 충돌 리포트", "공식 공지와 구두 합의가 충돌하여 고객 단가 제안 기준을 확인해야 하는 월간 요약"),
+        ("2026-12-01", "[DUMMY] 2026-12 임시 인수인계 누락 리스크 리포트", "담당자 휴가 중 고객 요청과 Todo가 분산되어 회신 지연이 발생한 월간 요약"),
+    ]
+    for idx, (month_start, title, summary) in enumerate(monthly_specs, 1):
         monthly_reports.append({
             "id": f"DUMMY-MONTHLY-{idx:03d}",
             "project_id": PROJECT_ID,
-            "title": f"[DUMMY] 월간 운영 리포트 {idx}",
+            "title": title,
             "period_start": dstr(month_start),
             "period_end": dstr(add_days(month_start, 29)),
-            "summary": "[DUMMY] 납기, 품질, 구매 리스크와 다음 액션 월간 요약",
+            "summary": f"[DUMMY] {summary}",
             "status": "published",
             "source": "dummy_current_seed",
             "created_at": NOW,
@@ -293,15 +300,19 @@ def main() -> None:
         })
 
     handoff_reports = []
-    for idx, title in enumerate(["영업-구매-물류 인수인계", "품질 클레임 후속 인수인계"], 1):
+    handoff_specs = [
+        ("영업-구매-물류 납기 변경 인수인계", "납기 일정이 여러 번 바뀐 긴급 주문의 임시 납기, 확정 납기, 다음 액션"),
+        ("Mirae EV Systems 임시 담당자 인수인계 누락", "휴가 전 전달 메모와 고객 요청이 분산된 상태의 담당자 확인 필요 항목"),
+    ]
+    for idx, (title, scope) in enumerate(handoff_specs, 1):
         handoff_reports.append({
             "id": f"DUMMY-HANDOFF-{idx:03d}",
             "project_id": PROJECT_ID,
             "title": f"[DUMMY] {title}",
             "from_member_id": members[0]["id"],
             "to_member_id": members[idx]["id"],
-            "scope_summary": "[DUMMY] 미해결 이슈, 다음 액션, 담당자, 리스크 범위",
-            "generated_summary": "[DUMMY] 문서와 issue_events 기반 인수인계 데모 요약",
+            "scope_summary": f"[DUMMY] {scope}",
+            "generated_summary": "[DUMMY] 문서와 issue_events 기반으로 미확정 정보, 담당자 확인, 다음 액션을 분리한 인수인계 데모 요약",
             "status": "ready",
             "source": "dummy_current_seed",
             "created_at": NOW,

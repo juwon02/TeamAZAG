@@ -18,3 +18,8 @@ ISS-2025-014,JST Components 검사 성적서 보완,QualityDocs,2025-11-18,2025-
 ISS-2026-008,Daesung Automotive 신규 안전재고 기준 협의,SafetyStock,2026-03-22,2026-04-12,CUS-002,SUP-001,AP-CN-204,영업관리팀;구매팀,Medium,Open,긴급 발주 재발 방지를 위해 고객별 안전재고 기준을 협의함
 ISS-2026-009,분기 공급사 평가 자료 취합,SupplierReview,2026-04-18,2026-04-30,,SUP-001;SUP-002;SUP-003,,구매팀,Low,Closed,"분기 공급사 납기, 품질, 단가 변동 데이터를 취합함"
 ISSUE-2026-009,Hanil Motors 수량 불일치 클레임,quantity_mismatch_claim,2026-05-13,2026-05-24,CUS-004,SUP-005,AP-CB-510,영업관리팀;물류팀;품질 클레임팀,Medium,in_progress,고객 입고 검사 수량과 내부 출고 처리 수량이 일치하지 않아 확인 및 재출고 또는 차액 조정 검토가 필요한 이슈
+ISSUE-2026-010,Hyundai Mobis Tier2 납기 일정 반복 변경 긴급 주문,messy_due_date_change,2026-07-08,2026-07-29,CUS-001,SUP-003,AP-WH-220,영업관리팀;구매팀;물류팀,High,in_progress,"고객 긴급 주문과 구매처 생산 일정 변경, 물류 출고 가능일 확인이 서로 다르게 전달되어 확정 납기와 임시 납기가 혼재된 이슈"
+ISSUE-2026-011,Daesung Automotive 케이블 클레임 원인 불명확,messy_claim_or_logistics_damage,2026-08-04,2026-08-22,CUS-002,SUP-005,AP-CB-510,품질 클레임팀;물류팀;영업관리팀,Medium,in_progress,고객은 외관 이상을 제기했지만 생산 불량인지 운송 중 박스 손상인지 원인이 확정되지 않은 클레임 이슈
+ISSUE-2026-012,TE Connectivity Korea 단가 인상 공지와 구두 합의 충돌,messy_price_conflict,2026-09-01,2026-09-26,CUS-004,SUP-001,AP-CN-204,구매팀;영업관리팀;운영총괄팀,High,in_progress,공식 단가 인상 공지와 이전 구두 합의가 충돌하여 고객 단가 제안 기준과 마진 영향 계산이 불확실한 이슈
+ISSUE-2026-013,Global Harness Vietnam 월말 출고 확인 누락,messy_month_end_shipment_confirmation,2026-10-24,2026-11-05,CUS-005,SUP-004,AP-TM-118,물류팀;영업관리팀;운영총괄팀,Medium,closed,시스템상 출고 완료이나 고객 수령 확인이 늦게 도착해 월말 매출 인식 여부가 흔들린 이슈
+ISSUE-2026-014,Mirae EV Systems 담당자 휴가 중 임시 인수인계 누락,messy_temporary_coverage_gap,2026-12-05,2026-12-20,CUS-003,SUP-002,AP-RL-450,영업관리팀;구매팀,Medium,in_progress,담당자 휴가 중 고객 요청 일부가 임시 담당자에게 전달되지 않아 회신 지연과 Todo 누락이 발생한 인수인계 이슈

@@ -13,15 +13,15 @@ This folder contains a minimal [DUMMY] seed for local demos of document upload, 
 - `users.csv`: 8 rows
 - `projects.csv`: 1 rows
 - `project_members.csv`: 8 rows
-- `documents.csv`: 36 rows
-- `issues.csv`: 9 rows
-- `todos.csv`: 27 rows
-- `calendar_events.csv`: 27 rows
+- `documents.csv`: 56 rows
+- `issues.csv`: 14 rows
+- `todos.csv`: 42 rows
+- `calendar_events.csv`: 42 rows
 - `weekly_reports.csv`: 3 rows
 - `monthly_reports.csv`: 2 rows
 - `handoff_reports.csv`: 2 rows
 - `chat_messages.csv`: 9 rows
-- `ai_summaries.csv`: 9 rows
+- `ai_summaries.csv`: 14 rows
 
 ## Usage
 ```bash

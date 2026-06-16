@@ -6,15 +6,15 @@
 - Did not use the expected-output test folder as input seed data.
 
 ## Included demo coverage
-- Documents: 36
-- Key issues: 9
-- Todos: 27
-- Calendar events: 27
+- Documents: 56
+- Key issues: 14
+- Todos: 42
+- Calendar events: 42
 - Weekly reports: 3
 - Monthly reports: 2
 - Handoff reports: 2
 - Chat messages: 9
-- AI summaries: 9
+- AI summaries: 14
 
 ## Compatibility note
 The `dummy` branch available in this local checkout does not contain a tracked database schema file. The seed therefore uses the current OpsRadar2 v2 table contracts already represented by the existing seed converter, but keeps the output smaller and cleanup-safe with fixed `DUMMY-*` IDs and `[DUMMY]` titles.
