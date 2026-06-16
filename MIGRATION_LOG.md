@@ -31,7 +31,7 @@
 | 인수인계 센터 | s-knowledge | handoff.js (504줄·월요일작업 03b02ca) | 기존바닐라 |
 | 보고서 | s-reports | report.js | 기존바닐라 |
 | AI Assistant | s-chat | app.js | 기존바닐라 |
-| 설정 | s-settings | app.js | 기존바닐라 |
+| 설정 | s-settings | React(SettingsScreen.jsx) + 멤버패널 vanilla 공존 | **전환완료** (e6ff5a4) |
 (상태값: 기존바닐라 / 전환중 / 전환완료)
 
 ## 공통 인프라 현황
@@ -69,6 +69,17 @@
   - 검증: `vite build` 통과(main.js 189.68kB). 8002에서 main.js HTTP 200 +
     content-type application/javascript(모듈 MIME 정상), 기존 화면/자산(title·workflow-v2·handoff) 그대로.
     사용자가 브라우저에서 픽셀 변화 0 + React main.js 관련 콘솔 에러 없음 직접 확인.
+- 2026-06-16, Claude Code, 설정(s-settings) 화면 React 전환 — 스트랭글러 1번째 (커밋 e6ff5a4):
+  - SettingsScreen.jsx: 기존 `#s-settings` 노드 안에 `createRoot` 로 렌더 → `#s-settings` ID 스코프
+    CSS 그대로 상속(픽셀 동일). 마크업/class 100% 복제, ID는 생략(CSS 클래스 기반·legacy 중복 회피).
+  - 데이터/동작은 전역 재사용: window.getStoredUserInfo(프로필) / setOpsRadarTheme(테마) / logout.
+    app.js에 `window.getStoredUserInfo` 노출 +1줄만 추가(기존 줄 무수정).
+  - nav 미래핑: #s-settings 의 .active 를 MutationObserver 로 감지해 갱신 → 다른 화면 영향 0.
+  - 멤버(담당자 관리) 패널: 조사에서 놓쳤다가 깜빡임으로 발견. api-integration.js 가 런타임에
+    `#memberAdminPanel` 을 주입하는 API CRUD 패널. Plan A 로 해결 — React.memo 로 "껍데기"만 1회
+    렌더하고 리스트(`#memberAdminList`)/CRUD 는 vanilla 가 그대로 소유. api-integration.js 무수정.
+  - 폴백: localStorage.opsradar_react_settings='off' +새로고침 → 바닐라 복귀.
+  - 검증(사용자 직접): 깜빡임 없음, 멤버 CRUD/테마/로그아웃/프로필 정상, 타화면(인수인계 등) 무영향.
 
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
@@ -78,16 +89,25 @@
   504줄본이 이를 인수인계 센터 전면(퇴사자/신규입사자 카드 + AI 파이프라인 데모/보드)으로 확장함.
 
 ## 다음 작업 (다음 AI가 할 일)
-- 첫 화면 React 전환: 가장 단순한 **설정(Settings, s-settings) 화면부터** 검증.
-  - 이유: 데이터/상태 의존이 적어 스트랭글러 1번째 검증용으로 위험 최소.
-  - 방법: settings 화면 영역을 React 컴포넌트로 만들어 #react-mount(또는 settings 전용 노드)에
-    렌더, 기존 바닐라 settings는 그대로 두고 토글/공존. 기존 class·HTML 구조·CSS 100% 재사용.
-  - React에서 데이터는 window.opsRadarApi/window.G 전역을 그대로 호출(별도 클라이언트 X).
-  - 빌드: `npm run vite:build` → public/static/react/main.js 갱신(gitignore됨). dist/ 절대 만들지 말 것.
-  - 완료 기준: 설정 화면 픽셀 동일 + 콘솔 에러 없음 + 나머지 화면 바닐라 정상.
+- 2번째 화면 전환 — 다음 단순 화면 선정.
+  - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부까지** 조사할 것(아래 교훈 참고).
+    설정처럼 "Front-end only"로 보여도 API 패널이 숨어있을 수 있음.
+  - 패턴은 설정과 동일: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용,
+    MutationObserver로 active 감지, 복잡/주입 패널은 React.memo 껍데기 + vanilla 공존.
+  - 빌드: `npm run vite:build` (dist/ 절대 생성 금지). 폴백 스위치 패턴 유지.
 - 그 외 화면(인수인계 센터 포함)은 계속 바닐라 유지, 한 번에 한 화면씩.
 
+## 백로그 (나중에 할 일)
+- [ ] 멤버 관리: 담당자별 ID/이메일 수정 + 비밀번호 변경 기능.
+      ⚠️ 백엔드 API 없음 → PATCH /members/{id}, 비번 변경 엔드포인트 + DB 스키마
+      (멤버 비번 필드) 먼저 필요. 보안: 비번 평문 노출 금지, '변경' 폼만. DB 담당이 작업.
+
 ## 주의사항 / 막힌 점
+- ★교훈(설정 전환에서 배움): 단순해 보이는 화면도 **런타임 주입 패널**이 있을 수 있다.
+  예) 담당자(멤버) 패널은 index.html에 없고 api-integration.js가 `#s-settings`에 주입함.
+  화면 조사 시 **index.html 정적 HTML뿐 아니라 api-integration.js(및 *-enhancements.js)의
+  런타임 DOM 주입까지 반드시 확인**할 것. 놓치면 React가 노드를 덮어써 깜빡임 발생.
+  → 주입형 API 패널은 React.memo 껍데기 + vanilla 리스트 공존 패턴으로 처리.
 - app.js(3305줄)에 거의 모든 화면 로직이 몰려있음. 화면 전환 = app.js에서 해당 부분 추출.
 - workflow-v2.js는 이슈/리스크 검토(renderPendingIssues 등). 이슈 화면 전환 시 반드시 함께 보존.
 - frontend/build/ = 어제의 CRA 전면교체 시도본(깨짐). 삭제 금지, 무시만. main.py가 이미 무시함.
