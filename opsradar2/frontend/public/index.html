@@ -505,27 +505,7 @@ window.OPSRADAR_API_BASE = window.location.port === "8002"
   <div style="display:flex;flex:1;overflow:hidden">
 
     <!-- 좌측: 컨텍스트 패널 -->
-    <div style="width:220px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:16px;height:100%">
-      <!-- Dashboard vs 인수인계 차이 안내 -->
-      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px">
-        <div style="font-weight:500;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-transfer" style="font-size:12px;color:var(--accent)"></i> 인수인계란?</div>
-        <div style="color:var(--text3);line-height:1.7;font-size:10px">
-          <div style="margin-bottom:4px">· 왜 이렇게 되었는가</div>
-          <div style="margin-bottom:4px">· 무엇을 조심해야 하는가</div>
-          <div>· 다음 담당자가 알아야 할 것</div>
-        </div>
-      </div>
-      <!-- AI 생성 미리보기 카드 -->
-      <div style="background:var(--accent-soft);border:1px solid rgba(66,99,235,.15);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:11px">
-        <div style="font-weight:500;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px"><i class="ti ti-sparkles" style="font-size:12px"></i> AI 생성 미리보기</div>
-        <div style="display:flex;flex-direction:column;gap:5px;font-size:10px;color:var(--text2)">
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>현재 진행 중인 업무</div>
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--danger);flex-shrink:0"></div>미해결 이슈</div>
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--warn);flex-shrink:0"></div>다음 담당자 주의사항</div>
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--success);flex-shrink:0"></div>참고 문서 링크</div>
-        </div>
-        <div class="tbtn primary" style="font-size:10px;padding:5px 0;width:100%;justify-content:center;margin-top:8px"><i class="ti ti-wand"></i> 문서 생성 미리보기</div>
-      </div>
+    <div id="knowledgeContextSidebar" style="width:220px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:16px;height:100%">
       <div id="knowledgeContextPanel"></div>
     </div>
 
