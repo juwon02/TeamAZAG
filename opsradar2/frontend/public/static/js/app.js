@@ -3149,6 +3149,7 @@ window.updateSettingsPage = updateSettingsPage;
 window.updateSidebarUserDisplay = updateSidebarUserDisplay;
 window.clearOpsRadarSession = clearOpsRadarSession;
 window.logout = logout;
+window.getStoredUserInfo = getStoredUserInfo;
 const ISSUE_DETAIL_MOCK = {
   'payment-api': {
     id:'payment-api', title:'결제 API 응답 지연', severity:'HIGH', status:'Blocked', elapsed:'48시간', assignee:'Backend',
