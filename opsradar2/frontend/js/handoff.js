@@ -520,6 +520,54 @@
     return handoffIssues.find((issue) => issue.id === state.selectedIssueId) || handoffIssues[0];
   }
 
+  function isCustomerScope() {
+    return selectedScope() === "특정 고객사";
+  }
+
+  function matchesSelectedFilters(item) {
+    if (isCustomerScope() && state.customer !== "전체" && item.customer && item.customer !== "전체" && item.customer !== state.customer) return false;
+    if (state.filterDepartment !== "전체" && item.department && item.department !== state.filterDepartment) return false;
+    return true;
+  }
+
+  function checkedTitles(section) {
+    const items = candidateItems[section] || [];
+    return items.filter(item => item.checked && matchesSelectedFilters(item)).map(item => item.title);
+  }
+
+  function checkedOnboardingTitles(section) {
+    const items = onboardingCandidates[section] || [];
+    return items.filter(item => item.checked).map(item => item.title);
+  }
+
+  function withRows(baseRows, replacements) {
+    const next = baseRows.filter((row) => !Object.prototype.hasOwnProperty.call(replacements, row[0]));
+    Object.keys(replacements).forEach((label) => next.push([label, replacements[label]]));
+    return normalizeRows(next);
+  }
+
+  function handoffRows() {
+    const baseRows = isIssueScope() ? selectedIssue().result.rows : fullScopeResult.rows;
+    return withRows(baseRows, {
+      "현재 진행 중 Todo": checkedTitles("todos"),
+      "미해결 이슈": checkedTitles("issues"),
+      "참고 보고서 / 문서": [...checkedTitles("reports"), ...checkedTitles("documents")],
+      "고객별 주의사항": checkedTitles("cautions"),
+    });
+  }
+
+  function onboardingRows() {
+    return withRows(onboardingResult.rows, {
+      "팀/업무 요약": `${COMPANY} ${state.onboardingTeam}에 배정된 ${state.onboardingTarget} 담당자는 고객/구매처 맥락, 반복 이슈, 우선 Todo, 보고서 근거를 먼저 확인합니다. 참고 기간은 ${state.period}입니다.`,
+      "먼저 파악해야 할 고객사": checkedOnboardingTitles("customers"),
+      "먼저 파악해야 할 구매처": checkedOnboardingTitles("suppliers"),
+      "최근 반복 이슈": checkedOnboardingTitles("issues"),
+      "우선 확인할 Todo": checkedOnboardingTitles("todos"),
+      "참고 보고서 / 문서": checkedOnboardingTitles("reports"),
+      "추천 질문": checkedOnboardingTitles("questions"),
+    });
+  }
+
   function issueMatches(issue, keyword) {
     if (!keyword) return true;
     return [issue.title, issue.summary, issue.customer, issue.supplier, issue.product, issue.category, issue.relatedTeams.join(" ")]
@@ -529,13 +577,14 @@
   }
 
   function currentRows() {
-    if (state.mode === "onboarding") return onboardingResult.rows;
-    return isIssueScope() ? selectedIssue().result.rows : fullScopeResult.rows;
+    if (state.mode === "onboarding") return onboardingRows();
+    return handoffRows();
   }
 
   function currentTitle() {
-    if (state.mode === "onboarding") return onboardingResult.title;
+    if (state.mode === "onboarding") return `신입 온보딩 가이드 - ${state.onboardingTarget}`;
     if (isIssueScope()) return selectedIssue().result.title;
+    if (isCustomerScope() && state.customer !== "전체") return `업무 인수인계서 - ${state.customer}`;
     return fullScopeResult.title;
   }
 
@@ -788,6 +837,9 @@
         <div class="hf-summary-item"><b>소속 팀</b>${esc(state.handoffDepartment)}</div>
         <div class="hf-summary-item"><b>인수인계 사유</b>${esc(state.reason)}</div>
         <div class="hf-summary-item"><b>업무 범위</b>${esc(state.scope)}</div>
+        <div class="hf-summary-item"><b>고객사</b>${esc(state.customer)}</div>
+        <div class="hf-summary-item"><b>구매처</b>${esc(state.supplier)}</div>
+        <div class="hf-summary-item"><b>자료 필터 부서</b>${esc(state.filterDepartment)}</div>
         <div class="hf-summary-item"><b>참고 기간</b>${esc(state.period)}</div>
       </div>`;
   }
@@ -1109,7 +1161,7 @@
   };
 
   window.updateHandoffScopeUI = function (value) {
-    state.scope = value === "특정 이슈" ? "특정 이슈" : scopeOptions[0];
+    state.scope = scopeOptions.includes(value) ? value : scopeOptions[0];
     if (!isIssueScope()) {
       state.issueGroup = "active";
       state.issueSearch = "";
@@ -1156,8 +1208,8 @@
     const mode = normalizeMode(requested);
     const issueMode = mode === "handoff" && isIssueScope();
     const issue = issueMode ? selectedIssue() : null;
-    const rows = normalizeRows(mode === "onboarding" ? onboardingResult.rows : (issue ? issue.result.rows : fullScopeResult.rows));
-    const title = mode === "onboarding" ? onboardingResult.title : (issue ? issue.result.title : fullScopeResult.title);
+    const rows = normalizeRows(mode === state.mode ? currentRows() : (mode === "onboarding" ? onboardingRows() : handoffRows()));
+    const title = mode === state.mode ? currentTitle() : (mode === "onboarding" ? onboardingResult.title : (issue ? issue.result.title : fullScopeResult.title));
     const rowText = (label) => {
       const row = rows.find((item) => item[0] === label);
       if (!row) return "";
@@ -1168,8 +1220,8 @@
       : (issue ? `${issue.status} · ${issue.title}` : "이전 담당 업무 전체");
     const referenceText = rowText("참고 보고서 / 문서") || rowText("참고 자료");
     const managerCheckText = rowText("팀장 확인 항목") || rowText("사수/팀장 확인 항목");
-    const selectedReports = candidateItems.reports.filter(r => r.checked).map(r => r.title);
-    const selectedTodos = candidateItems.todos.filter(t => t.checked).map(t => t.title);
+    const selectedReports = mode === "onboarding" ? checkedOnboardingTitles("reports") : checkedTitles("reports");
+    const selectedTodos = mode === "onboarding" ? checkedOnboardingTitles("todos") : checkedTitles("todos");
     return {
       title,
       target: mode === "onboarding" ? `${state.onboardingTarget} · ${state.onboardingTeam}` : (issue ? `${issue.status} · ${issue.title}` : `${state.owner} → ${state.nextOwner}`),
