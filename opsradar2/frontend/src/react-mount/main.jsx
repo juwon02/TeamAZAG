@@ -1,7 +1,7 @@
 // Strangler-fig React entry (see MIGRATION_LOG.md).
 //
 // 전환된 화면을 기존 바닐라 노드 안에 React로 렌더한다. 현재: 설정(s-settings),
-// 보고서(s-reports) 2개. 아직 안 옮긴 화면은 전부 바닐라가 그대로 소유한다.
+// 보고서(s-reports), 캘린더(s-calendar) 3개. 아직 안 옮긴 화면은 전부 바닐라가 그대로 소유한다.
 //
 // 안전 설계:
 //  - window.nav 를 건드리지 않는다. 대신 #s-settings 가 .active 가 되는 것을
@@ -12,6 +12,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import SettingsScreen from './SettingsScreen.jsx'
 import ReportsScreen from './ReportsScreen.jsx'
+import CalendarScreen from './CalendarScreen.jsx'
 
 const USE_REACT_SETTINGS = (() => {
   try {
@@ -24,6 +25,14 @@ const USE_REACT_SETTINGS = (() => {
 const USE_REACT_REPORTS = (() => {
   try {
     return localStorage.getItem('opsradar_react_reports') !== 'off'
+  } catch (_) {
+    return true
+  }
+})()
+
+const USE_REACT_CALENDAR = (() => {
+  try {
+    return localStorage.getItem('opsradar_react_calendar') !== 'off'
   } catch (_) {
     return true
   }
@@ -68,9 +77,24 @@ function mountReactReports() {
   )
 }
 
+// 캘린더(s-calendar) — 스트랭글러 3번째. 보고서와 동일: 화면 전체 vanilla 소유라
+// React 는 구조를 memo 로 1회만 렌더하고, nav('calendar') 가 renderCalendar()/
+// updateCalendarHeader()/showCalBanner() 로 이 노드에 바인딩·채운다. 재렌더 0(MutationObserver 미사용).
+// 셀당 "+N 더보기" 후처리는 CalendarScreen 내부의 #calGrid 데코레이터가 담당(renderCalendar 무수정).
+function mountReactCalendar() {
+  const el = document.getElementById('s-calendar')
+  if (!el) return
+  createRoot(el).render(
+    <StrictMode>
+      <CalendarScreen />
+    </StrictMode>,
+  )
+}
+
 function bootstrap() {
   if (USE_REACT_SETTINGS) mountReactSettings()
   if (USE_REACT_REPORTS) mountReactReports()
+  if (USE_REACT_CALENDAR) mountReactCalendar()
 }
 
 if (document.readyState === 'loading') {

@@ -27,7 +27,7 @@
 | 운영 로그 분석 | s-analysis | app.js | 기존바닐라 |
 | Todo | s-todo | app.js + todo-calendar-enhancements.js | 기존바닐라 |
 | 이슈 로그 | s-issues | app.js + workflow-v2.js | 기존바닐라 |
-| 캘린더 | s-calendar | app.js + todo-calendar-enhancements.js | 기존바닐라 |
+| 캘린더 | s-calendar | React(CalendarScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
 | 인수인계 센터 | s-knowledge | handoff.js (504줄·월요일작업 03b02ca) | 기존바닐라 |
 | 보고서 | s-reports | React(ReportsScreen.jsx) + report.js/app.js 동작 vanilla 공존 | **전환완료** |
 | AI Assistant | s-chat | app.js | 기존바닐라 |
@@ -102,6 +102,19 @@
     콘솔/페이지/HTTP 에러 0, **존재하지 않는 화면명 nav → throw 없이(NO_THROW) 조용히 넘어가고
     직후 정상 nav 완전 복구**.
   - ⏸ 로그아웃은 이번에 손대지 않음(제품 결정 대기 — 아래 주의사항 참고).
+- 2026-06-17, Claude Code, 캘린더(s-calendar) 화면 React 전환 — 스트랭글러 3번째 (보고서 패턴):
+  - CalendarScreen.jsx: 기존 `#s-calendar` HTML 을 verbatim 복제(class·id·inline style 동일, 픽셀 동일),
+    `createRoot(#s-calendar)` 로 memo 1회 렌더(재렌더 0, MutationObserver 미사용).
+    동작은 전부 vanilla 재사용: nav('calendar') → renderCalendar()/updateCalendarHeader()/showCalBanner()
+    가 이 React 노드(같은 id)에 바인딩·채움. **app.js / api-integration.js 무수정.**
+    (참고: `#calEventBanner` 인라인에 display:none/flex 중복 → 실제 computed=flex, React도 flex로 복제)
+  - 디자인 개선(역할 무관, 같이 반영): 하루 일정 많으면 칸 깨지는 문제 → **셀당 태그 최대 2개 +
+    초과 시 "+N 더보기"**. renderCalendar 무수정, `#calGrid` 에 MutationObserver(childList)로 vanilla
+    가 셀을 (재)그린 직후 표시만 후처리(멱등, 루프 없음). "+N"/셀 클릭은 기존 `openCalModal` 로 전체 표시.
+  - 폴백: localStorage.opsradar_react_calendar='off' +새로고침 → 바닐라 복귀.
+  - 검증(헤드리스 Chrome): 9화면 순회 정상, React 마운트(설정·보고서·캘린더 셋 다), 날짜셀 35개·월이동
+    (6월→5월→6월 복원)·AI모달·미니챗 정상, "+N 더보기" 데코레이터 실측(태그3개→"+1 더보기"·표시2개),
+    9화면 무영향, 콘솔/HTTP 에러 0. 사용자 브라우저 직접 확인 완료.
 
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
@@ -116,11 +129,13 @@
   CRA src에만 있고 서빙 vite 번들엔 없음 → `logout()`이 reload만 하고 같은 대시보드로 복귀).
   **사용자가 "발표 때 로그아웃이 무엇을 해야 하는지" 정한 뒤** app.js의 `logout()`을 그에 맞게 수정.
   (옵션: ㄱ 데모용 숨김/토스트 / ㄴ 토큰 클리어 후 안내 / ㄷ 로그인 화면 신설) — 자세한 건 주의사항 참고.
-- 3번째 화면 전환 — 대상 미정(사용자와 상의).
+- 4번째 화면 전환 — 대상 미정(사용자와 상의). 남은 바닐라 6개: Dashboard / 운영 로그 분석 /
+  Todo / 이슈 로그 / 인수인계 센터 / AI Assistant.
   - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부 + 바닐라 리스너 바인딩 방식까지** 조사할 것(아래 교훈 참고).
   - 패턴: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용.
-    화면 전체가 vanilla 소유면 보고서처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면
+    화면 전체가 vanilla 소유면 보고서·캘린더처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면
     설정처럼 MutationObserver + memo 껍데기 혼용. 복잡/주입 패널은 React.memo 껍데기 + vanilla 공존.
+    vanilla가 그리는 DOM에 표시만 더하려면(캘린더 +N더보기처럼) #노드에 MutationObserver 후처리.
   - 빌드: `npm run vite:build` (dist/ 절대 생성 금지). 폴백 스위치 패턴 유지.
 - 그 외 화면(인수인계 센터 포함)은 계속 바닐라 유지, 한 번에 한 화면씩.
 
@@ -128,6 +143,13 @@
 - [ ] 멤버 관리: 담당자별 ID/이메일 수정 + 비밀번호 변경 기능.
       ⚠️ 백엔드 API 없음 → PATCH /members/{id}, 비번 변경 엔드포인트 + DB 스키마
       (멤버 비번 필드) 먼저 필요. 보안: 비번 평문 노출 금지, '변경' 폼만. DB 담당이 작업.
+- [ ] 캘린더 역할 기반 기능 (역할 3단계: 시스템관리자 / PM=팀장 / 팀원). ⚠️ 백엔드/DB 선행 필요.
+      - 관리자: 이슈로그가 가장 먼저 보이게. 일정은 캘린더 크기에 맞춰 일부만(나머지 더보기).
+      - PM(팀장): 본인 포함 팀원 선택 → 선택 팀원 이슈만 필터. 날짜 클릭 시 휴가자/출장자 구분 표시
+        + 상세 패널 양쪽으로 넓게. 팀장 전용 항목(예: 퇴사자 면담)은 팀장만 노출.
+      - 팀원: 본인 일정 + 팀 전체 대표 일정만. (TODO 등록 시 '전체공유/팀장팀원만공유' 구분 필요)
+      - 권한 위임: 위임받으면 그 팀원 일정을 받아서 볼 수 있게 (인수인계 서비스 연계).
+      ⚠️ 프론트 숨기기만 하면 가짜(F12로 다 보임) → 역할별 필터는 백엔드 API/DB에서. DB담당 작업.
 
 ## 주의사항 / 막힌 점
 - ★교훈(설정 전환에서 배움): 단순해 보이는 화면도 **런타임 주입 패널**이 있을 수 있다.
