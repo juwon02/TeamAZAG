@@ -28,7 +28,7 @@
 | Todo | s-todo | app.js + todo-calendar-enhancements.js | 기존바닐라 |
 | 이슈 로그 | s-issues | React(IssuesScreen.jsx) + workflow-v2/app.js 동작 vanilla 공존 | **전환완료** (박주원) |
 | 캘린더 | s-calendar | React(CalendarScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
-| 인수인계 센터 | s-knowledge | handoff.js (504줄·월요일작업 03b02ca) | 기존바닐라 |
+| 인수인계 센터 | s-knowledge | React(KnowledgeScreen.jsx) + handoff.js/app.js 동작 vanilla 공존 | **전환완료** (b25e8de) |
 | 보고서 | s-reports | React(ReportsScreen.jsx) + report.js/app.js 동작 vanilla 공존 | **전환완료** |
 | AI Assistant | s-chat | app.js | 기존바닐라 |
 | 설정 | s-settings | React(SettingsScreen.jsx) + 멤버패널 vanilla 공존 | **전환완료** (e6ff5a4) |
@@ -148,6 +148,17 @@
   - 검증(헤드리스 Chrome): 픽셀 동일(날짜 칩 포함), React 마운트 5개 다, **재렌더 0 스트레스(nav 5회 왕복)
     후 .ops-role-switch 제거 유지 + 뷰 .active 일관 + 카운트/그리드/리스트/멤버뷰 보존**, switchDbRole
     뷰 토글 정상, openDashboardTodoTab 클릭(→todo 이동) 정상, 9화면 무영향, 콘솔/페이지/HTTP 에러 0.
+- 2026-06-18, Claude Code, 인수인계 센터(s-knowledge) 화면 React 전환 — 스트랭글러 4번째 (커밋 b25e8de):
+  - KnowledgeScreen.jsx: 기존 `#s-knowledge` 셸 HTML 을 verbatim 복제(class·id·inline style 동일, 픽셀 동일),
+    `createRoot(#s-knowledge)` 로 memo 1회 렌더(재렌더 0, MutationObserver 미사용).
+  - 동작/콘텐츠는 전부 vanilla 소유(무수정): handoff.js(window.nav 패치 / #knowledgeContent innerHTML 주입 /
+    #s-knowledge data-handoff-view 토글 / document.head 에 <style id="handoffCenterStyle"> 주입) + app.js.
+    탭(kbtn-*) 인라인 onclick 미러, '문서 생성 미리보기'는 vanilla 바인딩이라 onClick 미부착.
+  - main.jsx 에 import / USE_REACT_KNOWLEDGE 폴백 / mountReactKnowledge / bootstrap 4곳 순수 추가.
+    handoff.js/app.js/api-integration.js/workflow-v2.js 무수정, dist 미생성.
+  - 검증(헤드리스 Chrome): 9화면 무에러, home 카드 뷰 렌더(contentLen 1975)·탭 클릭 뷰 전환(home→offboard)·
+    data-handoff-view 토글·head <style> 주입 정상, 이중렌더 없음(reactContainer 1, 3회 재진입에도 콘텐츠 유지),
+    기존 3화면(설정·보고서·캘린더) 무영향. 폴백(opsradar_react_knowledge='off') → React 미마운트·바닐라 복귀 정상.
 
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
@@ -162,17 +173,14 @@
   CRA src에만 있고 서빙 vite 번들엔 없음 → `logout()`이 reload만 하고 같은 대시보드로 복귀).
   **사용자가 "발표 때 로그아웃이 무엇을 해야 하는지" 정한 뒤** app.js의 `logout()`을 그에 맞게 수정.
   (옵션: ㄱ 데모용 숨김/토스트 / ㄴ 토큰 클리어 후 안내 / ㄷ 로그인 화면 신설) — 자세한 건 주의사항 참고.
-- ✅ **이슈 로그 + 대시보드 전환완료(2026-06-17, 박주원, feature/issues-dashboard-react)** —
-  두 화면 다 React 전환 끝. 머지 대기 중. (둘 다 workflow-v2 의존이라 한 사람이 묶어서 진행함)
-- 4번째 화면 전환 — 대상 미정(사용자와 상의). 남은 바닐라 6개: Dashboard / 운영 로그 분석 /
-  Todo / 이슈 로그 / 인수인계 센터 / AI Assistant.
+- 다음 화면 전환 — 대상 미정(사용자와 상의). 남은 바닐라 3개: 운영 로그 분석 / Todo / AI Assistant.
   - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부 + 바닐라 리스너 바인딩 방식까지** 조사할 것(아래 교훈 참고).
   - 패턴: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용.
     화면 전체가 vanilla 소유면 보고서·캘린더처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면
     설정처럼 MutationObserver + memo 껍데기 혼용. 복잡/주입 패널은 React.memo 껍데기 + vanilla 공존.
     vanilla가 그리는 DOM에 표시만 더하려면(캘린더 +N더보기처럼) #노드에 MutationObserver 후처리.
   - 빌드: `npm run vite:build` (dist/ 절대 생성 금지). 폴백 스위치 패턴 유지.
-- 그 외 화면(인수인계 센터 포함)은 계속 바닐라 유지, 한 번에 한 화면씩.
+- 그 외 남은 바닐라 3개 화면은 계속 유지, 한 번에 한 화면씩.
 
 ## 백로그 (나중에 할 일)
 - [ ] 멤버 관리: 담당자별 ID/이메일 수정 + 비밀번호 변경 기능.
