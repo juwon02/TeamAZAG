@@ -1,7 +1,8 @@
 // Strangler-fig React entry (see MIGRATION_LOG.md).
 //
 // 전환된 화면을 기존 바닐라 노드 안에 React로 렌더한다. 현재: 설정(s-settings),
-// 보고서(s-reports), 캘린더(s-calendar) 3개. 아직 안 옮긴 화면은 전부 바닐라가 그대로 소유한다.
+// 보고서(s-reports), 캘린더(s-calendar), 이슈 로그(s-issues), 대시보드(s-dashboard),
+// 인수인계 센터(s-knowledge) 6개. 아직 안 옮긴 화면은 전부 바닐라가 그대로 소유한다.
 //
 // 안전 설계:
 //  - window.nav 를 건드리지 않는다. 대신 #s-settings 가 .active 가 되는 것을
@@ -15,6 +16,7 @@ import ReportsScreen from './ReportsScreen.jsx'
 import CalendarScreen from './CalendarScreen.jsx'
 import IssuesScreen from './IssuesScreen.jsx'
 import DashboardScreen from './DashboardScreen.jsx'
+import KnowledgeScreen from './KnowledgeScreen.jsx'
 
 const USE_REACT_SETTINGS = (() => {
   try {
@@ -51,6 +53,14 @@ const USE_REACT_ISSUES = (() => {
 const USE_REACT_DASHBOARD = (() => {
   try {
     return localStorage.getItem('opsradar_react_dashboard') !== 'off'
+  } catch (_) {
+    return true
+  }
+})()
+
+const USE_REACT_KNOWLEDGE = (() => {
+  try {
+    return localStorage.getItem('opsradar_react_knowledge') !== 'off'
   } catch (_) {
     return true
   }
@@ -137,12 +147,26 @@ function mountReactDashboard() {
   )
 }
 
+// 인수인계 센터(s-knowledge) — 스트랭글러 4번째. 보고서·캘린더와 동일: 화면 전체 vanilla 소유라
+// React 는 셸 구조를 memo 로 1회만 렌더하고, handoff.js(window.nav 패치)+app.js 가 이 노드에
+// #knowledgeContent 를 주입/바인딩한다. 재렌더 0(MutationObserver 미사용). <style>는 head 라 무관.
+function mountReactKnowledge() {
+  const el = document.getElementById('s-knowledge')
+  if (!el) return
+  createRoot(el).render(
+    <StrictMode>
+      <KnowledgeScreen />
+    </StrictMode>,
+  )
+}
+
 function bootstrap() {
   if (USE_REACT_SETTINGS) mountReactSettings()
   if (USE_REACT_REPORTS) mountReactReports()
   if (USE_REACT_CALENDAR) mountReactCalendar()
   if (USE_REACT_ISSUES) mountReactIssues()
   if (USE_REACT_DASHBOARD) mountReactDashboard()
+  if (USE_REACT_KNOWLEDGE) mountReactKnowledge()
 }
 
 if (document.readyState === 'loading') {
