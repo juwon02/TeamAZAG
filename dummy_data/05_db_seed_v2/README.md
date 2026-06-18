@@ -1,5 +1,7 @@
 # OpsRadar2 v2 MVP Seed Data
 
+> **Compatibility warning:** This folder targets an expanded candidate schema with tables such as `business_entities`, `entity_links`, and `approval_requests`. Those tables are not present in the current `SeongWoo-new2` `opsradar2/schema.sql`. Do not load these CSV files directly into the current database. Use `dummy_data/06_current_db_seed` for the current application schema.
+
 ## 1. 목적
 이 seed 데이터는 기존 `dummy_data`의 원천 문서와 flat CSV를 OpsRadar2 v2 MVP DB 구조에 맞게 적재하기 위한 CSV 묶음입니다.
 

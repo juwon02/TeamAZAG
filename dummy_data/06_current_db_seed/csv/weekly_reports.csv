@@ -1,4 +1,4 @@
-﻿id,project_id,title,period_start,period_end,summary,status,source,created_at,updated_at
-DUMMY-WEEKLY-001,DUMMY-PROJ-OPS-2026,[DUMMY] 주간 운영 리포트 1,2025-06-10,2025-06-16,"[DUMMY] Daesung Automotive 긴급 발주 대응 중심 주간 이슈, Todo, 리스크 요약",published,dummy_current_seed,2026-06-01T09:00:00,2026-06-01T09:00:00
-DUMMY-WEEKLY-002,DUMMY-PROJ-OPS-2026,[DUMMY] 주간 운영 리포트 2,2025-08-05,2025-08-11,"[DUMMY] KET Supplier 재고 부족으로 납기 지연 가능 중심 주간 이슈, Todo, 리스크 요약",published,dummy_current_seed,2026-06-01T09:00:00,2026-06-01T09:00:00
-DUMMY-WEEKLY-003,DUMMY-PROJ-OPS-2026,[DUMMY] 주간 운영 리포트 3,2025-09-08,2025-09-14,"[DUMMY] Global Harness Vietnam 수출 서류 누락 통관 지연 중심 주간 이슈, Todo, 리스크 요약",published,dummy_current_seed,2026-06-01T09:00:00,2026-06-01T09:00:00
+﻿id,project_id,created_by_member_id,week_start,week_end,content,progress_rate,created_at
+8c95eb0d-4400-5048-8bdf-fc902503149f,0a4f9295-ac96-59f7-b09d-fb82f68610c8,b6ce97f8-0c0d-5492-88f5-8e92d3955338,2026-07-04,2026-07-10,[DUMMY] 주간 운영 이슈와 Todo 진행 현황 1,70,2026-06-01T09:00:00+09:00
+aa90ab41-9cc2-5413-a8da-fd3e14de1d65,0a4f9295-ac96-59f7-b09d-fb82f68610c8,b6ce97f8-0c0d-5492-88f5-8e92d3955338,2026-08-01,2026-08-07,[DUMMY] 주간 운영 이슈와 Todo 진행 현황 2,80,2026-06-01T09:00:00+09:00
+7c2227e9-9b5e-581f-93c9-91d24e6125fd,0a4f9295-ac96-59f7-b09d-fb82f68610c8,b6ce97f8-0c0d-5492-88f5-8e92d3955338,2026-09-05,2026-09-11,[DUMMY] 주간 운영 이슈와 Todo 진행 현황 3,90,2026-06-01T09:00:00+09:00

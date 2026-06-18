@@ -1,27 +1,14 @@
 # Current Seed Compatibility Check
 
-## Scope
-- Generated from `dummy_data/02_raw_documents` and `dummy_data/03_structured_csv`.
-- Did not modify `dummy_data/05_db_seed_v2`.
-- Did not use the expected-output test folder as input seed data.
+## Schema basis
+- Contract: `origin/SeongWoo-new2:opsradar2/schema.sql`
+- Tables generated: 13
+- CSV rows generated: 242
+- Deterministic UUID PK/FK values: yes
+- Header, enum and FK validation: passed
+- Actual DB insert executed: no
 
-## Included demo coverage
-- Documents: 88
-- Key issues: 15
-- Todos: 45
-- Calendar events: 45
-- Weekly reports: 3
-- Monthly reports: 2
-- Handoff reports: 2
-- Chat messages: 9
-- AI summaries: 15
-
-## Compatibility note
-The `dummy` branch available in this local checkout does not contain a tracked database schema file. The seed therefore uses the current OpsRadar2 v2 table contracts already represented by the existing seed converter, but keeps the output smaller and cleanup-safe with fixed `DUMMY-*` IDs and `[DUMMY]` titles.
-
-If a target database lacks optional tables such as `weekly_reports`, `monthly_reports`, `handoff_reports`, `chat_messages`, or `ai_summaries`, load only the CSV/SQL sections for tables present in that database.
-
-## Safety
-- All generated rows use fixed `DUMMY-*` IDs or `[DUMMY]` labels.
-- Cleanup deletes by generated IDs only.
-- No local environment files are read.
+## Exclusions
+- `dummy_data/05_db_seed_v2` uses an expanded candidate schema and is not directly loadable into the current database.
+- `dummy_data/04_expected_outputs_for_test` is not used as seed input.
+- Authentication migration columns use database defaults; no authentication credential is generated.

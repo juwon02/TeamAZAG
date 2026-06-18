@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from operational_raw_documents import validate_operational_body
+from validate_current_db_seed import main as validate_current_db_seed
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -161,15 +162,27 @@ def main() -> int:
     else:
         fail(f"raw document format errors: {raw_errors[:10]}", failures)
 
-    if not git_diff_names("dummy_data/05_db_seed_v2"):
-        ok("dummy_data/05_db_seed_v2 is not modified")
+    db_v2_changes = git_diff_names("dummy_data/05_db_seed_v2")
+    unexpected_db_v2_changes = [
+        path for path in db_v2_changes if path != "dummy_data/05_db_seed_v2/README.md"
+    ]
+    if not unexpected_db_v2_changes:
+        ok("expanded candidate DB seed data is not modified")
     else:
-        fail("dummy_data/05_db_seed_v2 has modifications", failures)
+        fail(
+            f"unexpected expanded candidate DB seed changes: {unexpected_db_v2_changes}",
+            failures,
+        )
 
-    if not git_diff_names("dummy_data/06_current_db_seed") and not git_diff_names("dummy_data/2022"):
-        ok("current DB seed and isolated 2022 seed are not modified")
+    if validate_current_db_seed() == 0:
+        ok("current DB seed matches the current database contract")
     else:
-        fail("protected DB or 2022 seed folders have modifications", failures)
+        fail("current DB seed contract validation failed", failures)
+
+    if not git_diff_names("dummy_data/2022"):
+        ok("isolated 2022 seed is not modified")
+    else:
+        fail("protected 2022 seed folder has modifications", failures)
 
     scan_paths = []
     for rel in [

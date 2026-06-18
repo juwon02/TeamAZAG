@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import shutil
+import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -12,13 +15,95 @@ DUMMY = ROOT / "dummy_data"
 OUT = DUMMY / "06_current_db_seed"
 CSV_OUT = OUT / "csv"
 SQL_OUT = OUT / "sql"
-
-TEAM_ID = "DUMMY-TEAM-OPS"
-PROJECT_ID = "DUMMY-PROJ-OPS-2026"
-NOW = "2026-06-01T09:00:00"
+NOW = "2026-06-01T09:00:00+09:00"
 START_DATE = date(2025, 6, 1)
 END_DATE = date(2026, 12, 31)
 MESSY_ISSUE_IDS = {f"ISSUE-2026-{idx:03d}" for idx in range(10, 16)}
+
+
+TABLE_HEADERS = {
+    "teams": ["id", "name", "created_at", "updated_at"],
+    "users": ["id", "team_id", "name", "email", "role", "created_at", "updated_at"],
+    "projects": ["id", "team_id", "name", "description", "status", "created_at", "updated_at"],
+    "project_members": ["id", "team_id", "project_id", "user_id", "role", "status", "joined_at"],
+    "documents": ["id", "project_id", "uploaded_by_member_id", "file_name", "file_type", "mime_type", "storage_uri", "content_hash", "analysis_status", "progress", "error_message", "created_at", "updated_at"],
+    "issues": ["id", "project_id", "assignee_member_id", "reporter_member_id", "source_document_id", "title", "description", "severity", "status", "source_type", "approval_status", "confidence_score", "is_candidate", "risk_reason", "domino_chain", "due_at", "created_at", "updated_at"],
+    "todos": ["id", "project_id", "assignee_member_id", "created_by_member_id", "reviewed_by_member_id", "source_document_id", "linked_issue_id", "title", "description", "status", "priority", "source_type", "approval_status", "confidence_score", "due_at", "created_at", "updated_at"],
+    "calendar_events": ["id", "project_id", "member_id", "event_type", "title", "source_type", "approval_status", "starts_at", "ends_at", "created_at"],
+    "weekly_reports": ["id", "project_id", "created_by_member_id", "week_start", "week_end", "content", "progress_rate", "created_at"],
+    "monthly_reports": ["id", "project_id", "created_by_member_id", "month_start", "month_end", "content", "progress_rate", "created_at"],
+    "handoff_reports": ["id", "project_id", "from_member_id", "to_member_id", "handoff_type", "content", "created_at"],
+    "chat_messages": ["id", "project_id", "member_id", "role", "content", "sources_json", "model_name", "created_at"],
+    "ai_summaries": ["id", "document_id", "project_id", "todo_count", "issue_count", "blocked_count", "summary", "extracted_json", "model_name", "created_at"],
+}
+
+
+ENUMS = {
+    ("projects", "status"): {"active", "archived", "completed"},
+    ("project_members", "role"): {"admin", "member", "viewer"},
+    ("project_members", "status"): {"active", "inactive"},
+    ("documents", "file_type"): {"email", "meeting", "chat", "issue_log", "other"},
+    ("documents", "analysis_status"): {"uploaded", "parsing", "chunking", "embedding", "analyzing", "completed", "failed"},
+    ("issues", "severity"): {"low", "medium", "high", "critical"},
+    ("issues", "status"): {"open", "in_progress", "blocked", "resolved"},
+    ("issues", "source_type"): {"ai", "manual"},
+    ("issues", "approval_status"): {"pending", "approved", "rejected"},
+    ("todos", "status"): {"pending", "in_progress", "completed", "blocked"},
+    ("todos", "priority"): {"low", "medium", "high"},
+    ("todos", "source_type"): {"ai", "manual"},
+    ("todos", "approval_status"): {"pending", "approved", "rejected"},
+    ("calendar_events", "event_type"): {"absence", "deadline", "milestone", "meeting"},
+    ("calendar_events", "source_type"): {"ai", "manual", "chat"},
+    ("calendar_events", "approval_status"): {"pending", "approved", "rejected"},
+    ("chat_messages", "role"): {"user", "assistant"},
+}
+
+
+REQUIRED_COLUMNS = {
+    "teams": {"id", "name", "created_at", "updated_at"},
+    "users": {"id", "name", "email", "role", "created_at", "updated_at"},
+    "projects": {"id", "team_id", "name", "status", "created_at", "updated_at"},
+    "project_members": {"id", "team_id", "project_id", "user_id", "role", "status", "joined_at"},
+    "documents": {"id", "project_id", "file_name", "file_type", "analysis_status", "progress", "created_at", "updated_at"},
+    "issues": {"id", "project_id", "title", "severity", "status", "source_type", "approval_status", "is_candidate", "created_at", "updated_at"},
+    "todos": {"id", "project_id", "title", "status", "priority", "source_type", "approval_status", "created_at", "updated_at"},
+    "calendar_events": {"id", "project_id", "event_type", "title", "source_type", "approval_status", "starts_at", "created_at"},
+    "weekly_reports": {"id", "project_id", "week_start", "week_end", "created_at"},
+    "monthly_reports": {"id", "project_id", "month_start", "month_end", "created_at"},
+    "handoff_reports": {"id", "project_id", "handoff_type", "created_at"},
+    "chat_messages": {"id", "project_id", "role", "content", "created_at"},
+    "ai_summaries": {"id", "project_id", "todo_count", "issue_count", "blocked_count", "created_at"},
+}
+
+
+MAX_LENGTHS = {
+    ("teams", "name"): 100,
+    ("users", "name"): 100,
+    ("users", "email"): 255,
+    ("users", "role"): 50,
+    ("projects", "name"): 150,
+    ("documents", "file_name"): 255,
+    ("documents", "file_type"): 50,
+    ("documents", "mime_type"): 100,
+    ("documents", "storage_uri"): 500,
+    ("documents", "content_hash"): 128,
+    ("issues", "title"): 500,
+    ("issues", "severity"): 20,
+    ("issues", "status"): 50,
+    ("todos", "title"): 500,
+    ("calendar_events", "title"): 255,
+    ("handoff_reports", "handoff_type"): 50,
+    ("chat_messages", "model_name"): 100,
+    ("ai_summaries", "model_name"): 100,
+}
+
+
+def seed_uuid(key: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://teamazag.local/dummy/{key}"))
+
+
+TEAM_ID = seed_uuid("team/ops")
+PROJECT_ID = seed_uuid("project/ops-2026")
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -31,8 +116,7 @@ def write_csv(path: Path, headers: list[str], rows: list[dict[str, object]]) -> 
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
         writer.writeheader()
-        for row in rows:
-            writer.writerow({h: row.get(h, "") for h in headers})
+        writer.writerows({header: row.get(header, "") for header in headers} for row in rows)
 
 
 def parse_date(value: str | date | None) -> date:
@@ -43,72 +127,147 @@ def parse_date(value: str | date | None) -> date:
     return datetime.fromisoformat(str(value)[:10]).date()
 
 
-def clamp_date(value: str | date | None) -> date:
-    parsed = parse_date(value)
-    if parsed < START_DATE:
-        return START_DATE
-    if parsed > END_DATE:
-        return END_DATE
-    return parsed
-
-
 def dstr(value: str | date | None) -> str:
-    return clamp_date(value).isoformat()
+    parsed = parse_date(value)
+    return max(START_DATE, min(END_DATE, parsed)).isoformat()
 
 
 def dtstr(value: str | date | None) -> str:
-    return f"{dstr(value)}T09:00:00"
+    return f"{dstr(value)}T09:00:00+09:00"
 
 
 def add_days(value: str | date, days: int) -> str:
-    return dstr(clamp_date(value) + timedelta(days=days))
+    return dstr(parse_date(value) + timedelta(days=days))
 
 
-def norm_status(value: str) -> str:
-    status = (value or "open").strip().lower()
-    if status in {"closed", "done", "completed"}:
-        return "completed"
-    if status in {"monitoring", "in_progress"}:
+def issue_status(value: str) -> str:
+    normalized = (value or "open").strip().lower()
+    if normalized in {"closed", "done", "completed", "resolved"}:
+        return "resolved"
+    if normalized in {"monitoring", "in_progress", "partially_resolved"}:
         return "in_progress"
+    if normalized == "blocked":
+        return "blocked"
     return "open"
 
 
-def priority(severity: str) -> str:
-    severity = (severity or "").strip().lower()
-    if severity == "high":
-        return "high"
-    if severity == "medium":
-        return "medium"
-    return "low"
+def priority(value: str) -> str:
+    normalized = (value or "medium").strip().lower()
+    return normalized if normalized in {"low", "medium", "high"} else "medium"
 
 
 def sql_value(value: object) -> str:
     if value is None or value == "":
         return "NULL"
-    text = str(value).replace("'", "''")
-    return f"'{text}'"
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return "'" + str(value).replace("'", "''") + "'"
 
 
 def insert_sql(table: str, headers: list[str], rows: list[dict[str, object]]) -> str:
-    if not rows:
-        return ""
-    cols = ", ".join(headers)
-    values = []
-    for row in rows:
-        values.append("(" + ", ".join(sql_value(row.get(h, "")) for h in headers) + ")")
-    return f"INSERT INTO {table} ({cols}) VALUES\n  " + ",\n  ".join(values) + "\nON CONFLICT (id) DO NOTHING;\n"
+    values = ["(" + ", ".join(sql_value(row.get(header, "")) for header in headers) + ")" for row in rows]
+    return f"INSERT INTO {table} ({', '.join(headers)}) VALUES\n  " + ",\n  ".join(values) + "\nON CONFLICT (id) DO NOTHING;\n"
 
 
-def doc_file_type(doc_type: str) -> str:
+def document_file_type(doc_type: str) -> str:
     if "메일" in doc_type:
         return "email"
     if "회의" in doc_type:
         return "meeting"
-    if "채팅" in doc_type:
+    if "채팅" in doc_type or "대화" in doc_type:
         return "chat"
-    if "이슈" in doc_type or "클레임" in doc_type:
+    if "클레임" in doc_type or "이슈" in doc_type:
         return "issue_log"
     return "other"
+
+
+def validate_tables(tables: dict[str, list[dict[str, object]]]) -> None:
+    errors: list[str] = []
+    ids: dict[str, set[str]] = {}
+    for table, rows in tables.items():
+        expected = TABLE_HEADERS[table]
+        ids[table] = {str(row["id"]) for row in rows}
+        if len(ids[table]) != len(rows):
+            errors.append(f"{table}: duplicate primary key")
+        for row_number, row in enumerate(rows, 2):
+            extra = set(row) - set(expected)
+            missing = set(expected) - set(row)
+            if extra or missing:
+                errors.append(f"{table}:{row_number} columns extra={sorted(extra)} missing={sorted(missing)}")
+            try:
+                uuid.UUID(str(row["id"]))
+            except (ValueError, TypeError):
+                errors.append(f"{table}:{row_number} invalid UUID id={row.get('id')}")
+            for column in REQUIRED_COLUMNS[table]:
+                if row.get(column) in {None, ""}:
+                    errors.append(f"{table}:{row_number} required column is blank: {column}")
+            for (length_table, column), maximum in MAX_LENGTHS.items():
+                if length_table == table and len(str(row.get(column, ""))) > maximum:
+                    errors.append(f"{table}:{row_number} {column} exceeds VARCHAR({maximum})")
+            for (enum_table, column), allowed in ENUMS.items():
+                if enum_table == table and str(row.get(column, "")) not in allowed:
+                    errors.append(f"{table}:{row_number} invalid {column}={row.get(column)}")
+
+    foreign_keys = [
+        ("users", "team_id", "teams"),
+        ("projects", "team_id", "teams"),
+        ("project_members", "team_id", "teams"),
+        ("project_members", "project_id", "projects"),
+        ("project_members", "user_id", "users"),
+        ("documents", "project_id", "projects"),
+        ("documents", "uploaded_by_member_id", "project_members"),
+        ("issues", "project_id", "projects"),
+        ("issues", "assignee_member_id", "project_members"),
+        ("issues", "reporter_member_id", "project_members"),
+        ("issues", "source_document_id", "documents"),
+        ("todos", "project_id", "projects"),
+        ("todos", "assignee_member_id", "project_members"),
+        ("todos", "created_by_member_id", "project_members"),
+        ("todos", "reviewed_by_member_id", "project_members"),
+        ("todos", "source_document_id", "documents"),
+        ("todos", "linked_issue_id", "issues"),
+        ("calendar_events", "project_id", "projects"),
+        ("calendar_events", "member_id", "project_members"),
+        ("weekly_reports", "project_id", "projects"),
+        ("weekly_reports", "created_by_member_id", "project_members"),
+        ("monthly_reports", "project_id", "projects"),
+        ("monthly_reports", "created_by_member_id", "project_members"),
+        ("handoff_reports", "project_id", "projects"),
+        ("handoff_reports", "from_member_id", "project_members"),
+        ("handoff_reports", "to_member_id", "project_members"),
+        ("chat_messages", "project_id", "projects"),
+        ("chat_messages", "member_id", "project_members"),
+        ("ai_summaries", "document_id", "documents"),
+        ("ai_summaries", "project_id", "projects"),
+    ]
+    for table, column, parent in foreign_keys:
+        for row_number, row in enumerate(tables[table], 2):
+            value = str(row.get(column, ""))
+            if value and value not in ids[parent]:
+                errors.append(f"{table}:{row_number} orphan {column}={value}")
+
+    unique_checks = [
+        ("users", ("email",)),
+        ("project_members", ("project_id", "user_id")),
+        ("weekly_reports", ("project_id", "week_start")),
+        ("monthly_reports", ("project_id", "month_start")),
+    ]
+    for table, columns in unique_checks:
+        keys = [tuple(str(row[column]) for column in columns) for row in tables[table]]
+        if len(keys) != len(set(keys)):
+            errors.append(f"{table}: duplicate unique key {columns}")
+
+    for row_number, row in enumerate(tables["weekly_reports"], 2):
+        if str(row["week_start"]) > str(row["week_end"]):
+            errors.append(f"weekly_reports:{row_number} week_start after week_end")
+    for row_number, row in enumerate(tables["monthly_reports"], 2):
+        if str(row["month_start"]) > str(row["month_end"]):
+            errors.append(f"monthly_reports:{row_number} month_start after month_end")
+
+    if errors:
+        raise ValueError("Current DB seed validation failed:\n- " + "\n- ".join(errors[:50]))
 
 
 def main() -> None:
@@ -121,321 +280,183 @@ def main() -> None:
     issue_events = read_csv(DUMMY / "03_structured_csv" / "issue_events.csv")
     source_docs = read_csv(DUMMY / "03_structured_csv" / "source_document_index.csv")
 
+    teams = [{"id": TEAM_ID, "name": "[DUMMY] AutoParts One 운영팀", "created_at": NOW, "updated_at": NOW}]
     users: list[dict[str, object]] = []
-    members: list[dict[str, object]] = []
+    project_members: list[dict[str, object]] = []
     member_by_name: dict[str, str] = {}
-    for idx, employee in enumerate(employees[:8], 1):
-        user_id = f"DUMMY-USER-{idx:03d}"
-        member_id = f"DUMMY-PM-{idx:03d}"
+    for index, employee in enumerate(employees[:8], 1):
+        user_id = seed_uuid(f"user/{employee['employee_id']}")
+        member_id = seed_uuid(f"project-member/{employee['employee_id']}")
         role = "admin" if employee["permission_level"] == "admin" else "member"
-        users.append({
-            "id": user_id,
-            "team_id": TEAM_ID,
-            "name": employee["name"],
-            "email": employee["email"],
-            "role": role,
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
-        members.append({
-            "id": member_id,
-            "project_id": PROJECT_ID,
-            "user_id": user_id,
-            "role": role,
-            "status": "active",
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
+        users.append({"id": user_id, "team_id": TEAM_ID, "name": employee["name"], "email": employee["email"], "role": role, "created_at": NOW, "updated_at": NOW})
+        project_members.append({"id": member_id, "team_id": TEAM_ID, "project_id": PROJECT_ID, "user_id": user_id, "role": role, "status": "active", "joined_at": NOW})
         member_by_name[employee["name"]] = member_id
 
-    teams = [{
-        "id": TEAM_ID,
-        "name": "[DUMMY] AutoParts One 운영팀",
-        "description": "[DUMMY] 로컬 데모용 운영 인수인계 seed 팀",
-        "created_at": NOW,
-        "updated_at": NOW,
-    }]
-    projects = [{
-        "id": PROJECT_ID,
-        "team_id": TEAM_ID,
-        "name": "[DUMMY] OpsRadar2 운영 인수인계 데모",
-        "description": "[DUMMY] 문서 업로드, 분석, Todo, 이슈, 리포트, 인수인계 흐름 검증용 seed",
-        "status": "active",
-        "created_at": NOW,
-        "updated_at": NOW,
-    }]
+    projects = [{"id": PROJECT_ID, "team_id": TEAM_ID, "name": "[DUMMY] OpsRadar2 운영 인수인계 데모", "description": "문서 분석, Todo, 이슈, 리포트, 인수인계 흐름 검증용 seed", "status": "active", "created_at": NOW, "updated_at": NOW}]
 
-    base_issues = issue_events[:9]
-    messy_issues = [row for row in issue_events if row["issue_id"] in MESSY_ISSUE_IDS]
-    selected_issues = base_issues + messy_issues
-    issue_ids = {row["issue_id"] for row in selected_issues}
+    selected_issues = issue_events[:9] + [row for row in issue_events if row["issue_id"] in MESSY_ISSUE_IDS]
+    selected_issue_ids = {row["issue_id"] for row in selected_issues}
     docs_by_issue: dict[str, list[dict[str, str]]] = defaultdict(list)
     for doc in source_docs:
-        issue_id = doc.get("related_issue_id", "")
-        if issue_id in issue_ids and len(docs_by_issue[issue_id]) < 6:
-            docs_by_issue[issue_id].append(doc)
+        if doc.get("related_issue_id") in selected_issue_ids and len(docs_by_issue[doc["related_issue_id"]]) < 6:
+            docs_by_issue[doc["related_issue_id"]].append(doc)
+    selected_docs = [doc for issue in selected_issues for doc in docs_by_issue[issue["issue_id"]]][:96]
 
-    selected_docs: list[dict[str, str]] = []
-    for issue in selected_issues:
-        selected_docs.extend(docs_by_issue[issue["issue_id"]])
-    if len(selected_docs) < 30:
-        used = {doc["doc_id"] for doc in selected_docs}
-        for doc in source_docs:
-            if doc["doc_id"] not in used and doc.get("file_path", "").startswith("02_raw_documents/"):
-                selected_docs.append(doc)
-                used.add(doc["doc_id"])
-            if len(selected_docs) >= 32:
-                break
-    selected_docs = selected_docs[:96]
-
-    documents = []
-    for idx, doc in enumerate(selected_docs, 1):
+    documents: list[dict[str, object]] = []
+    document_id_by_source: dict[str, str] = {}
+    for doc in selected_docs:
+        document_id = seed_uuid(f"document/{doc['doc_id']}")
+        document_id_by_source[doc["doc_id"]] = document_id
+        source_path = DUMMY / doc["file_path"]
+        content_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
         documents.append({
-            "id": f"DUMMY-DOC-{idx:03d}",
+            "id": document_id,
             "project_id": PROJECT_ID,
-            "uploaded_by_member_id": member_by_name.get(doc.get("author", ""), "DUMMY-PM-001"),
-            "file_name": Path(doc["file_path"]).name,
-            "file_type": doc_file_type(doc.get("doc_type", "")),
+            "uploaded_by_member_id": member_by_name.get(doc.get("author", ""), project_members[0]["id"]),
+            "file_name": source_path.name,
+            "file_type": document_file_type(doc.get("doc_type", "")),
+            "mime_type": "text/markdown",
             "storage_uri": f"dummy_data/{doc['file_path']}",
-            "summary": f"[DUMMY] {doc.get('summary_hint', '')}",
-            "source_doc_id": doc["doc_id"],
+            "content_hash": content_hash,
+            "analysis_status": "completed",
+            "progress": 100,
+            "error_message": "",
             "created_at": dtstr(doc.get("created_date")),
             "updated_at": dtstr(doc.get("created_date")),
         })
 
-    issues = []
-    todos = []
-    calendar_events = []
-    ai_summaries = []
-    for idx, issue in enumerate(selected_issues, 1):
-        issue_seed_id = f"DUMMY-ISSUE-{idx:03d}"
-        start = issue.get("start_date", "")
-        due = issue.get("end_date", "") or add_days(start, 14)
+    first_document_by_issue = {issue_id: document_id_by_source[docs[0]["doc_id"]] for issue_id, docs in docs_by_issue.items() if docs}
+    issues: list[dict[str, object]] = []
+    todos: list[dict[str, object]] = []
+    calendar_events: list[dict[str, object]] = []
+    issue_id_map: dict[str, str] = {}
+    for index, issue in enumerate(selected_issues, 1):
+        issue_id = seed_uuid(f"issue/{issue['issue_id']}")
+        issue_id_map[issue["issue_id"]] = issue_id
+        source_document_id = first_document_by_issue.get(issue["issue_id"], "")
+        assignee = project_members[index % len(project_members)]["id"]
+        due_at = dtstr(issue.get("end_date") or add_days(issue["start_date"], 14))
+        normalized_status = issue_status(issue["status"])
         issues.append({
-            "id": issue_seed_id,
-            "project_id": PROJECT_ID,
-            "title": f"[DUMMY] {issue['issue_title']}",
-            "issue_type": issue["issue_type"],
-            "severity": issue["severity"].lower(),
-            "status": norm_status(issue["status"]),
-            "description": f"[DUMMY] {issue['description']}",
-            "detected_at": dtstr(start),
-            "due_at": dtstr(due),
-            "source": "dummy_current_seed",
-            "created_at": dtstr(start),
-            "updated_at": NOW,
-        })
-        ai_summaries.append({
-            "id": f"DUMMY-AI-ISSUE-{idx:03d}",
-            "project_id": PROJECT_ID,
-            "source_type": "issue",
-            "source_id": issue_seed_id,
-            "summary": f"[DUMMY] {issue['issue_title']} 관련 리스크, 담당자, 요청사항, 다음 액션 요약",
-            "key_points": "담당자 확인; 요청사항 추적; 리스크 관리; 다음 액션 등록",
-            "created_at": NOW,
-            "updated_at": NOW,
+            "id": issue_id, "project_id": PROJECT_ID, "assignee_member_id": assignee,
+            "reporter_member_id": project_members[0]["id"], "source_document_id": source_document_id,
+            "title": f"[DUMMY] {issue['issue_title']}", "description": issue["description"],
+            "severity": priority(issue["severity"]), "status": normalized_status,
+            "source_type": "manual", "approval_status": "approved", "confidence_score": 85,
+            "is_candidate": False, "risk_reason": issue["description"], "domino_chain": "납기 -> 고객 생산 일정 -> 긴급 운송 비용",
+            "due_at": due_at, "created_at": dtstr(issue["start_date"]), "updated_at": NOW,
         })
         for step in range(1, 4):
-            todo_id = f"DUMMY-TODO-{idx:03d}-{step}"
-            todo_due = add_days(start, step * 2)
+            todo_id = seed_uuid(f"todo/{issue['issue_id']}/{step}")
+            todo_status = "completed" if normalized_status == "resolved" else "pending"
+            todo_due = dtstr(add_days(issue["start_date"], step * 2))
+            owner = project_members[(index + step) % len(project_members)]["id"]
             todos.append({
-                "id": todo_id,
-                "project_id": PROJECT_ID,
-                "title": f"[DUMMY] {issue['issue_title']} 액션 {step}",
-                "description": f"[DUMMY] {issue['issue_type']} 대응 Todo {step}: 담당자 확인, 요청사항 정리, 리스크 업데이트",
-                "status": "done" if issue["status"].lower() == "closed" else "open",
-                "priority": priority(issue["severity"]),
-                "owner_member_id": members[(idx + step) % len(members)]["id"],
-                "due_at": dtstr(todo_due),
-                "source_type": "issue",
-                "source_id": issue_seed_id,
-                "created_at": dtstr(start),
-                "updated_at": NOW,
+                "id": todo_id, "project_id": PROJECT_ID, "assignee_member_id": owner,
+                "created_by_member_id": project_members[0]["id"], "reviewed_by_member_id": "",
+                "source_document_id": source_document_id, "linked_issue_id": issue_id,
+                "title": f"[DUMMY] {issue['issue_title']} 확인 {step}",
+                "description": f"{issue['issue_type']} 대응에 필요한 일정·수량·담당자 확인",
+                "status": todo_status, "priority": priority(issue["severity"]), "source_type": "manual",
+                "approval_status": "approved", "confidence_score": 85, "due_at": todo_due,
+                "created_at": dtstr(issue["start_date"]), "updated_at": NOW,
             })
             calendar_events.append({
-                "id": f"DUMMY-CAL-{idx:03d}-{step}",
-                "project_id": PROJECT_ID,
-                "title": f"[DUMMY] {issue['issue_title']} 후속 일정 {step}",
-                "event_type": "todo_due",
-                "start_at": dtstr(todo_due),
-                "end_at": dtstr(todo_due),
-                "related_todo_id": todo_id,
-                "related_issue_id": issue_seed_id,
-                "created_at": NOW,
-                "updated_at": NOW,
+                "id": seed_uuid(f"calendar/{issue['issue_id']}/{step}"), "project_id": PROJECT_ID,
+                "member_id": owner, "event_type": "deadline", "title": f"[DUMMY] {issue['issue_title']} 확인 기한",
+                "source_type": "manual", "approval_status": "approved", "starts_at": todo_due,
+                "ends_at": todo_due, "created_at": NOW,
             })
 
     weekly_reports = []
-    for idx, issue in enumerate(selected_issues[:3], 1):
-        weekly_reports.append({
-            "id": f"DUMMY-WEEKLY-{idx:03d}",
-            "project_id": PROJECT_ID,
-            "title": f"[DUMMY] 주간 운영 리포트 {idx}",
-            "period_start": dstr(issue["start_date"]),
-            "period_end": dstr(add_days(issue["start_date"], 6)),
-            "summary": f"[DUMMY] {issue['issue_title']} 중심 주간 이슈, Todo, 리스크 요약",
-            "status": "published",
-            "source": "dummy_current_seed",
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
+    for index, week_start in enumerate(["2026-07-04", "2026-08-01", "2026-09-05"], 1):
+        weekly_reports.append({"id": seed_uuid(f"weekly/{week_start}"), "project_id": PROJECT_ID, "created_by_member_id": project_members[0]["id"], "week_start": week_start, "week_end": add_days(week_start, 6), "content": f"[DUMMY] 주간 운영 이슈와 Todo 진행 현황 {index}", "progress_rate": 60 + index * 10, "created_at": NOW})
 
     monthly_reports = []
-    monthly_specs = [
-        ("2026-09-01", "[DUMMY] 2026-09 단가 인상 공지와 구두 합의 충돌 리포트", "공식 공지와 구두 합의가 충돌하여 고객 단가 제안 기준을 확인해야 하는 월간 요약"),
-        ("2026-12-01", "[DUMMY] 2026-12 임시 인수인계 누락 리스크 리포트", "담당자 휴가 중 고객 요청과 Todo가 분산되어 회신 지연이 발생한 월간 요약"),
-    ]
-    for idx, (month_start, title, summary) in enumerate(monthly_specs, 1):
-        monthly_reports.append({
-            "id": f"DUMMY-MONTHLY-{idx:03d}",
-            "project_id": PROJECT_ID,
-            "title": title,
-            "period_start": dstr(month_start),
-            "period_end": dstr(add_days(month_start, 29)),
-            "summary": f"[DUMMY] {summary}",
-            "status": "published",
-            "source": "dummy_current_seed",
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
+    for month_start, month_end, content in [("2026-09-01", "2026-09-30", "단가 인상 공지와 구두 합의 충돌 점검"), ("2026-12-01", "2026-12-31", "임시 인수인계 누락과 회신 지연 점검")]:
+        monthly_reports.append({"id": seed_uuid(f"monthly/{month_start}"), "project_id": PROJECT_ID, "created_by_member_id": project_members[0]["id"], "month_start": month_start, "month_end": month_end, "content": f"[DUMMY] {content}", "progress_rate": 70, "created_at": NOW})
 
-    handoff_reports = []
-    handoff_specs = [
-        ("영업-구매-물류 납기 변경 인수인계", "납기 일정이 여러 번 바뀐 긴급 주문의 임시 납기, 확정 납기, 다음 액션"),
-        ("Mirae EV Systems 임시 담당자 인수인계 누락", "휴가 전 전달 메모와 고객 요청이 분산된 상태의 담당자 확인 필요 항목"),
+    handoff_reports = [
+        {"id": seed_uuid("handoff/due-date"), "project_id": PROJECT_ID, "from_member_id": project_members[0]["id"], "to_member_id": project_members[1]["id"], "handoff_type": "general", "content": "[DUMMY] 변경된 납기와 부분 출고 수량, 고객 미회신 항목 인수인계", "created_at": NOW},
+        {"id": seed_uuid("handoff/coverage"), "project_id": PROJECT_ID, "from_member_id": project_members[1]["id"], "to_member_id": project_members[2]["id"], "handoff_type": "temporary_coverage", "content": "[DUMMY] 휴가 기간 임시 담당자와 미완료 고객 회신 인수인계", "created_at": NOW},
     ]
-    for idx, (title, scope) in enumerate(handoff_specs, 1):
-        handoff_reports.append({
-            "id": f"DUMMY-HANDOFF-{idx:03d}",
-            "project_id": PROJECT_ID,
-            "title": f"[DUMMY] {title}",
-            "from_member_id": members[0]["id"],
-            "to_member_id": members[idx]["id"],
-            "scope_summary": f"[DUMMY] {scope}",
-            "generated_summary": "[DUMMY] 문서와 issue_events 기반으로 미확정 정보, 담당자 확인, 다음 액션을 분리한 인수인계 데모 요약",
-            "status": "ready",
-            "source": "dummy_current_seed",
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
 
     chat_messages = []
-    for idx, issue in enumerate(selected_issues[:9], 1):
-        chat_messages.append({
-            "id": f"DUMMY-CHAT-{idx:03d}",
-            "project_id": PROJECT_ID,
-            "sender_member_id": members[idx % len(members)]["id"],
-            "message": f"[DUMMY] {issue['issue_title']} 진행 상황과 다음 액션 확인",
-            "source_type": "issue",
-            "source_id": f"DUMMY-ISSUE-{idx:03d}",
-            "created_at": NOW,
-            "updated_at": NOW,
-        })
+    for index, issue in enumerate(selected_issues[:9], 1):
+        linked_issue = issue_id_map[issue["issue_id"]]
+        chat_messages.append({"id": seed_uuid(f"chat/{issue['issue_id']}"), "project_id": PROJECT_ID, "member_id": project_members[index % len(project_members)]["id"], "role": "user", "content": f"[DUMMY] {issue['issue_title']} 진행 상황을 확인해 주세요.", "sources_json": json.dumps([{"type": "issue", "id": linked_issue}], ensure_ascii=False), "model_name": "", "created_at": NOW})
 
-    tables: dict[str, tuple[list[str], list[dict[str, object]]]] = {
-        "teams": (["id", "name", "description", "created_at", "updated_at"], teams),
-        "users": (["id", "team_id", "name", "email", "role", "created_at", "updated_at"], users),
-        "projects": (["id", "team_id", "name", "description", "status", "created_at", "updated_at"], projects),
-        "project_members": (["id", "project_id", "user_id", "role", "status", "created_at", "updated_at"], members),
-        "documents": (["id", "project_id", "uploaded_by_member_id", "file_name", "file_type", "storage_uri", "summary", "source_doc_id", "created_at", "updated_at"], documents),
-        "issues": (["id", "project_id", "title", "issue_type", "severity", "status", "description", "detected_at", "due_at", "source", "created_at", "updated_at"], issues),
-        "todos": (["id", "project_id", "title", "description", "status", "priority", "owner_member_id", "due_at", "source_type", "source_id", "created_at", "updated_at"], todos),
-        "calendar_events": (["id", "project_id", "title", "event_type", "start_at", "end_at", "related_todo_id", "related_issue_id", "created_at", "updated_at"], calendar_events),
-        "weekly_reports": (["id", "project_id", "title", "period_start", "period_end", "summary", "status", "source", "created_at", "updated_at"], weekly_reports),
-        "monthly_reports": (["id", "project_id", "title", "period_start", "period_end", "summary", "status", "source", "created_at", "updated_at"], monthly_reports),
-        "handoff_reports": (["id", "project_id", "title", "from_member_id", "to_member_id", "scope_summary", "generated_summary", "status", "source", "created_at", "updated_at"], handoff_reports),
-        "chat_messages": (["id", "project_id", "sender_member_id", "message", "source_type", "source_id", "created_at", "updated_at"], chat_messages),
-        "ai_summaries": (["id", "project_id", "source_type", "source_id", "summary", "key_points", "created_at", "updated_at"], ai_summaries),
+    ai_summaries = []
+    for index, issue in enumerate(selected_issues, 1):
+        source_document_id = first_document_by_issue.get(issue["issue_id"], "")
+        ai_summaries.append({"id": seed_uuid(f"ai-summary/{issue['issue_id']}"), "document_id": source_document_id, "project_id": PROJECT_ID, "todo_count": 3, "issue_count": 1, "blocked_count": 1 if issue_status(issue["status"]) == "blocked" else 0, "summary": f"[DUMMY] {issue['issue_title']} 관련 일정·수량·담당자 요약", "extracted_json": json.dumps({"source_issue_id": issue["issue_id"], "severity": priority(issue["severity"])}, ensure_ascii=False), "model_name": "dummy-seed", "created_at": NOW})
+
+    tables = {
+        "teams": teams, "users": users, "projects": projects, "project_members": project_members,
+        "documents": documents, "issues": issues, "todos": todos, "calendar_events": calendar_events,
+        "weekly_reports": weekly_reports, "monthly_reports": monthly_reports,
+        "handoff_reports": handoff_reports, "chat_messages": chat_messages, "ai_summaries": ai_summaries,
     }
+    validate_tables(tables)
 
-    for table, (headers, rows) in tables.items():
-        write_csv(CSV_OUT / f"{table}.csv", headers, rows)
+    for table, rows in tables.items():
+        write_csv(CSV_OUT / f"{table}.csv", TABLE_HEADERS[table], rows)
 
-    insert_parts = [
-        "-- OpsRadar2 current DB compatible dummy seed\n",
-        "-- Apply after the current application schema/migrations are ready.\n",
-        "BEGIN;\n",
-    ]
-    for table, (headers, rows) in tables.items():
-        insert_parts.append(insert_sql(table, headers, rows))
+    insert_parts = ["-- OpsRadar2 schema.sql compatible dummy seed", "SET search_path TO opsradar2, public;", "BEGIN;"]
+    insert_parts.extend(insert_sql(table, TABLE_HEADERS[table], rows) for table, rows in tables.items())
     insert_parts.append("COMMIT;\n")
-    (SQL_OUT / "insert_current_seed.sql").write_text("\n".join(insert_parts), encoding="utf-8")
+    (SQL_OUT / "insert_current_seed.sql").write_text("\n\n".join(insert_parts), encoding="utf-8")
 
-    clear_order = list(reversed(list(tables.keys())))
-    clear_parts = [
-        "-- Clear only OpsRadar2 [DUMMY] current seed rows.\n",
-        "BEGIN;\n",
-    ]
-    for table in clear_order:
-        ids = [row["id"] for row in tables[table][1]]
-        quoted = ", ".join(sql_value(value) for value in ids)
-        clear_parts.append(f"DELETE FROM {table} WHERE id IN ({quoted});\n")
+    clear_parts = ["-- Clear only rows generated by this seed.", "SET search_path TO opsradar2, public;", "BEGIN;"]
+    for table in reversed(list(tables)):
+        quoted = ", ".join(sql_value(row["id"]) for row in tables[table])
+        clear_parts.append(f"DELETE FROM {table} WHERE id IN ({quoted});")
     clear_parts.append("COMMIT;\n")
     (SQL_OUT / "clear_current_seed.sql").write_text("\n".join(clear_parts), encoding="utf-8")
 
-    readme_rows = "\n".join(f"- `{name}.csv`: {len(rows)} rows" for name, (_, rows) in tables.items())
-    (OUT / "README.md").write_text(
-        f"""# OpsRadar2 Current DB Seed
+    row_lines = "\n".join(f"- `{table}.csv`: {len(rows)} rows" for table, rows in tables.items())
+    (OUT / "README.md").write_text(f"""# OpsRadar2 Current DB Seed
 
-This folder contains a minimal [DUMMY] seed for local demos of document upload, analysis, Todo, issue, report, chat, and handoff flows.
-
-## Files
-- `csv/`: table-shaped CSV files
-- `sql/insert_current_seed.sql`: PostgreSQL insert script
-- `sql/clear_current_seed.sql`: cleanup script for this seed only
-- `current-seed-compatibility-check.md`: compatibility notes and verification summary
+This seed matches `opsradar2/schema.sql` from `SeongWoo-new2` (plus optional auth migration columns left to database defaults).
 
 ## Row counts
-{readme_rows}
+{row_lines}
 
-## Usage
+## Generate and validate
 ```bash
 python scripts/create_current_db_seed.py
+python scripts/validate_current_db_seed.py
+```
+
+## Load
+```bash
 psql -h 127.0.0.1 -p 5432 -U postgres -d azag_db -f dummy_data/06_current_db_seed/sql/insert_current_seed.sql
 ```
 
-To remove only this demo seed:
+All identifiers are deterministic UUIDs. The SQL sets `search_path` to `opsradar2, public`. Expected-output samples and `05_db_seed_v2` are not loaded.
+""", encoding="utf-8")
 
-```bash
-psql -h 127.0.0.1 -p 5432 -U postgres -d azag_db -f dummy_data/06_current_db_seed/sql/clear_current_seed.sql
-```
+    (OUT / "current-seed-compatibility-check.md").write_text(f"""# Current Seed Compatibility Check
 
-The expected-output test samples are not used as seed input.
-""",
-        encoding="utf-8",
-    )
+## Schema basis
+- Contract: `origin/SeongWoo-new2:opsradar2/schema.sql`
+- Tables generated: {len(tables)}
+- CSV rows generated: {sum(len(rows) for rows in tables.values())}
+- Deterministic UUID PK/FK values: yes
+- Header, enum and FK validation: passed
+- Actual DB insert executed: no
 
-    (OUT / "current-seed-compatibility-check.md").write_text(
-        f"""# Current Seed Compatibility Check
+## Exclusions
+- `dummy_data/05_db_seed_v2` uses an expanded candidate schema and is not directly loadable into the current database.
+- `dummy_data/04_expected_outputs_for_test` is not used as seed input.
+- Authentication migration columns use database defaults; no authentication credential is generated.
+""", encoding="utf-8")
 
-## Scope
-- Generated from `dummy_data/02_raw_documents` and `dummy_data/03_structured_csv`.
-- Did not modify `dummy_data/05_db_seed_v2`.
-- Did not use the expected-output test folder as input seed data.
-
-## Included demo coverage
-- Documents: {len(documents)}
-- Key issues: {len(issues)}
-- Todos: {len(todos)}
-- Calendar events: {len(calendar_events)}
-- Weekly reports: {len(weekly_reports)}
-- Monthly reports: {len(monthly_reports)}
-- Handoff reports: {len(handoff_reports)}
-- Chat messages: {len(chat_messages)}
-- AI summaries: {len(ai_summaries)}
-
-## Compatibility note
-The `dummy` branch available in this local checkout does not contain a tracked database schema file. The seed therefore uses the current OpsRadar2 v2 table contracts already represented by the existing seed converter, but keeps the output smaller and cleanup-safe with fixed `DUMMY-*` IDs and `[DUMMY]` titles.
-
-If a target database lacks optional tables such as `weekly_reports`, `monthly_reports`, `handoff_reports`, `chat_messages`, or `ai_summaries`, load only the CSV/SQL sections for tables present in that database.
-
-## Safety
-- All generated rows use fixed `DUMMY-*` IDs or `[DUMMY]` labels.
-- Cleanup deletes by generated IDs only.
-- No local environment files are read.
-""",
-        encoding="utf-8",
-    )
+    print(f"generated current seed: {OUT}")
+    print(f"tables: {len(tables)}")
+    print(f"rows: {sum(len(rows) for rows in tables.values())}")
+    print("schema validation: OK")
+    print("actual DB insert: False")
 
 
 if __name__ == "__main__":
