@@ -5,6 +5,17 @@
 
 ---
 
+## 0. 최신 상태 (2026-06-18 기준)
+- 현재 기준 브랜치: codex/jw-new2-test-run / JWon = 2a9f324.
+- feature/analysis-react 병합 완료: 운영 로그 분석(s-analysis) + AI Assistant(s-chat) React 전환 반영.
+- feature/todo-react 병합 완료: Todo(s-todo) React 전환 반영.
+- 화면 전환 상태: 9개 화면 전부 React 전환완료.
+  - Dashboard, 운영 로그 분석, Todo, 이슈 로그, 캘린더, 인수인계 센터, 보고서, AI Assistant, 설정.
+- RAG 백엔드 상태: FAISS 런타임 호출 제거, PostgreSQL pgvector 기반 저장/검색으로 전환.
+  - 기준 차원: EMBEDDING_DIMENSION=1536.
+  - 공유 DB 확인: opsradar2.chunk_embeddings의 completed embedding 230개 확인.
+- 아래 기존 섹션에는 과거 전환 중 안내가 남아 있을 수 있으므로, 최신 작업/검증 기준은 MIGRATION_LOG.md와 이 섹션을 우선한다.
+
 ## 1. 프로젝트가 뭔지
 - **OpsRadar / WorkRader** — 무역 운영 인텔리전스 앱. 문서에서 Todo·이슈(리스크)를 AI로 추출하고
   실제 업무 객체와 연결, 캘린더·보고서·인수인계까지 연결하는 운영 관제 도구.
