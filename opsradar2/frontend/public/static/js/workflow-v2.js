@@ -310,6 +310,7 @@
     configureIssueTabs();
     removeObsoleteAnalysisUi();
     ensureIssueRejectedTab();
+    ensureIssueResolvedTab();
     relocateCalendarPreferences();
   }
 
@@ -334,8 +335,9 @@
     const tabs = document.querySelector("#s-issues .tabs");
     if (!tabs || !isLead()) return;
     const pending = tabs.querySelector(".tab[onclick*=\"'candidate'\"]");
+    const resolved = document.getElementById("issueResolvedTab");
     const rejected = document.getElementById("issueRejectedTab");
-    [pending, rejected].filter(Boolean).forEach((node) => tabs.appendChild(node));
+    [pending, resolved, rejected].filter(Boolean).forEach((node) => tabs.appendChild(node));
   }
 
   function removeObsoleteAnalysisUi() {
@@ -660,12 +662,33 @@
 
   }
 
+  // "완료" 탭 — 반려 탭과 동일한 주입 방식(TABS_HTML 미사용 → IssuesScreen 재렌더 0).
+  // 단, 전체 역할 노출(isLead 게이팅 없음). resolved(=완료) 이슈만 거른다.
+  function ensureIssueResolvedTab() {
+    const tabs = document.querySelector("#s-issues .tabs");
+    if (!tabs || document.getElementById("issueResolvedTab")) return;
+    const tab = document.createElement("div");
+    tab.id = "issueResolvedTab";
+    tab.className = "tab";
+    tab.innerHTML = `완료 <span class="badge b-success" id="i-done-cnt">0</span>`;
+    tab.onclick = () => switchIssueTab("resolved");
+    tabs.appendChild(tab);
+  }
+
   const baseSwitchIssue = window.switchIssueTab;
   window.switchIssueTab = switchIssueTab = async function (tab) {
     if (tab === "candidate" && isLead()) {
       G.currentIssueTab = "candidate";
       document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => node.classList.toggle("active", String(node.getAttribute("onclick") || "").includes("'candidate'")));
       renderPendingRisks();
+      return;
+    }
+    if (tab === "resolved") {
+      G.currentIssueTab = "resolved";
+      G.selectedIssueId = null;
+      hideIssueDetail();
+      document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => node.classList.toggle("active", node.id === "issueResolvedTab"));
+      renderIssues();
       return;
     }
     if (tab !== "rejected") return baseSwitchIssue(tab);

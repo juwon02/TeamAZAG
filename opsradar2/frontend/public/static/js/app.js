@@ -1145,7 +1145,7 @@ async function saveManual(){
 function switchIssueTab(tab){G.currentIssueTab=tab;G.selectedIssueId=null;hideIssueDetail();document.querySelectorAll('#s-issues .tab').forEach((el,i)=>el.classList.toggle('active',['inprogress','candidate'][i]===tab));renderIssues();}
 function renderIssues(){
   const list=G.currentIssueTab==='inprogress'
-    ?issues.filter(i=>i.type==='confirmed'||i.type==='resolved')
+    ?issues.filter(i=>i.type==='confirmed')
     :issues.filter(i=>i.type===G.currentIssueTab);
   const el=document.getElementById('issueList');
   if(!list.length){el.innerHTML=`<div style="padding:40px;text-align:center;color:var(--text3);font-size:12px"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>이 탭에 항목이 없습니다.</div>`;return;}
@@ -1176,7 +1176,8 @@ function renderIssues(){
       </div>
     </div>`;
   }).join('');
-  const progCnt=document.getElementById('i-prog-cnt');if(progCnt)progCnt.textContent=issues.filter(i=>i.type==='confirmed'||i.type==='resolved').length;
+  const progCnt=document.getElementById('i-prog-cnt');if(progCnt)progCnt.textContent=issues.filter(i=>i.type==='confirmed').length;
+  const doneCnt=document.getElementById('i-done-cnt');if(doneCnt)doneCnt.textContent=issues.filter(i=>i.type==='resolved').length;
   const candCnt=document.getElementById('i-cand-cnt');if(candCnt)candCnt.textContent=issues.filter(i=>i.type==='candidate').length;
   const pendingCnt=document.getElementById('i-pending-cnt');if(pendingCnt)pendingCnt.textContent=issues.filter(i=>i.type==='candidate').length;
 }
