@@ -6,7 +6,7 @@
 ---
 
 ## 0. 최신 상태 (2026-06-18 기준)
-- 현재 기준 브랜치: codex/jw-new2-test-run / JWon = 2a9f324.
+- 현재 기준 브랜치: codex/jw-new2-test-run / JWon = 1eb14a7.
 - feature/analysis-react 병합 완료: 운영 로그 분석(s-analysis) + AI Assistant(s-chat) React 전환 반영.
 - feature/todo-react 병합 완료: Todo(s-todo) React 전환 반영.
 - 화면 전환 상태: 9개 화면 전부 React 전환완료.
@@ -99,20 +99,16 @@
 - `frontend/vite.config.js` — publicDir:false, outDir=public/static/react, dist/ 안 만듦
 
 ## 6. 다음 할 일
-- **`MIGRATION_LOG.md` 의 "다음 작업"** 을 먼저 볼 것. 현재: **2번째 화면 전환 — 다음 단순 화면 선정**.
-- 남은 바닐라 화면 **8개**:
-  | 화면 | ID | 담당 JS |
-  |---|---|---|
-  | Dashboard | s-dashboard | app.js + workflow-v2.js |
-  | 운영 로그 분석 | s-analysis | app.js |
-  | Todo | s-todo | app.js + todo-calendar-enhancements.js |
-  | 이슈 로그 | s-issues | app.js + workflow-v2.js |
-  | 캘린더 | s-calendar | app.js + todo-calendar-enhancements.js |
-  | 인수인계 센터 | s-knowledge | handoff.js |
-  | 보고서 | s-reports | report.js |
-  | AI Assistant | s-chat | app.js |
-  - (설정 s-settings 는 전환완료)
-  - 다음 화면 고를 때 **5번 패턴 1단계(런타임 주입 조사 포함)** 를 반드시 수행.
+- 프론트 화면 전환은 **9/9 완료** 상태다. 새 화면 전환 대상을 더 찾지 말 것.
+- 남은 바닐라 전환 화면은 **0개**다.
+- 기존 vanilla JS는 삭제 대상이 아니라, React 화면과 공존하는 compatibility wrapper / 런타임 동작 보존용 코드일 수 있다.
+- 이후 작업 기준은 `MIGRATION_LOG.md`와 이 문서의 "최신 상태" 섹션을 먼저 확인한다.
+- 유지보수 체크리스트:
+  - React 번들: `cd opsradar2/frontend && npm run vite:build`
+  - FastAPI 실행: `cd opsradar2 && python scripts/dev_server.py`
+  - RAG/AI: PostgreSQL `pgvector` 기준, `EMBEDDING_DIMENSION=1536` 유지
+  - 재임베딩 필요 시: `python scripts/backfill_pgvector_embeddings.py --execute`
+  - DB 확인: `SELECT COUNT(*) FROM opsradar2.chunk_embeddings WHERE embedding_status = 'completed' AND embedding IS NOT NULL;`
 
 ## 7. AI에게 시킬 때 첫 프롬프트 (복붙용)
 ```
