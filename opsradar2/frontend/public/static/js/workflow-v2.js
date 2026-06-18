@@ -694,8 +694,14 @@
     if (tab !== "rejected") return baseSwitchIssue(tab);
     G.currentIssueTab = "rejected";
     document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => node.classList.toggle("active", node.id === "issueRejectedTab"));
-    const result = await api("/workflow/risks/rejected");
-    G.rejectedRisks = result.issues || [];
+    try {
+      const result = await api("/workflow/risks/rejected");
+      G.rejectedRisks = result.issues || [];
+    } catch (error) {
+      console.warn("rejected risks load failed", error);
+      G.rejectedRisks = G.rejectedRisks || [];
+      if (typeof showToast === "function") showToast("세션이 만료되어 반려 이슈를 불러오지 못했습니다.", "warn");
+    }
     renderRejectedRisks();
   };
 
@@ -759,8 +765,10 @@
 
   function renderRejectedRisks() {
     const host = document.getElementById("issueList");
+    if (!host) return;
     const items = G.rejectedRisks || [];
-    document.getElementById("i-rej-cnt").textContent = items.length;
+    const rejCnt = document.getElementById("i-rej-cnt");
+    if (rejCnt) rejCnt.textContent = items.length;
     host.innerHTML = items.map((item) => `<article class="issue-card" onclick="showRejectedRiskDetail('${esc(item.id)}')"><div class="issue-hd"><span class="badge b-gray">반려</span><div class="issue-title">${esc(item.title)}</div></div><div class="issue-desc">${esc(description(item))}</div><div class="issue-footer"><span>${esc(String(item.created_at || "").slice(0,10))}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn" onclick="restoreRejectedRisk('${esc(item.id)}')">되돌리기</button><button class="tbtn danger" onclick="deleteRejectedRisk('${esc(item.id)}')">삭제</button><button class="tbtn" onclick="showRejectedRiskReason('${esc(item.id)}')">반려 사유</button></div></div></article>`).join("") || '<div class="wr-empty">반려된 이슈가 없습니다.</div>';
   }
   window.showRejectedRiskDetail = function (id) {
