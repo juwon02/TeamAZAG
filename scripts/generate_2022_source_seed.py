@@ -87,8 +87,161 @@ GENERAL_ISSUES = [
 
 ISSUES = CORE_ISSUES + GENERAL_ISSUES
 DOC_TYPES = ["sales_emails", "purchase_emails", "quality_claims", "logistics_logs", "meeting_notes", "chat_logs"]
-DOC_LABELS = ["고객 요청", "구매처 회신", "품질 확인", "물류 기록", "운영 회의", "내부 채팅"]
 AUTHORS = {"sales_emails": "박서연", "purchase_emails": "최유진", "quality_claims": "한지우", "logistics_logs": "윤예린", "meeting_notes": "김도윤", "chat_logs": "이민재"}
+
+
+def master_name(rows: list[tuple[str, ...]], entity_id: str, name_index: int = 1) -> str:
+    return next(row[name_index] for row in rows if row[0] == entity_id)
+
+
+def natural_status_lines(status: str, variant: int) -> tuple[str, str]:
+    if status == "resolved":
+        internal = [
+            "내부 출고 처리는 끝난 것으로 정리했습니다.",
+            "담당 부서에서는 조치 완료로 보고 있습니다.",
+            "오늘 기준으로 남은 작업은 없다고 전달받았습니다.",
+        ][variant % 3]
+        external = [
+            "다만 고객 쪽 최종 수령 확인은 아직 오지 않았습니다.",
+            "상대방 확인 메일이 없어 종결 회신은 잠시 보류해 주세요.",
+            "완료 안내를 보내기 전에 고객 확인 한 번만 더 필요합니다.",
+        ][variant % 3]
+    elif status == "partially_resolved":
+        internal = "확보된 수량은 먼저 진행하고 잔량은 별도로 잡기로 했습니다."
+        external = "대체품 승인과 잔량 일정은 아직 회신을 기다리고 있습니다."
+    else:
+        internal = "내부 조치는 진행 중이며 오늘 안으로 확정하기는 어렵습니다."
+        external = "고객에게는 확정 전 일정으로 안내하지 말아 주세요."
+    return internal, external
+
+
+def render_document(
+    folder: str,
+    doc_id: str,
+    created: date,
+    author: str,
+    related_team: str,
+    issue_id: str,
+    title: str,
+    customer_id: str,
+    supplier_id: str,
+    product_id: str,
+    description: str,
+    status: str,
+    variant: int,
+) -> str:
+    customer_name = master_name(CUSTOMERS, customer_id)
+    customer_contact = master_name(CUSTOMERS, customer_id, 3)
+    supplier_name = master_name(SUPPLIERS, supplier_id)
+    product_name = master_name(PRODUCTS, product_id)
+    quantity = deterministic_number("doc-qty", doc_id, 120, 2400)
+    first_date = min(END_DATE, created + timedelta(days=3 + variant % 4))
+    revised_date = min(END_DATE, first_date + timedelta(days=2 + variant % 3))
+    internal_status, external_status = natural_status_lines(status, variant)
+
+    if folder == "sales_emails":
+        content = f"""제목: [{customer_name}] {product_name} 납기 확인
+보낸사람: {customer_contact} <customer-{customer_id.lower()}@example.invalid>
+받는사람: {author} <sales@example.invalid>
+보낸시각: {created.isoformat()} 09:{10 + variant:02d}
+
+안녕하세요.
+
+{product_name} {quantity:,}개 건은 {first_date.strftime('%m/%d')}까지 입고되는 것으로 알고 있습니다.
+어제 통화에서는 {revised_date.strftime('%m/%d')} 가능성도 말씀하셔서 어느 날짜가 맞는지 확인 부탁드립니다.
+생산 투입 일정이 잡혀 있어 전량이 어렵다면 먼저 가능한 수량이라도 오늘 오후까지 알려 주세요.
+
+저희 쪽에서는 아직 최종 일정으로 등록하지 않았습니다. 회신 주실 때 출고 수량과 잔량 일정을 같이 부탁드립니다.
+
+{customer_contact} 드림
+"""
+    elif folder == "purchase_emails":
+        content = f"""제목: RE: {product_name} 재고 및 출하 일정
+보낸사람: {supplier_name} 영업담당 <supplier-{supplier_id.lower()}@example.invalid>
+받는사람: {author} <purchase@example.invalid>
+보낸시각: {created.isoformat()} 14:{5 + variant:02d}
+
+{author}님,
+
+현재 바로 출하 가능한 수량은 {max(50, quantity // 2):,}개입니다. 나머지는 생산 확인 중입니다.
+우선분은 {first_date.strftime('%m/%d')} 출고로 잡아 두었지만 확정 출고표에는 아직 반영 전입니다.
+지난번 말씀드린 {revised_date.strftime('%m/%d')}는 잔량 예상일이고 하루 이틀 변동될 수 있습니다.
+
+{description}
+대체 사양으로 진행하실 경우 고객 승인 여부를 먼저 알려 주셔야 준비할 수 있습니다.
+
+감사합니다.
+{supplier_name} 영업팀
+"""
+    elif folder == "quality_claims":
+        content = f"""클레임 접수 메모
+접수: {created.isoformat()} {10 + variant:02d}:20 / 전화
+고객: {customer_name} ({customer_contact})
+품목: {product_name}
+수량: 확인 대상 {quantity:,}개 중 불량 주장 {max(1, quantity // 37)}개
+
+- 고객은 조립 중 체결이 일정하지 않았다고 함.
+- 생산 LOT 표기는 사진이 흐려서 다시 받아야 함.
+- 동일 증상 샘플 {1 + variant % 3}개를 회수하기로 했으나 발송일은 미정.
+- 공급처는 출하검사 이상 없었다고 구두로 답변함.
+- 고객 공정 조건도 같이 확인하기로 했고, 원인 확정 전 교환 여부는 안내하지 않음.
+
+{external_status}
+메모 작성: {author}
+"""
+    elif folder == "logistics_logs":
+        content = f"""{created.isoformat()} 출고/통관 작업 로그
+
+08:40  {product_name} {quantity:,}개 출고 요청 접수. 요청 납기 {first_date.strftime('%m/%d')}.
+10:15  창고 피킹 수량 {max(50, quantity - (variant % 4) * 80):,}개 확인. 요청 수량과 차이 있어 영업팀에 문의.
+13:05  운송사 배차는 {revised_date.strftime('%m/%d')} 도착 기준으로 임시 예약.
+15:30  {supplier_name} 포장명세 수량과 창고 실물이 맞지 않아 송장 발행 보류.
+17:10  {internal_status}
+17:25  {external_status}
+
+기록: {author}
+"""
+    elif folder == "meeting_notes":
+        content = f"""{created.strftime('%m/%d')} 운영 확인 메모
+참석: {author}, 영업 박서연, 구매 최유진, 물류 윤예린
+
+- {title}
+- 고객이 원하는 날짜: {first_date.strftime('%m/%d')}
+- 구매팀이 받은 날짜: {revised_date.strftime('%m/%d')} 전후, 확답 아님
+- 먼저 가능한 수량은 {max(50, quantity // 2):,}개로 들었으나 창고 확인 필요
+- 고객 회신은 박서연이 맡기로 했는데 휴가 일정과 겹치는지 확인
+- {internal_status}
+- {external_status}
+- 내일 오전 공급처 수량 확인 후 다시 모이기
+
+작성: {author}
+"""
+    else:
+        content = f"""[{created.isoformat()} 내부 메신저]
+
+09:12 {author}: {product_name} 건 고객이 {first_date.strftime('%m/%d')} 맞냐고 다시 물어봤어요.
+09:14 최유진: 구매처 메일에는 잔량이 {revised_date.strftime('%m/%d')}라고 왔습니다. 우선분만 먼저 나갈 수 있어요.
+09:18 윤예린: 창고 수량은 {max(50, quantity - (variant % 3) * 100):,}개로 보여요. 전량 출고 표시는 아직 하지 말아주세요.
+09:26 박서연: 그러면 고객한테 부분 출고라고 먼저 말할까요? 어제는 완료 예정이라고 전달했습니다.
+09:31 {author}: {internal_status}
+09:35 박서연: {external_status}
+09:42 최유진: 담당자가 오늘 외근이라 공급처 최종 답은 오후 늦게 올 것 같습니다.
+"""
+
+    metadata = "\n".join([
+        f"doc_id: {doc_id}",
+        f"doc_type: {folder}",
+        f"created_date: {created.isoformat()}",
+        f"author: {author}",
+        f"related_team: {related_team}",
+        f"related_customer_id: {customer_id}",
+        f"related_supplier_id: {supplier_id}",
+        f"related_product_id: {product_id}",
+        f"related_issue_id: {issue_id}",
+        "--------------------------------",
+        "",
+    ])
+    return metadata + textwrap.dedent(content).strip() + "\n"
 
 
 def write_csv(path: Path, headers: list[str], rows: list[dict[str, object]]) -> None:
@@ -129,7 +282,6 @@ def build_documents() -> tuple[list[dict[str, str]], Counter]:
         count = 12 if issue_index < len(CORE_ISSUES) else 4
         for idx in range(count):
             folder = DOC_TYPES[idx % len(DOC_TYPES)]
-            label = DOC_LABELS[idx % len(DOC_LABELS)]
             created = spread_date(start, end, idx, count)
             monthly[created.month] += 1
             doc_id = f"DOC-2022-{issue_index + 1:03d}-{idx + 1:03d}"
@@ -137,31 +289,10 @@ def build_documents() -> tuple[list[dict[str, str]], Counter]:
             file_path = f"02_raw_documents/{folder}/{file_name}"
             author = AUTHORS[folder]
             related_team = teams.split(";")[idx % len(teams.split(";"))]
-            uncertainty = ["아마", "일단", "확인 중", "다음 주 초 예상", "확정 아님", "담당자 재확인 필요"][idx % 6]
-            body = "\n".join([
-                f"doc_id: {doc_id}",
-                f"doc_type: {folder}",
-                f"created_date: {created.isoformat()}",
-                f"author: {author}",
-                f"related_team: {related_team}",
-                f"related_customer_id: {customer}",
-                f"related_supplier_id: {supplier}",
-                f"related_product_id: {product}",
-                f"related_issue_id: {issue_id}",
-                "--------------------------------",
-                "",
-                f"{label} 관련 메모입니다. {uncertainty}. {description}",
-                f"제목에는 {title}로 적었는데 이전 메일에서는 표현이 조금 달랐습니다.",
-                "고객 요청 날짜와 내부 확인 날짜가 한 번 수정되어 최신 기준을 다시 봐야 합니다.",
-                f"담당자는 {author}로 보이지만 최종 승인자와 회신 주체는 아직 분명하지 않습니다.",
-                "같은 확인 요청이 메일과 채팅에 중복으로 남아 있습니다.",
-                f"현재 상태는 {status}로 기록했지만 일부 문서에는 완료처럼 적힌 부분도 있습니다.",
-                f"리스크 등급은 {severity}이며 단정하지 말고 근거 문서를 함께 확인해야 합니다.",
-                "요청사항: 최신 수량, 날짜, 고객 승인 필요 여부를 다시 맞춰 주세요.",
-                "다음 액션: 담당자 확인 후 고객 회신 초안을 업데이트합니다.",
-                "이 내용은 완성된 보고서가 아니라 당시 업무 자료입니다.",
-                "",
-            ])
+            body = render_document(
+                folder, doc_id, created, author, related_team, issue_id, title, customer,
+                supplier, product, description, status, idx,
+            )
             write_text(OUT / file_path, body)
             rows.append({
                 "doc_id": doc_id, "file_path": file_path, "doc_type": folder,
@@ -169,7 +300,7 @@ def build_documents() -> tuple[list[dict[str, str]], Counter]:
                 "related_team": related_team, "related_customer_id": customer,
                 "related_supplier_id": supplier, "related_product_id": product,
                 "related_issue_id": issue_id,
-                "summary_hint": f"{title} 관련 비정형 {label} 자료. 날짜 변경, 담당자 불명확, 중복 요청 포함",
+                "summary_hint": f"{title} 관련 {folder} 원천자료",
             })
     return rows, monthly
 
@@ -455,6 +586,27 @@ The loader is preview-only. Review `05_mapping/`, current DB constraints, and pr
 
 def validate(documents: list[dict[str, str]], csv_sets: dict[str, list[dict[str, object]]], monthly: Counter) -> list[str]:
     errors = []
+    banned_raw_phrases = [
+        "이 내용은 완성된 보고서가 아니라",
+        "단정하지 말고 근거 문서를",
+        "현재 상태는",
+        "요청사항:",
+        "다음 액션:",
+        "제목에는",
+        "리스크 등급은",
+        "AI가 추출",
+        "AI 분석",
+        "데이터 생성 의도",
+        "보고서 작성 지시",
+    ]
+    required_body_markers = {
+        "sales_emails": ["제목:", "보낸사람:", "받는사람:"],
+        "purchase_emails": ["제목:", "보낸사람:", "받는사람:"],
+        "quality_claims": ["클레임 접수 메모", "접수:", "품목:"],
+        "logistics_logs": ["출고/통관 작업 로그", "08:40", "기록:"],
+        "meeting_notes": ["운영 확인 메모", "참석:", "작성:"],
+        "chat_logs": ["내부 메신저", "09:12", "09:42"],
+    }
     if len(documents) < 120:
         errors.append("source documents below 120")
     per_issue = Counter(row["related_issue_id"] for row in documents)
@@ -465,10 +617,20 @@ def validate(documents: list[dict[str, str]], csv_sets: dict[str, list[dict[str,
         if monthly[month] < 8:
             errors.append(f"2022-{month:02d} has fewer than 8 documents")
     for row in documents:
-        if not (OUT / row["file_path"]).exists():
+        path = OUT / row["file_path"]
+        if not path.exists():
             errors.append(f"missing document: {row['file_path']}")
+            continue
         if not ("2022-01-01" <= row["created_date"] <= "2022-12-31"):
             errors.append(f"document date out of range: {row['doc_id']}")
+        text = path.read_text(encoding="utf-8")
+        body = text.split("--------------------------------", 1)[-1]
+        for phrase in banned_raw_phrases:
+            if phrase in body:
+                errors.append(f"meta phrase in raw body: {row['doc_id']} ({phrase})")
+        for marker in required_body_markers[row["doc_type"]]:
+            if marker not in body:
+                errors.append(f"missing {row['doc_type']} marker: {row['doc_id']} ({marker})")
     for name, rows in csv_sets.items():
         date_keys = [key for key in rows[0] if key.endswith("_date")] if rows else []
         for row in rows:
