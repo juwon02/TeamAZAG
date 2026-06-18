@@ -2,7 +2,8 @@
 //
 // 전환된 화면을 기존 바닐라 노드 안에 React로 렌더한다. 현재: 설정(s-settings),
 // 보고서(s-reports), 캘린더(s-calendar), 이슈 로그(s-issues), 대시보드(s-dashboard),
-// 인수인계 센터(s-knowledge) 6개. 아직 안 옮긴 화면은 전부 바닐라가 그대로 소유한다.
+// 인수인계 센터(s-knowledge), 운영 로그 분석(s-analysis), AI Assistant(s-chat) 8개.
+// 아직 안 옮긴 화면(Todo)은 전부 바닐라가 그대로 소유한다.
 //
 // 안전 설계:
 //  - window.nav 를 건드리지 않는다. 대신 #s-settings 가 .active 가 되는 것을
@@ -17,6 +18,8 @@ import CalendarScreen from './CalendarScreen.jsx'
 import IssuesScreen from './IssuesScreen.jsx'
 import DashboardScreen from './DashboardScreen.jsx'
 import KnowledgeScreen from './KnowledgeScreen.jsx'
+import AnalysisScreen from './AnalysisScreen.jsx'
+import ChatScreen from './ChatScreen.jsx'
 
 const USE_REACT_SETTINGS = (() => {
   try {
@@ -61,6 +64,22 @@ const USE_REACT_DASHBOARD = (() => {
 const USE_REACT_KNOWLEDGE = (() => {
   try {
     return localStorage.getItem('opsradar_react_knowledge') !== 'off'
+  } catch (_) {
+    return true
+  }
+})()
+
+const USE_REACT_ANALYSIS = (() => {
+  try {
+    return localStorage.getItem('opsradar_react_analysis') !== 'off'
+  } catch (_) {
+    return true
+  }
+})()
+
+const USE_REACT_CHAT = (() => {
+  try {
+    return localStorage.getItem('opsradar_react_chat') !== 'off'
   } catch (_) {
     return true
   }
@@ -147,7 +166,7 @@ function mountReactDashboard() {
   )
 }
 
-// 인수인계 센터(s-knowledge) — 스트랭글러 4번째. 보고서·캘린더와 동일: 화면 전체 vanilla 소유라
+// 인수인계 센터(s-knowledge) — 보고서·캘린더와 동일: 화면 전체 vanilla 소유라
 // React 는 셸 구조를 memo 로 1회만 렌더하고, handoff.js(window.nav 패치)+app.js 가 이 노드에
 // #knowledgeContent 를 주입/바인딩한다. 재렌더 0(MutationObserver 미사용). <style>는 head 라 무관.
 function mountReactKnowledge() {
@@ -160,6 +179,38 @@ function mountReactKnowledge() {
   )
 }
 
+// 운영 로그 분석(s-analysis) — 캘린더/보고서와 동일: 화면 전체 vanilla 소유라
+// React 는 구조를 memo 로 1회만 렌더하고, inline 핸들러(onclick 등)가 기존 전역 함수를 그대로 호출한다.
+// ⚠️ 재렌더 0(key/MutationObserver 미사용): workflow-v2.js(ensureQueues→#workflowQueueCenter) 와
+// role-workflow-enhancements.js(ensureApprovalCenter→#analysisApprovalCenter) 가 런타임에
+// `#s-analysis .content` 로 패널을 prepend 한다. React 가 재렌더하면 이 주입 패널이 사라지므로
+// 절대 1회 렌더 이후 다시 그리지 않는다.
+function mountReactAnalysis() {
+  const el = document.getElementById('s-analysis')
+  if (!el) return
+  createRoot(el).render(
+    <StrictMode>
+      <AnalysisScreen />
+    </StrictMode>,
+  )
+}
+
+// AI Assistant(s-chat) — 운영분석/캘린더와 동일: 화면 전체 vanilla 소유라
+// React 는 구조를 memo 로 1회만 렌더하고, inline 핸들러(onclick="sendMsg()" 등)가 기존 전역
+// 함수를 그대로 호출한다. nav('chat') 가 initChatSessions()→renderCurrentChatMessages() 로
+// 이 노드의 #chatArea/#chatSessionList 를 채운다.
+// ⚠️ 재렌더 0(key/MutationObserver 미사용): 메시지는 #chatArea 에 appendChild 로 쌓이므로,
+// React 가 재렌더하면 진행 중 대화가 intro 로 리셋된다. 1회 렌더 이후 절대 다시 그리지 않는다.
+function mountReactChat() {
+  const el = document.getElementById('s-chat')
+  if (!el) return
+  createRoot(el).render(
+    <StrictMode>
+      <ChatScreen />
+    </StrictMode>,
+  )
+}
+
 function bootstrap() {
   if (USE_REACT_SETTINGS) mountReactSettings()
   if (USE_REACT_REPORTS) mountReactReports()
@@ -167,6 +218,8 @@ function bootstrap() {
   if (USE_REACT_ISSUES) mountReactIssues()
   if (USE_REACT_DASHBOARD) mountReactDashboard()
   if (USE_REACT_KNOWLEDGE) mountReactKnowledge()
+  if (USE_REACT_ANALYSIS) mountReactAnalysis()
+  if (USE_REACT_CHAT) mountReactChat()
 }
 
 if (document.readyState === 'loading') {

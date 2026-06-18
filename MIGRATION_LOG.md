@@ -24,13 +24,13 @@
 | 화면 | ID | 담당 기존 JS | 상태 |
 |------|----|----|----|
 | Dashboard | s-dashboard | React(DashboardScreen.jsx) + renderDashboardLive 등 동작 vanilla 공존 | **전환완료** (박주원) |
-| 운영 로그 분석 | s-analysis | app.js | 기존바닐라 |
+| 운영 로그 분석 | s-analysis | React(AnalysisScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
 | Todo | s-todo | app.js + todo-calendar-enhancements.js | 기존바닐라 |
 | 이슈 로그 | s-issues | React(IssuesScreen.jsx) + workflow-v2/app.js 동작 vanilla 공존 | **전환완료** (박주원) |
 | 캘린더 | s-calendar | React(CalendarScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
 | 인수인계 센터 | s-knowledge | React(KnowledgeScreen.jsx) + handoff.js/app.js 동작 vanilla 공존 | **전환완료** (b25e8de) |
 | 보고서 | s-reports | React(ReportsScreen.jsx) + report.js/app.js 동작 vanilla 공존 | **전환완료** |
-| AI Assistant | s-chat | app.js | 기존바닐라 |
+| AI Assistant | s-chat | React(ChatScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
 | 설정 | s-settings | React(SettingsScreen.jsx) + 멤버패널 vanilla 공존 | **전환완료** (e6ff5a4) |
 (상태값: 기존바닐라 / 전환중 / 전환완료)
 
@@ -160,6 +160,41 @@
     data-handoff-view 토글·head <style> 주입 정상, 이중렌더 없음(reactContainer 1, 3회 재진입에도 콘텐츠 유지),
     기존 3화면(설정·보고서·캘린더) 무영향. 폴백(opsradar_react_knowledge='off') → React 미마운트·바닐라 복귀 정상.
 
+- 2026-06-17, Claude Code, 운영 로그 분석(s-analysis) 화면 React 전환 — 스트랭글러 4번째 (dangerouslySetInnerHTML verbatim):
+  - AnalysisScreen.jsx: 기존 `#s-analysis` 내부 HTML(index.html 215~294줄)을 **dangerouslySetInnerHTML 로
+    verbatim 주입**. inline onclick/onchange/ondragover/ondragleave/ondrop/style 전부 보존 →
+    브라우저가 innerHTML 파싱 시 네이티브 이벤트로 등록 → 기존 전역 함수(startAnalysis/resetUpload/
+    toggleHistory/onFileSelect/ondov/ondl/handleUploadDrop/openAnalysisTodoReview/openAnalysisRiskReview/
+    applyDashboard/resetFlow 등)를 그대로 호출. **React 관리 상태 0개.**
+  - 구조 보존: `#s-analysis`(.screen flex column)의 직계 자식은 `.topbar`/`.content` 두 개.
+    래퍼 div 를 끼우면 flex 가 깨지므로 프래그먼트로 `.topbar`/`.content` 를 각각 직접 렌더하고
+    그 안쪽만 dangerouslySetInnerHTML 로 채움(원본 직계 구조 동일, 픽셀 동일).
+  - **app.js / api-integration.js / workflow-v2.js / role-workflow-enhancements.js 무수정.**
+    특히 api-integration.js 의 startAnalysis 몽키패치(실제 문서 업로드→분석→todos/issues API)는 그대로 둠.
+  - 폴백: localStorage.opsradar_react_analysis='off' +새로고침 → 바닐라 복귀. main.jsx 에
+    mountReactAnalysis() 추가(캘린더와 동일: createRoot 1회 render, MutationObserver/key 미사용).
+  - 검증(사용자 직접): 픽셀 동일(업로드존/플로우/결과), 파일 업로드→AI 분석 4단계 끝까지 정상
+    (DB documents/todos/issues 반영), **주입 패널 2개(승인 대기 Todo 큐 + 이슈 자동탐지) 재렌더로 안 사라짐 확인**,
+    콘솔 빨간 에러 없음(401 토큰 기존 이슈 제외).
+
+- 2026-06-17, Claude Code, AI Assistant(s-chat) 화면 React 전환 — 스트랭글러 5번째 (dangerouslySetInnerHTML verbatim):
+  - ChatScreen.jsx: 기존 `#s-chat` 내부 HTML(index.html 597~652줄)을 **dangerouslySetInnerHTML 로
+    verbatim 주입**. 직계 자식 `.topbar.chat-topbar` + `.chat-workspace` 를 프래그먼트 2개로 각각
+    직접 렌더하고 안쪽만 채움(원본 직계 구조 동일, 픽셀 동일). inline onclick/onkeydown/oninput/style
+    전부 보존 → 기존 전역 함수(sendMsg/autoResize/createNewChatSession/clearCurrentChatSession 등)
+    그대로 호출. **React 관리 상태 0개.**
+  - **app.js / api-integration.js / workflow-v2.js / role-workflow-enhancements.js 무수정.**
+    특히 app.js `sendMsg`(RAG `POST /chat` API 내장)는 그대로 둠. api-integration.js 는 s-chat 을
+    아예 안 건드림(운영분석의 startAnalysis 몽키패치와 달리 채팅은 RAG 가 app.js 에 직접 내장).
+  - 폴백: localStorage.opsradar_react_chat='off' +새로고침 → 바닐라 복귀. main.jsx 에
+    mountReactChat() 추가(운영분석/캘린더와 동일: createRoot 1회 render, MutationObserver/key 미사용).
+  - 검증(사용자 직접): 픽셀 동일(세션/채팅/컨텍스트 3패널), 메시지 전송→응답 카드 렌더 정상,
+    **재렌더 0 검증 통과 — 메시지 주고받고 다른 화면 갔다 와도 #chatArea 대화 그대로 보존**,
+    타화면 무영향, 콘솔 빨간 JS 에러 없음.
+  - ⚠️ 채팅 RAG 응답이 "Azure OpenAI 연결 실패"로 옴 — **프론트 전환과 무관한 백엔드 문제**
+    (서버 Azure OpenAI API 키 재발급 미완료). sendMsg→POST /chat 호출까지는 정상, LLM 연결만 실패.
+    아래 백로그 참고.
+
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
 - 최종: 504줄은 월요일(2026-06-15) 사용자+Codex가 만든 인수인계 센터 핵심 작업 →
@@ -168,12 +203,21 @@
   504줄본이 이를 인수인계 센터 전면(퇴사자/신규입사자 카드 + AI 파이프라인 데모/보드)으로 확장함.
 
 ## 다음 작업 (다음 AI가 할 일)
-- ⏸ **로그아웃 후속처리(제품 결정 대기)** — nav 방어수정(커밋 fd9409a)은 끝남. 남은 건 로그아웃.
+- 🔴 **[발표 전 필수 해결] 로그인/로그아웃 + 토큰 만료 복구** (기존 "제품 결정 대기"에서 격상, 2026-06-17).
   진단 결론: 로그인/로그아웃 플로우가 반쪽만 이식됨(`src/Login.js`·`__workraderLogout`·login CSS가
   CRA src에만 있고 서빙 vite 번들엔 없음 → `logout()`이 reload만 하고 같은 대시보드로 복귀).
   **사용자가 "발표 때 로그아웃이 무엇을 해야 하는지" 정한 뒤** app.js의 `logout()`을 그에 맞게 수정.
-  (옵션: ㄱ 데모용 숨김/토스트 / ㄴ 토큰 클리어 후 안내 / ㄷ 로그인 화면 신설) — 자세한 건 주의사항 참고.
-- 다음 화면 전환 — 대상 미정(사용자와 상의). 남은 바닐라 3개: 운영 로그 분석 / Todo / AI Assistant.
+  - **증상 실증됨(2026-06-17)**: 토큰 만료 시 인증 기능(예: 문서 삭제 `DELETE /api/v1/documents/{id}`)이
+    **401**, 그런데 **로그인 화면이 vite 번들에 없어 재로그인 불가** → 한 번 만료되면 **복구 불가**.
+    (실제로 이번에 테스트 더미 문서 삭제가 이 401 때문에 막힘.)
+  - **발표 리스크**: 데모 중 토큰이 만료되면 인증 기능이 죽고 되살릴 길이 없음.
+  - **발표 전 팀 결정 필요**: ㄱ(로그아웃 숨김 + 직전 새 토큰 발급) / ㄴ(토큰 클리어 후 안내) /
+    ㄷ(로그인 화면 신설). 정한 뒤 app.js `logout()` + 토큰 갱신 흐름 수정.
+  - **추가 확인 필요**: 토큰 유효기간 설정값(`JWT_EXPIRE_HOURS`)이 데모 시간 동안 안 만료되는지 점검.
+  - 별도(정리 보류): 테스트 더미 문서 **6407772e**(`ops_dummy.txt`) + 연결 Todo 3 / Issue 2 **미삭제** —
+    토큰 401 로 막혀 보류. 나중에 **DB 직접 삭제** 또는 토큰 복구 후 `DELETE /api/v1/documents/6407772e...` 로 정리.
+- 다음 화면 전환 — 운영 로그 분석/AI Assistant 전환완료. 남은 바닐라 1개: **Todo**
+  (feature/todo-react 에서 전환 진행 중). 이슈·대시보드·인수인계·운영분석·AI Assistant 모두 전환완료.
   - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부 + 바닐라 리스너 바인딩 방식까지** 조사할 것(아래 교훈 참고).
   - 패턴: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용.
     화면 전체가 vanilla 소유면 보고서·캘린더처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면
@@ -183,6 +227,17 @@
 - 그 외 남은 바닐라 3개 화면은 계속 유지, 한 번에 한 화면씩.
 
 ## 백로그 (나중에 할 일)
+- [✅ 해결됨] (2026-06-17) AI Assistant 채팅 RAG "Azure OpenAI 연결 실패" — **키 문제 아니었음.**
+      원인: `.env` 의 `AZURE_OPENAI_ENDPOINT` 가 **Foundry 프로젝트 URL**(`...services.ai.azure.com/api/projects/...`)
+      + 미지원 API 버전이었음. 표준 `AsyncAzureOpenAI` 클라이언트와 형식 불일치 → 400/404.
+      해결 (**`.env` 3줄, 코드 0줄**):
+      · `AZURE_OPENAI_ENDPOINT = https://<리소스>.openai.azure.com/`
+        (Foundry "Azure OpenAI 엔드포인트" 칸 값. ⚠️ **끝에 `/openai/v1` 붙이지 말 것 — 베이스 URL만.**
+         `/openai/v1` 붙이면 SDK 가 경로를 또 붙여 404)
+      · `AZURE_OPENAI_API_VERSION = 2024-10-21`
+      · 키/배포명(gpt-4o, text-embedding-3-large)은 그대로
+      검증: 채팅 gpt-4o 응답 + 임베딩 3072차원 + 문서분석(업로드→임베딩→Todo/Issue 추출) 끝단까지 성공.
+      ⚠️ **`.env` 는 git 미추적 → 각 PC 에 직접 적용해야 함. 통합/발표 PC 도 같은 값으로 맞출 것.**
 - [ ] 멤버 관리: 담당자별 ID/이메일 수정 + 비밀번호 변경 기능.
       ⚠️ 백엔드 API 없음 → PATCH /members/{id}, 비번 변경 엔드포인트 + DB 스키마
       (멤버 비번 필드) 먼저 필요. 보안: 비번 평문 노출 금지, '변경' 폼만. DB 담당이 작업.
@@ -207,6 +262,21 @@
   단 React가 재렌더하면 vanilla가 채운 DOM(목록/contenteditable/탭 active)을 되돌릴 수 있으니
   **memo + 재렌더 0**(MutationObserver 미사용)으로 둘 것. contenteditable은 uncontrolled(+
   suppressContentEditableWarning)로 두어 vanilla의 innerHTML 읽기/쓰기를 방해하지 말 것.
+- ★교훈(AI Assistant 전환에서 배움): 채팅 메시지는 app.js `appendChatMsg()` 가 `#chatArea` 에
+  **appendChild 로 live 하게 쌓는다**(+ `renderCurrentChatMessages()` 가 innerHTML 교체로 세션 복원).
+  → **재렌더 0 필수 — memo 1회 렌더.** 운영분석과 동일 패턴이지만, 여기는 런타임 주입 패널이 없는 대신
+  메시지가 live append 되므로 React 가 재렌더하면 진행 중 **대화 전체가 intro 로 리셋**된다(운영분석은
+  주입 패널 소실, 채팅은 대화 소실 — 위험 형태만 다름). dangerouslySetInnerHTML 로 `#chatArea` 를 진짜
+  element 로 두면 vanilla 의 append/innerHTML 교체가 그대로 작동하고, React 가 안 그리는 한 보존된다.
+  참고: RAG `POST /chat` 은 api-integration.js 몽키패치가 아니라 app.js `sendMsg` 에 직접 내장이라
+  채팅 전환은 api-integration.js 와 무관(운영분석의 startAnalysis 몽키패치와 대비).
+- ★교훈(운영 로그 분석 전환에서 배움): `#s-analysis .content` 에는 **두 외부 JS 가 런타임에 패널을
+  prepend** 한다 — workflow-v2.js `ensureQueues()`→`#workflowQueueCenter`(승인 대기 Todo/Risk 큐),
+  role-workflow-enhancements.js `ensureApprovalCenter()`→`#analysisApprovalCenter`(관리자 승인함).
+  React 가 `.content` 를 한 번이라도 재렌더하면 이 주입 패널이 사라진다.
+  → **재렌더 0 필수 — memo 1회 렌더(MutationObserver/key 미사용)로 해결.** dangerouslySetInnerHTML 로
+  `.content` 를 진짜 element 로 두면, React 가 다시 안 그리는 한 vanilla 가 prepend 한 자식은 보존된다.
+  (설정 멤버패널과 같은 주입형 위험이지만 여기선 패널이 2개 + 역할 기반이라 더 주의.)
 - ★방어수정(2026-06-16): `nav()`에 **null 가드 + 화면별 init try/catch** 적용 완료. 이제 화면 노드가
   없거나 한 화면 init이 에러나도 nav 전체가 throw로 멈추지 않음(에러는 console.warn). 향후 React 전환에서
   `#s-OOO` 노드를 없애는 변경을 하더라도 nav가 죽지 않는다(단 가능하면 컨테이너 노드는 유지할 것).
