@@ -7,7 +7,7 @@ import io
 from pathlib import Path
 
 
-SUPPORTED_EXTENSIONS = {".txt", ".csv", ".pdf", ".docx"}
+SUPPORTED_EXTENSIONS = {".txt", ".csv", ".pdf", ".docx", ".md"}
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 
@@ -24,7 +24,7 @@ def parse_file(file_path: str | Path) -> tuple[str, str]:
     if ext not in SUPPORTED_EXTENSIONS:
         raise ValueError(f"unsupported file extension: {ext}")
 
-    if ext == ".txt":
+    if ext in (".txt", ".md"):
         text = _parse_text(path)
     elif ext == ".csv":
         text = _parse_csv(path)
