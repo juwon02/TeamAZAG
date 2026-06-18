@@ -61,9 +61,13 @@ async def chat(payload: ChatRequest, db: AsyncSession = Depends(get_db)):
 
     context = "\n\n".join(part for part in [rag_context, operational_context] if part.strip())
     knowledge_answer = _local_knowledge_answer(payload.message, rag_context)
+    # [B3] 관련 문서가 실제로 검색됐고(rag_context 존재) Azure 가 켜져 있으면, 운영 질문이라도
+    # 임베딩 검색 결과를 LLM 컨텍스트로 주입해서 답하도록 한다. 기존엔 운영 질문이 무조건
+    # _local_answer(operational_context) 로 빠져 retrieve() 결과(문서 chunk)가 버려졌음.
+    use_llm_rag = settings.AI_PROVIDER.lower() == "azure" and bool(rag_context.strip())
     if knowledge_answer:
         answer = knowledge_answer
-    elif _is_operational_question(payload.message):
+    elif _is_operational_question(payload.message) and not use_llm_rag:
         answer = _local_answer(payload.message, operational_context, team_members)
     elif settings.AI_PROVIDER.lower() != "azure":
         answer = _local_knowledge_answer(payload.message, rag_context) or _local_answer(payload.message, operational_context, team_members)
