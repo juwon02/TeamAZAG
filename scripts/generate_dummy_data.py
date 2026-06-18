@@ -6,6 +6,8 @@ import shutil
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from operational_raw_documents import render_operational_document
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "dummy_data"
@@ -91,8 +93,12 @@ DOC_TYPES = {
 
 
 def ensure_dirs() -> None:
-    if OUT.exists():
-        shutil.rmtree(OUT)
+    # Regenerate only the source-data areas owned by this script. Historical and
+    # DB seed folders under dummy_data are independent artifacts.
+    for name in ["01_master_data", "02_raw_documents", "03_structured_csv", "04_expected_outputs_for_test"]:
+        target = OUT / name
+        if target.exists():
+            shutil.rmtree(target)
     for path in [
         OUT / "01_master_data",
         OUT / "02_raw_documents" / "sales_emails",
@@ -208,40 +214,30 @@ def make_doc_body(doc_id: str, folder: str, doc_type: str, day: date, issue: tup
     status = issue[10] if issue else RNG.choice(["Open", "Closed", "Monitoring"])
     quantity = RNG.choice([400, 600, 800, 1200, 2500, 5000])
 
-    lines = [
-        f"문서ID: {doc_id}",
-        f"작성일: {day.isoformat()}",
-        f"문서유형: {doc_type}",
-        f"작성자: {author}",
-        f"관련팀: {related_team}",
-        f"고객사: {cname}",
-        f"구매처: {sname}",
-        f"품목: {pname}",
-        f"관련이슈: {issue_id or '일반 운영'} / {issue_title}",
-        "",
-        f"{cname} 관련 {pname} 업무 건으로 {day.strftime('%Y년 %m월 %d일')} 기준 진행 상황을 정리합니다.",
-        f"현재 확인된 수량은 {quantity:,}개이며, 요청 납기 또는 내부 처리 기준일은 {due.isoformat()}입니다.",
-        f"{sname} 회신 기준으로 재고, 리드타임, 단가, 출고 가능일 중 최소 한 항목은 추가 확인이 필요합니다.",
-        f"리스크 등급은 {risk}이며 상태는 {status}로 분류합니다.",
-        f"Todo: {author}은 {due.isoformat()} 오전까지 고객 안내 문구와 내부 처리 결과를 업데이트합니다.",
-        f"요청사항: {related_team}은 구매처 회신, 출고 가능 수량, 고객 승인 여부를 한 문단으로 요약해 공유합니다.",
-        f"Blocked: 고객 승인, 공급처 회신, 통관 서류, 품질 판정 중 지연 항목이 있으면 issue_id {issue_id or '미지정'}로 연결합니다.",
-        "다음 액션: 담당자는 완료 여부를 Closed 또는 Monitoring으로 변경하고, 미완료 항목은 다음 주 보고서에 포함합니다.",
-    ]
+    customer_contact = next(row[3] for row in CUSTOMERS if row[0] == cid)
+    content = render_operational_document(
+        doc_id=doc_id,
+        folder=folder,
+        doc_type=doc_type,
+        created_date=day.isoformat(),
+        author=author,
+        related_team=related_team,
+        customer=cname,
+        customer_contact=customer_contact,
+        supplier=sname,
+        product=pname,
+        issue_id=issue_id,
+        issue_title=issue_title,
+        issue_description=issue[11] if issue else "정기 발주와 입출고 일정 확인",
+        status=status,
+        quantity=quantity,
+        due_date=due.isoformat(),
+    )
+    # Keep the seeded generation sequence compatible with the original dataset.
     if folder == "chat_logs":
-        lines.extend([
-            "",
-            f"[{author}] {cname} 건 Todo 남은 항목 확인 부탁드립니다.",
-            f"[{employee_by_team('구매팀')}] {sname} 회신은 아직 대기 중이며 예상 회신일은 {due.isoformat()}입니다.",
-            f"[{employee_by_team('물류팀')}] 출고 가능 수량 확인 후 지연이면 Blocked로 표시하겠습니다.",
-        ])
-    if folder == "meeting_notes":
-        lines.extend([
-            "",
-            "회의 결정: 고객 영향도가 높은 건은 운영총괄팀이 주간 보고서 초안에 먼저 반영합니다.",
-            "후속 확인: 담당자 변경 또는 인수인계 대상 고객이면 고객별 주의사항을 별도 메모로 남깁니다.",
-        ])
-    summary = f"{cname} / {pname} / {issue_title} 관련 Todo, 리스크, 다음 액션 포함"
+        employee_by_team("구매팀")
+        employee_by_team("물류팀")
+    summary = f"{cname} / {pname} / {issue_title} 관련 {folder} 업무 기록"
     meta = {
         "doc_id": doc_id,
         "doc_type": doc_type,
@@ -254,7 +250,7 @@ def make_doc_body(doc_id: str, folder: str, doc_type: str, day: date, issue: tup
         "related_issue_id": issue_id,
         "summary_hint": summary,
     }
-    return "\n".join(lines) + "\n", meta
+    return content, meta
 
 
 def generate_documents() -> list[dict[str, str]]:
@@ -570,20 +566,24 @@ def append_scenario_9_outputs() -> None:
 
     for doc in docs:
         path = OUT / "02_raw_documents" / doc["folder"] / doc["filename"]
-        body = "\n".join([
-            f"문서ID: {doc['doc_id']}",
-            f"작성일: {doc['created_date']}",
-            f"문서유형: {doc['doc_type']}",
-            f"작성자: {doc['author']}",
-            f"관련팀: {doc['related_team']}",
-            "고객사: Hanil Motors",
-            "구매처: Local Cable Works",
-            "품목: AP-CB-510 케이블 어셈블리",
-            f"관련이슈: {issue_id} / Hanil Motors 수량 불일치 클레임",
-            "",
-            *doc["body"],
-            "",
-        ])
+        body = render_operational_document(
+            doc_id=doc["doc_id"],
+            folder=doc["folder"],
+            doc_type=doc["doc_type"],
+            created_date=doc["created_date"],
+            author=doc["author"],
+            related_team=doc["related_team"],
+            customer="Hanil Motors",
+            customer_contact="최가은",
+            supplier="Local Cable Works",
+            product="AP-CB-510 케이블 어셈블리",
+            issue_id=issue_id,
+            issue_title="Hanil Motors 수량 불일치 클레임",
+            issue_description="고객 입고 수량 1,850개와 내부 출고 처리 2,000개의 차이를 확인 중",
+            status="in_progress",
+            quantity=2000,
+            due_date="2026-05-20",
+        )
         path.write_text(body, encoding="utf-8")
 
     append_csv(

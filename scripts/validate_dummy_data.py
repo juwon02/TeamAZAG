@@ -5,6 +5,8 @@ import subprocess
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from operational_raw_documents import validate_operational_body
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DUMMY = ROOT / "dummy_data"
@@ -146,10 +148,28 @@ def main() -> int:
     else:
         fail(f"duplicates found: docs={duplicate_docs[:10]}, issues={duplicate_issues[:10]}", failures)
 
+    raw_errors: list[str] = []
+    for row in docs:
+        path = DUMMY / row["file_path"]
+        if not path.exists():
+            continue
+        folder = Path(row["file_path"]).parts[1]
+        text = path.read_text(encoding="utf-8")
+        raw_errors.extend(f"{row['doc_id']}: {message}" for message in validate_operational_body(text, folder))
+    if not raw_errors:
+        ok(f"all raw documents use operational record formats ({len(docs)})")
+    else:
+        fail(f"raw document format errors: {raw_errors[:10]}", failures)
+
     if not git_diff_names("dummy_data/05_db_seed_v2"):
         ok("dummy_data/05_db_seed_v2 is not modified")
     else:
         fail("dummy_data/05_db_seed_v2 has modifications", failures)
+
+    if not git_diff_names("dummy_data/06_current_db_seed") and not git_diff_names("dummy_data/2022"):
+        ok("current DB seed and isolated 2022 seed are not modified")
+    else:
+        fail("protected DB or 2022 seed folders have modifications", failures)
 
     scan_paths = []
     for rel in [
