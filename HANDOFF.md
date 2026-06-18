@@ -6,7 +6,7 @@
 ---
 
 ## 0. 최신 상태 (2026-06-18 기준)
-- 현재 기준 브랜치: codex/jw-new2-test-run / JWon = 1eb14a7.
+- 현재 기준 브랜치: codex/jw-new2-test-run / JWon = 41e740b.
 - feature/analysis-react 병합 완료: 운영 로그 분석(s-analysis) + AI Assistant(s-chat) React 전환 반영.
 - feature/todo-react 병합 완료: Todo(s-todo) React 전환 반영.
 - 화면 전환 상태: 9개 화면 전부 React 전환완료.
