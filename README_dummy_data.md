@@ -10,6 +10,10 @@
 - `04_expected_outputs_for_test`: 개발 검증용 결과 샘플이며 실제 서비스 업로드 대상이 아닙니다.
 - `05_db_seed_v2`: OpsRadar2 v2 MVP DB seed CSV
 
+## DB / RAG 적용 기준
+
+DB/RAG 적용 기준은 `docs/dummy-data-db-rag-handoff.md`를 참고하세요. `dummy_data/05_db_seed_v2`는 현재 공유 DB에 바로 넣는 DB-ready seed가 아니며, 업무 원천 seed 또는 v2 후보 seed로 취급해야 합니다.
+
 ## 특수 시나리오 9개
 1. 2025년 6월 Daesung Automotive 긴급 발주 대응
 2. 2025년 8월 KET Supplier 재고 부족과 납기 지연 가능성
