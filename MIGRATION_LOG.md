@@ -25,7 +25,7 @@
 |------|----|----|----|
 | Dashboard | s-dashboard | React(DashboardScreen.jsx) + renderDashboardLive 등 동작 vanilla 공존 | **전환완료** (박주원) |
 | 운영 로그 분석 | s-analysis | React(AnalysisScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
-| Todo | s-todo | app.js + todo-calendar-enhancements.js | 기존바닐라 |
+| Todo | s-todo | React(TodoScreen.jsx) + app.js compatibility wrapper + todo-calendar-enhancements.js | **전환완료** (Codex) |
 | 이슈 로그 | s-issues | React(IssuesScreen.jsx) + workflow-v2/app.js 동작 vanilla 공존 | **전환완료** (박주원) |
 | 캘린더 | s-calendar | React(CalendarScreen.jsx) + 동작 vanilla 공존 | **전환완료** |
 | 인수인계 센터 | s-knowledge | React(KnowledgeScreen.jsx) + handoff.js/app.js 동작 vanilla 공존 | **전환완료** (b25e8de) |
@@ -194,6 +194,16 @@
   - ⚠️ 채팅 RAG 응답이 "Azure OpenAI 연결 실패"로 옴 — **프론트 전환과 무관한 백엔드 문제**
     (서버 Azure OpenAI API 키 재발급 미완료). sendMsg→POST /chat 호출까지는 정상, LLM 연결만 실패.
     아래 백로그 참고.
+- 2026-06-17, Codex, Todo(s-todo) 화면 React 렌더링 전환 — 스트랭글러 4번째:
+  - TodoScreen.jsx를 React shell에서 실제 React 렌더링 화면으로 확장. 탭 active, 검색 조건/키워드,
+    페이지, 테이블/카드 뷰, 선택 Todo 상세, empty state를 React state로 관리.
+  - TodoTabs.jsx / TodoList.jsx / TodoDetail.jsx / TodoEmptyState.jsx / todoStateAdapter.js 추가.
+    기존 class/id 구조는 유지하고, 기존 Todo 데이터 source(todos/G)는 app.js bridge로 읽어 React state에 반영.
+  - app.js의 renderTodos/selectTodo/renderTodoDetail/switchTodoTab/switchTodoView 등 기존 전역 함수는
+    삭제하지 않고 compatibility wrapper로 전환해 `opsradar:todo-*` 이벤트를 발생시킴.
+    Dashboard의 openDashboardTodoTab 및 api-integration/workflow/todo-calendar 기존 호출 흐름 유지.
+  - workflow-v2.js의 Todo 목록/상세 DOM 후처리는 React 렌더링과 중복되어 wrapper 호출만 남김.
+  - Vite 산출물은 기존 규칙대로 public/static/react/main.js만 갱신(dist 미생성).
 
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
@@ -216,8 +226,8 @@
   - **추가 확인 필요**: 토큰 유효기간 설정값(`JWT_EXPIRE_HOURS`)이 데모 시간 동안 안 만료되는지 점검.
   - 별도(정리 보류): 테스트 더미 문서 **6407772e**(`ops_dummy.txt`) + 연결 Todo 3 / Issue 2 **미삭제** —
     토큰 401 로 막혀 보류. 나중에 **DB 직접 삭제** 또는 토큰 복구 후 `DELETE /api/v1/documents/6407772e...` 로 정리.
-- 다음 화면 전환 — 운영 로그 분석/AI Assistant 전환완료. 남은 바닐라 1개: **Todo**
-  (feature/todo-react 에서 전환 진행 중). 이슈·대시보드·인수인계·운영분석·AI Assistant 모두 전환완료.
+- 화면 전환 — **9개 전부 전환완료**(설정·보고서·캘린더·이슈·대시보드·인수인계·운영분석·AI Assistant·Todo).
+  남은 바닐라 화면 없음. 이후 작업은 위 로그아웃/토큰 이슈 + 공통 인프라(공유 API 클라이언트 등) 중심.
   - 후보 검토 시 반드시 **api-integration.js 런타임 주입 여부 + 바닐라 리스너 바인딩 방식까지** 조사할 것(아래 교훈 참고).
   - 패턴: 기존 노드에 createRoot 렌더(ID 스코프 CSS 상속), 전역 함수 재사용.
     화면 전체가 vanilla 소유면 보고서·캘린더처럼 **memo 1회 렌더(재렌더 0)**, React 관리 상태가 있으면

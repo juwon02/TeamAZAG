@@ -2,8 +2,8 @@
 //
 // 전환된 화면을 기존 바닐라 노드 안에 React로 렌더한다. 현재: 설정(s-settings),
 // 보고서(s-reports), 캘린더(s-calendar), 이슈 로그(s-issues), 대시보드(s-dashboard),
-// 인수인계 센터(s-knowledge), 운영 로그 분석(s-analysis), AI Assistant(s-chat) 8개.
-// 아직 안 옮긴 화면(Todo)은 전부 바닐라가 그대로 소유한다.
+// 인수인계 센터(s-knowledge), 운영 로그 분석(s-analysis), AI Assistant(s-chat),
+// Todo(s-todo) 9개 — 9개 화면 전부 React 전환 완료.
 //
 // 안전 설계:
 //  - window.nav 를 건드리지 않는다. 대신 #s-settings 가 .active 가 되는 것을
@@ -20,6 +20,7 @@ import DashboardScreen from './DashboardScreen.jsx'
 import KnowledgeScreen from './KnowledgeScreen.jsx'
 import AnalysisScreen from './AnalysisScreen.jsx'
 import ChatScreen from './ChatScreen.jsx'
+import TodoScreen from './TodoScreen.jsx'
 
 const USE_REACT_SETTINGS = (() => {
   try {
@@ -80,6 +81,14 @@ const USE_REACT_ANALYSIS = (() => {
 const USE_REACT_CHAT = (() => {
   try {
     return localStorage.getItem('opsradar_react_chat') !== 'off'
+  } catch (_) {
+    return true
+  }
+})()
+
+const USE_REACT_TODO = (() => {
+  try {
+    return localStorage.getItem('opsradar_react_todo') !== 'off'
   } catch (_) {
     return true
   }
@@ -211,6 +220,19 @@ function mountReactChat() {
   )
 }
 
+// Todo(s-todo) — Todo 탭/목록/카드/상세는 React state 로 렌더한다(다른 화면들과 달리 React 가 상태 관리).
+// 기존 renderTodos()/switchTodoTab()/openDashboardTodoTab() 호출자는 app.js compatibility wrapper 로
+// React 이벤트를 발생시켜 유지한다. 다른 화면 흐름은 그대로.
+function mountReactTodo() {
+  const el = document.getElementById('s-todo')
+  if (!el) return
+  createRoot(el).render(
+    <StrictMode>
+      <TodoScreen />
+    </StrictMode>,
+  )
+}
+
 function bootstrap() {
   if (USE_REACT_SETTINGS) mountReactSettings()
   if (USE_REACT_REPORTS) mountReactReports()
@@ -220,6 +242,7 @@ function bootstrap() {
   if (USE_REACT_KNOWLEDGE) mountReactKnowledge()
   if (USE_REACT_ANALYSIS) mountReactAnalysis()
   if (USE_REACT_CHAT) mountReactChat()
+  if (USE_REACT_TODO) mountReactTodo()
 }
 
 if (document.readyState === 'loading') {
