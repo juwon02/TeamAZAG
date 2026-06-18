@@ -223,6 +223,30 @@
   - **→ pgvector RAG 통합 완료** (pgvector 2a9f324 + dimensions 픽스 1d93716 + 백필 230 + 검색·채팅 끝단 검증).
   - (출처: feature/pgvector-integration 의 7aa1bc3 기록을 codex 라인으로 구제한 것.)
 
+- 2026-06-19, Claude Code, **Todo/이슈 리뉴얼 (브랜치 feature/todo-issue-renewal)**:
+  - **발견: 9/9 전환 이미 완료** — MIGRATION_LOG의 "3/9" 표기는 stale이었음(실제 b172fd5로 전부 전환됨).
+    이후 작업은 React 전환이 아닌 기능 추가·버그픽스 중심.
+  - **Pydantic↔DB 정합 픽스 (c6dc310)**: `TodoPriority`에서 `critical` 제거 (DB CHECK는 low/medium/high만 허용).
+    `needs_revision`은 라이브 DB가 `allow_needs_revision_status.py`로 ALTER돼 실제 허용 중 → 유지.
+    (schema.sql은 stale이었음 — pg_dump로 라이브 DDL 확인 후 결론)
+  - **이슈 "완료" 탭 추가 (753c3fe)**: `resolved` 분리 (기존 confirmed+resolved 혼합 → confirmed만 진행중, resolved 별도 탭).
+    반려탭 패턴(`ensureIssueRejectedTab`) 복제 → `ensureIssueResolvedTab`. IssuesScreen.jsx 무수정 = 재렌더 0 유지.
+  - **반려 탭 토큰 만료 방어 (6348a6c)**: `await api("/workflow/risks/rejected")` unhandled rejection 방어.
+    try/catch 래핑 + toast 안내 + `renderRejectedRisks()` null 가드 (`host`/`i-rej-cnt`).
+
+- 2026-06-19, Claude Code, **.md 파서 허용 (브랜치 fix/parser-allow-md, 커밋 f7f9e82)**:
+  - `file_parser.py` 2줄: `SUPPORTED_EXTENSIONS`에 `".md"` 추가 + `if ext in (".txt", ".md"): _parse_text()` 라우팅.
+  - 기존 `.txt`와 동일 파싱(read_bytes → 인코딩 추론 → 평문). 마크다운 특수처리 불필요(LLM이 마커 자연 처리).
+  - 발표 라이브 업로드 데모에서 `.md` 원본 그대로 업로드 가능 (이전엔 `.txt` 변환 필요했음).
+
+- 2026-06-19, Claude Code, **더미 업로드 품질 검증 (공유 DB 프로젝트 격리)**:
+  - 검증 프로젝트 `[VERIFY]` 임시 생성 → dummy 브랜치 raw 문서 7유형(회의록/구매메일/물류로그/채팅/품질클레임/영업메일/복합채팅)
+    업로드(`.md` 직접, `.txt` 변환 불필요) → 파이프라인 완료(~24초/건) → 추출 결과 확인 → cascade 삭제(baseline 무손상).
+  - **결과**: 실무 문서·비정형 채팅 모두 추출 양호. "문서→AI Todo/Risk 추출" 핵심 기능 작동 확인.
+  - ⚠️ **dept/assignee_member_id는 AI 추출이 채우지 않음(전부 NULL)** → 발표에서 부서 기능 제외 결정.
+  - ⚠️ **프로젝트 격리 한계**: 스토리지는 완전 격리(project_id + ON DELETE CASCADE). 단 `GET /todos`·`GET /issues`가
+    project_id 필터 없음 → UI에선 프로젝트 혼합 표시. 발표 시 단일 프로젝트 데이터만 있어야 깔끔.
+
 ## handoff.js 보존 결정 기록 (2026-06-16, 최종)
 - 정정: 한때 "미커밋 504줄을 폐기하고 dc49ee8로 되돌린다"는 방침이 있었으나 **취소됨**.
 - 최종: 504줄은 월요일(2026-06-15) 사용자+Codex가 만든 인수인계 센터 핵심 작업 →
@@ -231,6 +255,11 @@
   504줄본이 이를 인수인계 센터 전면(퇴사자/신규입사자 카드 + AI 파이프라인 데모/보드)으로 확장함.
 
 ## 다음 작업 (다음 AI가 할 일)
+- **발표 baseline 데이터 확정**: dummy 브랜치 raw 문서를 업로드 파이프라인(`.md` 직접 가능)으로 공유 DB에 적재
+  → RAG 백필 → freeze. ⚠️ 기존 278문서 비우고 재적재는 팀 합의 필요(baseline 오염 방지).
+  라이브 데모용 문서 2~3개는 baseline에서 분리(중복 업로드 방지).
+- **PR 미올림**: `feature/todo-issue-renewal` (커밋 c6dc310·753c3fe·6348a6c), `fix/parser-allow-md` (f7f9e82)
+  모두 push 예정. PR은 팀 합의 후.
 - 🔴 **[발표 전 필수 해결] 로그인/로그아웃 + 토큰 만료 복구** (기존 "제품 결정 대기"에서 격상, 2026-06-17).
   진단 결론: 로그인/로그아웃 플로우가 반쪽만 이식됨(`src/Login.js`·`__workraderLogout`·login CSS가
   CRA src에만 있고 서빙 vite 번들엔 없음 → `logout()`이 reload만 하고 같은 대시보드로 복귀).
