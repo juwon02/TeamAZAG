@@ -55,14 +55,17 @@ export function getVisibleTodos() {
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || Number(b.id || 0) - Number(a.id || 0))
 }
 
-export function getPageTodos(list, activeTab) {
-  const { page } = getTodoSnapshot()
-  const current = Math.max(1, page[activeTab] || 1)
-  return list.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
+export function getPageTodos(list, currentPage) {
+  const page = Math.max(1, Number(currentPage) || 1)
+  return list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 }
 
 export function pageCount(total) {
   return Math.max(1, Math.ceil(total / PAGE_SIZE))
+}
+
+export function clampTodoPage(page, totalPages) {
+  return Math.min(Math.max(1, Number(page) || 1), Math.max(1, Number(totalPages) || 1))
 }
 
 export function cleanTodoTitle(title) {

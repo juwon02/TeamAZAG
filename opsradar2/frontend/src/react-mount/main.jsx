@@ -21,6 +21,7 @@ import KnowledgeScreen from './KnowledgeScreen.jsx'
 import AnalysisScreen from './AnalysisScreen.jsx'
 import ChatScreen from './ChatScreen.jsx'
 import TodoScreen from './TodoScreen.jsx'
+import { restoreVanillaTodo } from './todoMountFallback.js'
 
 const USE_REACT_SETTINGS = (() => {
   try {
@@ -226,11 +227,30 @@ function mountReactChat() {
 function mountReactTodo() {
   const el = document.getElementById('s-todo')
   if (!el) return
-  createRoot(el).render(
-    <StrictMode>
-      <TodoScreen />
-    </StrictMode>,
-  )
+
+  const originalHtml = el.innerHTML
+  let root
+  let fallbackScheduled = false
+  window.opsRadarReactTodoMounted = false
+
+  const restoreFallback = (error) => {
+    if (fallbackScheduled) return
+    fallbackScheduled = true
+    console.warn('Todo React mount failed; restoring vanilla Todo', error)
+    queueMicrotask(() => restoreVanillaTodo({ container: el, originalHtml, root }))
+  }
+
+  try {
+    root = createRoot(el, { onUncaughtError: restoreFallback })
+    root.render(
+      <StrictMode>
+        <TodoScreen />
+      </StrictMode>,
+    )
+  } catch (error) {
+    restoreVanillaTodo({ container: el, originalHtml, root })
+    console.warn('Todo React mount failed; vanilla Todo restored', error)
+  }
 }
 
 function bootstrap() {

@@ -1006,13 +1006,13 @@ function todoAssigneeLabel(t){return t.assignee||(t.status==='pending'?t.recomme
 
 function renderTodos() {
   const list = getFilteredTodos();
+  renderTodoPager(list.length);
   const pageList = todoPageItems(list);
   const body = document.getElementById('todoBody');
   const empty = document.getElementById('todoEmpty');
   const search=document.getElementById('todoSearchInput');if(search&&search.value!==G.todoSearch[G.currentTodoTab])search.value=G.todoSearch[G.currentTodoTab]||'';
   const field=document.getElementById('todoSearchField');if(field&&field.value!==G.todoSearchField[G.currentTodoTab])field.value=G.todoSearchField[G.currentTodoTab]||'all';
   updateTodoDateColumns();
-  renderTodoPager(list.length);
   if (!list.length){body.innerHTML='';empty.style.display='block';updateTodoCounts();return;}
   empty.style.display='none';
   body.innerHTML = pageList.map(t=>{
@@ -1109,7 +1109,7 @@ function updateTodoCounts(){
   document.getElementById('pendingCount').textContent=ai;
   ['t-ai-cnt','t-in-cnt','t-done-cnt','t-rej-cnt'].forEach((id)=>{const el=document.getElementById(id);if(!el)return;el.className=(id==='t-ai-cnt'&&ai>0)?'badge b-warn':'badge b-gray';});
 }
-function switchTodoTab(tab){G.currentTodoTab=tab;G.todoPage[tab]=1;G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['inprogress','ai','done','rejected'][i]===tab);});const notice=document.getElementById('todoAINotice');const isAi=tab==='ai';const isProgress=tab==='inprogress';notice.style.display=(isAi||isProgress)?'flex':'none';document.getElementById('todoNoticeIcon').className=isAi?'ti ti-sparkles':'ti ti-rotate-2';document.getElementById('todoNoticeText').textContent=isAi?'AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.':'체크한 진행 Todo를 AI 제안으로 되돌릴 수 있습니다.';document.getElementById('todoBulkApproveBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkRejectBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkUndoBtn').style.display=isProgress?'flex':'none';renderTodos();}
+function switchTodoTab(tab){G.currentTodoTab=tab;G.todoPage[tab]=Math.max(1,G.todoPage[tab]||1);G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['inprogress','ai','done','rejected'][i]===tab);});const notice=document.getElementById('todoAINotice');const isAi=tab==='ai';const isProgress=tab==='inprogress';notice.style.display=(isAi||isProgress)?'flex':'none';document.getElementById('todoNoticeIcon').className=isAi?'ti ti-sparkles':'ti ti-rotate-2';document.getElementById('todoNoticeText').textContent=isAi?'AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.':'체크한 진행 Todo를 AI 제안으로 되돌릴 수 있습니다.';document.getElementById('todoBulkApproveBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkRejectBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkUndoBtn').style.display=isProgress?'flex':'none';renderTodos();}
 function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=cleanTodoTitle(t.title);document.getElementById('editDescription').value=briefTodoText(t);document.getElementById('editAssignee').value=t.assignee||t.recommendedAssignee||((window.opsRadarMembers||[])[0]?.name)||'이성우';document.getElementById('editModal').classList.add('show');}
 function saveEdit(){const t=todos.find(x=>x.id===G.editTargetId);t.title=document.getElementById('editTitle').value.trim();t.description=document.getElementById('editDescription').value.trim();t.assignee=document.getElementById('editAssignee').value;closeModal('editModal');renderTodos();if(G.selectedTodoId===G.editTargetId)renderTodoDetail(G.editTargetId);showToast('수정되었습니다.','info');}
 function openManualModal(){document.getElementById('manualModal').classList.add('show');}
@@ -2536,6 +2536,79 @@ function emitTodoRefresh(reason = 'compat') {
   emitTodoReactEvent('opsradar:todo-refresh', { reason });
 }
 
+const vanillaTodoFunctions = {
+  renderTodos,
+  renderTodoCards,
+  renderTodoDetail,
+  selectTodo,
+  switchTodoView,
+  setTodoSearch,
+  setTodoSearchField,
+  setTodoPage,
+  toggleTodoCheck,
+  toggleAllChk,
+  switchTodoTab,
+};
+
+window.opsRadarReactTodoMounted = false;
+
+/* TODO_COMPAT_HELPER_START */
+function createTodoCompatDispatcher(isReactMounted) {
+  return function dispatchTodoCompat(reactAction, vanillaAction, args = []) {
+    if (isReactMounted()) return reactAction();
+    if (typeof vanillaAction === 'function') return vanillaAction(...Array.from(args));
+    return undefined;
+  };
+}
+
+function createTodoCompatActions({ state, setViewMode, emit }) {
+  return {
+    refresh(reason) {
+      emit('opsradar:todo-refresh', { reason });
+    },
+    select(id) {
+      state.selectedTodoId = id;
+      emit('opsradar:todo-select', { id });
+    },
+    switchView(mode) {
+      setViewMode(mode);
+      emit('opsradar:todo-view-change', { mode });
+    },
+    setSearch(value) {
+      state.todoSearch[state.currentTodoTab] = value;
+      state.todoPage[state.currentTodoTab] = 1;
+      emit('opsradar:todo-refresh', { reason: 'setTodoSearch' });
+    },
+    setSearchField(value) {
+      state.todoSearchField[state.currentTodoTab] = value;
+      state.todoPage[state.currentTodoTab] = 1;
+      emit('opsradar:todo-refresh', { reason: 'setTodoSearchField' });
+    },
+    setPage(page) {
+      state.todoPage[state.currentTodoTab] = Math.max(1, Number(page) || 1);
+      emit('opsradar:todo-refresh', { reason: 'setTodoPage' });
+    },
+    switchTab(tab) {
+      state.currentTodoTab = tab;
+      state.todoPage[tab] = Math.max(1, state.todoPage[tab] || 1);
+      state.selectedTodoId = null;
+      emit('opsradar:todo-tab-change', { tabId: tab });
+    },
+  };
+}
+/* TODO_COMPAT_HELPER_END */
+
+const dispatchTodoCompat = createTodoCompatDispatcher(
+  () => window.opsRadarReactTodoMounted === true,
+);
+const todoCompatActions = createTodoCompatActions({
+  state: G,
+  setViewMode(mode) {
+    todoViewMode = mode;
+  },
+  emit: emitTodoReactEvent,
+});
+
 window.opsRadarTodoBridge = {
   getSnapshot() {
     return {
@@ -2553,7 +2626,7 @@ window.opsRadarTodoBridge = {
   },
   setTab(tab) {
     G.currentTodoTab = tab;
-    G.todoPage[tab] = 1;
+    G.todoPage[tab] = Math.max(1, G.todoPage[tab] || 1);
     G.selectedTodoId = null;
   },
   setViewMode(mode) {
@@ -2568,7 +2641,7 @@ window.opsRadarTodoBridge = {
     G.todoPage[G.currentTodoTab] = 1;
   },
   setPage(page) {
-    G.todoPage[G.currentTodoTab] = page;
+    G.todoPage[G.currentTodoTab] = Math.max(1, Number(page) || 1);
   },
   selectTodo(id) {
     G.selectedTodoId = id;
@@ -2582,57 +2655,90 @@ window.opsRadarTodoBridge = {
 };
 
 window.renderTodos = renderTodos = function renderTodosCompat() {
-  emitTodoRefresh('renderTodos');
+  return dispatchTodoCompat(
+    () => todoCompatActions.refresh('renderTodos'),
+    vanillaTodoFunctions.renderTodos,
+    arguments,
+  );
 };
 window.renderTodoCards = renderTodoCards = function renderTodoCardsCompat() {
-  emitTodoRefresh('renderTodoCards');
+  return dispatchTodoCompat(
+    () => todoCompatActions.refresh('renderTodoCards'),
+    vanillaTodoFunctions.renderTodoCards,
+    arguments,
+  );
 };
 window.renderTodoDetail = renderTodoDetail = function renderTodoDetailCompat(id) {
-  G.selectedTodoId = id;
-  emitTodoReactEvent('opsradar:todo-select', { id });
-  emitTodoRefresh('renderTodoDetail');
+  return dispatchTodoCompat(
+    () => todoCompatActions.select(id),
+    vanillaTodoFunctions.renderTodoDetail,
+    arguments,
+  );
 };
 window.selectTodo = selectTodo = function selectTodoCompat(id) {
-  G.selectedTodoId = id;
-  emitTodoReactEvent('opsradar:todo-select', { id });
-  emitTodoRefresh('selectTodo');
+  return dispatchTodoCompat(
+    () => todoCompatActions.select(id),
+    vanillaTodoFunctions.selectTodo,
+    arguments,
+  );
 };
 window.switchTodoView = switchTodoView = function switchTodoViewCompat(mode) {
-  todoViewMode = mode;
-  emitTodoReactEvent('opsradar:todo-view-change', { mode });
-  emitTodoRefresh('switchTodoView');
+  return dispatchTodoCompat(
+    () => todoCompatActions.switchView(mode),
+    vanillaTodoFunctions.switchTodoView,
+    arguments,
+  );
 };
 window.setTodoSearch = setTodoSearch = function setTodoSearchCompat(value) {
-  G.todoSearch[G.currentTodoTab] = value;
-  G.todoPage[G.currentTodoTab] = 1;
-  emitTodoRefresh('setTodoSearch');
+  return dispatchTodoCompat(
+    () => todoCompatActions.setSearch(value),
+    vanillaTodoFunctions.setTodoSearch,
+    arguments,
+  );
 };
 window.setTodoSearchField = setTodoSearchField = function setTodoSearchFieldCompat(value) {
-  G.todoSearchField[G.currentTodoTab] = value;
-  G.todoPage[G.currentTodoTab] = 1;
-  emitTodoRefresh('setTodoSearchField');
+  return dispatchTodoCompat(
+    () => todoCompatActions.setSearchField(value),
+    vanillaTodoFunctions.setTodoSearchField,
+    arguments,
+  );
 };
 window.setTodoPage = setTodoPage = function setTodoPageCompat(page) {
-  G.todoPage[G.currentTodoTab] = page;
-  emitTodoRefresh('setTodoPage');
+  return dispatchTodoCompat(
+    () => todoCompatActions.setPage(page),
+    vanillaTodoFunctions.setTodoPage,
+    arguments,
+  );
 };
 window.toggleTodoCheck = toggleTodoCheck = function toggleTodoCheckCompat(event, id, fromCheckbox = false) {
-  const checked = fromCheckbox && event?.target ? event.target.checked : !G.todoChecked[id];
-  G.todoChecked[id] = checked;
-  if (fromCheckbox) event.stopPropagation();
-  emitTodoRefresh('toggleTodoCheck');
+  return dispatchTodoCompat(
+    () => {
+      const checked = fromCheckbox && event?.target ? event.target.checked : !G.todoChecked[id];
+      G.todoChecked[id] = checked;
+      if (fromCheckbox) event.stopPropagation();
+      emitTodoRefresh('toggleTodoCheck');
+    },
+    vanillaTodoFunctions.toggleTodoCheck,
+    arguments,
+  );
 };
 window.toggleAllChk = toggleAllChk = function toggleAllChkCompat(el) {
-  const filtered = todoPageItems(getFilteredTodos());
-  filtered.forEach((todo) => { G.todoChecked[todo.id] = !!el.checked; });
-  emitTodoRefresh('toggleAllChk');
+  return dispatchTodoCompat(
+    () => {
+      const filtered = todoPageItems(getFilteredTodos());
+      filtered.forEach((todo) => { G.todoChecked[todo.id] = !!el.checked; });
+      emitTodoRefresh('toggleAllChk');
+    },
+    vanillaTodoFunctions.toggleAllChk,
+    arguments,
+  );
 };
 window.switchTodoTab = switchTodoTab = function switchTodoTabCompat(tab) {
-  G.currentTodoTab = tab;
-  G.todoPage[tab] = 1;
-  G.selectedTodoId = null;
-  emitTodoReactEvent('opsradar:todo-tab-change', { tabId: tab });
-  emitTodoRefresh('switchTodoTab');
+  return dispatchTodoCompat(
+    () => todoCompatActions.switchTab(tab),
+    vanillaTodoFunctions.switchTodoTab,
+    arguments,
+  );
 };
 
 // ════════════════════════════════════════════════

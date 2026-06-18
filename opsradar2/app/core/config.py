@@ -53,9 +53,7 @@ class Settings:
         "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
         "",
     )
-    EMBEDDING_DIMENSION: int = parse_int_env("EMBEDDING_DIMENSION", 1536)
-    EMBEDDING_BATCH_SIZE: int = parse_int_env("EMBEDDING_BATCH_SIZE", 16)
-    AZURE_OPENAI_MAX_RETRIES: int = parse_int_env("AZURE_OPENAI_MAX_RETRIES", 3)
+    FAISS_INDEX_PATH: str = os.getenv("FAISS_INDEX_PATH", "data/faiss/index.faiss")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-this-secret-in-production")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = parse_int_env("JWT_EXPIRE_HOURS", 8)

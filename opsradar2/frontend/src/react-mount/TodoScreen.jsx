@@ -9,9 +9,8 @@ import TodoEmptyState from './TodoEmptyState.jsx'
 import { TodoCardGrid, TodoTable } from './TodoList.jsx'
 import TodoTabs from './TodoTabs.jsx'
 import {
-  clearSelectedTodo,
+  clampTodoPage,
   getPageTodos,
-  getTodoById,
   getTodoSnapshot,
   getVisibleTodos,
   pageCount,
@@ -45,41 +44,41 @@ function TodoScreen() {
   const refresh = () => setSnapshot(getTodoSnapshot())
 
   useEffect(() => {
-    const handleRefresh = () => refresh()
-    const handleTabChange = (event) => {
-      if (event.detail?.tabId) setTodoTab(event.detail.tabId)
-      refresh()
-    }
-    const handleViewChange = (event) => {
-      if (event.detail?.mode) setTodoView(event.detail.mode)
-      refresh()
-    }
-    const handleSelect = (event) => {
-      if (event.detail?.id !== undefined) selectTodoId(event.detail.id)
-      refresh()
+    let active = true
+    let refreshQueued = false
+    const handleRefresh = () => {
+      if (refreshQueued) return
+      refreshQueued = true
+      queueMicrotask(() => {
+        refreshQueued = false
+        if (active) refresh()
+      })
     }
 
     window.addEventListener('opsradar:todo-refresh', handleRefresh)
-    window.addEventListener('opsradar:todo-tab-change', handleTabChange)
-    window.addEventListener('opsradar:todo-view-change', handleViewChange)
-    window.addEventListener('opsradar:todo-select', handleSelect)
+    window.addEventListener('opsradar:todo-tab-change', handleRefresh)
+    window.addEventListener('opsradar:todo-view-change', handleRefresh)
+    window.addEventListener('opsradar:todo-select', handleRefresh)
+    window.opsRadarReactTodoMounted = true
     refresh()
     return () => {
+      active = false
+      window.opsRadarReactTodoMounted = false
       window.removeEventListener('opsradar:todo-refresh', handleRefresh)
-      window.removeEventListener('opsradar:todo-tab-change', handleTabChange)
-      window.removeEventListener('opsradar:todo-view-change', handleViewChange)
-      window.removeEventListener('opsradar:todo-select', handleSelect)
+      window.removeEventListener('opsradar:todo-tab-change', handleRefresh)
+      window.removeEventListener('opsradar:todo-view-change', handleRefresh)
+      window.removeEventListener('opsradar:todo-select', handleRefresh)
     }
   }, [])
 
   const activeTab = snapshot.activeTab
   const viewMode = snapshot.viewMode
   const allTodos = snapshot.todos
-  const visibleTodos = useMemo(() => getVisibleTodos(), [snapshot])
+  const visibleTodos = getVisibleTodos()
   const totalPages = pageCount(visibleTodos.length)
-  const currentPage = Math.min(snapshot.page[activeTab] || 1, totalPages)
-  const pageTodos = useMemo(() => getPageTodos(visibleTodos, activeTab), [activeTab, visibleTodos, snapshot.page])
-  const selectedTodo = getTodoById(snapshot.selectedTodoId)
+  const currentPage = clampTodoPage(snapshot.page[activeTab], totalPages)
+  const pageTodos = useMemo(() => getPageTodos(visibleTodos, currentPage), [currentPage, visibleTodos])
+  const selectedTodo = allTodos.find((todo) => String(todo.id) === String(snapshot.selectedTodoId))
   const counts = tabCounts(allTodos)
   const notice = noticeForTab(activeTab)
   const isAi = activeTab === 'ai'
@@ -88,20 +87,23 @@ function TodoScreen() {
   const checkedProgressCount = allTodos.filter((todo) => todo.status === 'approved' && snapshot.checked[todo.id]).length
   const showProgressBulk = isProgress && checkedProgressCount > 0
 
+  useEffect(() => {
+    const sharedPage = getTodoSnapshot().page[activeTab]
+    if (clampTodoPage(sharedPage, totalPages) !== currentPage || sharedPage !== currentPage) {
+      setTodoPageValue(currentPage)
+    }
+  }, [activeTab, currentPage, totalPages])
+
   const changeTab = (tab) => {
-    clearSelectedTodo()
     setTodoTab(tab)
-    refresh()
   }
 
   const changeView = (mode) => {
     setTodoView(mode)
-    refresh()
   }
 
   const changePage = (page) => {
     setTodoPageValue(page)
-    refresh()
   }
 
   return (
@@ -177,7 +179,6 @@ function TodoScreen() {
           value={snapshot.searchField[activeTab] || 'all'}
           onChange={(event) => {
             setTodoSearchFieldValue(event.target.value)
-            refresh()
           }}
           aria-label="Todo 검색 조건"
         >
@@ -195,7 +196,6 @@ function TodoScreen() {
             placeholder="제목, 내용, 담당자 검색"
             onChange={(event) => {
               setTodoSearchValue(event.target.value)
-              refresh()
             }}
           />
         </div>
@@ -255,16 +255,16 @@ function TodoScreen() {
             selectedTodoId={snapshot.selectedTodoId}
             todos={pageTodos}
             visible={viewMode === 'table' && pageTodos.length > 0}
-            onCheck={(id, checked) => { toggleTodoChecked(id, checked); refresh() }}
-            onSelect={(id) => { selectTodoId(id); refresh() }}
-            onToggleAll={(ids, checked) => { toggleAllTodos(ids, checked); refresh() }}
+            onCheck={(id, checked) => toggleTodoChecked(id, checked)}
+            onSelect={(id) => selectTodoId(id)}
+            onToggleAll={(ids, checked) => toggleAllTodos(ids, checked)}
           />
           <TodoCardGrid
             activeTab={activeTab}
             selectedTodoId={snapshot.selectedTodoId}
             todos={pageTodos}
             visible={viewMode === 'card' && pageTodos.length > 0}
-            onSelect={(id) => { selectTodoId(id); refresh() }}
+            onSelect={(id) => selectTodoId(id)}
           />
           {!pageTodos.length ? <TodoEmptyState viewMode={viewMode} /> : null}
 
