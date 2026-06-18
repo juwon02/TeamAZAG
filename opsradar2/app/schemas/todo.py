@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 TodoStatus = Literal["pending", "in_progress", "blocked", "completed"]
-TodoPriority = Literal["low", "medium", "high", "critical"]
+TodoPriority = Literal["low", "medium", "high"]
 ApprovalStatus = Literal["pending", "approved", "rejected", "needs_revision"]
 
 
