@@ -1024,6 +1024,13 @@ Content: API 연결 일정과 담당자 확인이 필요합니다.</pre></div>
 <script src="/static/js/todo.js?v=20260617"></script>
 <script src="/static/js/issue.js?v=20260617"></script>
 <script src="/static/js/calendar.js?v=20260617"></script>
+<script>
+try {
+  window.__HANDOFF_REACT_ENABLED__ = localStorage.getItem('opsradar_react_knowledge') !== 'off';
+} catch (_) {
+  window.__HANDOFF_REACT_ENABLED__ = true;
+}
+</script>
 <script src="/static/js/handoff.js?v=20260617"></script>
 <script src="/static/js/report.js?v=20260617"></script>
 <script src="/static/js/assistant.js?v=20260617"></script>

@@ -577,6 +577,10 @@ function nav(screen) {
     if (screen === 'reports') initReportsScreen();
     if (screen === 'chat') initChatSessions();
     if (screen === 'knowledge') {
+      if (window.__HANDOFF_REACT_ENABLED__) {
+        window.dispatchEvent(new CustomEvent('opsradar:open-handover'));
+        return;
+      }
       setTimeout(initDocumentGenerationActions, 0);
       setTimeout(bindRemainingActionButtons, 0);
       // 버튼 전체 초기화 후 온보딩으로 바로 시작
@@ -1587,6 +1591,19 @@ function openAssistantTodoDetail(id){
   openTodoDetailModal(id);
 }
 window.openAssistantTodoDetail=openAssistantTodoDetail;
+
+function openAssistantWithQuestion(question) {
+  nav('chat');
+  setTimeout(function() {
+    var input = document.getElementById('chatInput');
+    if (!input) return;
+    input.value = question;
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+    input.focus();
+  }, 60);
+}
+window.openAssistantWithQuestion = openAssistantWithQuestion;
 
 // ════════════════════════════════════════════════
 // AI Assistant (흐름 5)

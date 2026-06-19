@@ -17,7 +17,8 @@ import ReportsScreen from './ReportsScreen.jsx'
 import CalendarScreen from './CalendarScreen.jsx'
 import IssuesScreen from './IssuesScreen.jsx'
 import DashboardScreen from './DashboardScreen.jsx'
-import KnowledgeScreen from './KnowledgeScreen.jsx'
+import HandoverCenterPage from '../handover/HandoverCenterPage.jsx'
+import { installHandoffCompatibility } from '../handover/handoffStateAdapter.js'
 import AnalysisScreen from './AnalysisScreen.jsx'
 import ChatScreen from './ChatScreen.jsx'
 import TodoScreen from './TodoScreen.jsx'
@@ -182,9 +183,10 @@ function mountReactDashboard() {
 function mountReactKnowledge() {
   const el = document.getElementById('s-knowledge')
   if (!el) return
+  el.dataset.reactOwned = 'true'
   createRoot(el).render(
     <StrictMode>
-      <KnowledgeScreen />
+      <HandoverCenterPage />
     </StrictMode>,
   )
 }
@@ -259,7 +261,10 @@ function bootstrap() {
   if (USE_REACT_CALENDAR) mountReactCalendar()
   if (USE_REACT_ISSUES) mountReactIssues()
   if (USE_REACT_DASHBOARD) mountReactDashboard()
-  if (USE_REACT_KNOWLEDGE) mountReactKnowledge()
+  if (USE_REACT_KNOWLEDGE) {
+    installHandoffCompatibility()
+    mountReactKnowledge()
+  }
   if (USE_REACT_ANALYSIS) mountReactAnalysis()
   if (USE_REACT_CHAT) mountReactChat()
   if (USE_REACT_TODO) mountReactTodo()
