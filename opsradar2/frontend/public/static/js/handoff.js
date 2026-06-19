@@ -2,6 +2,7 @@
 // Keeps the Home -> Detail flow and uses scoped mock controls only inside Detail.
 (function () {
   const COMPANY = "AutoParts One Korea";
+  const HANDOFF_ARCHIVE_KEY = "opsradar_handoff_archives";
 
   const PEOPLE = {
     owners: [
@@ -50,6 +51,9 @@
     selectedIssueId: "mirae-quality-claim",
     onboardingTarget: "정하늘",
     onboardingTeam: "영업관리팀",
+    archiveFilter: "all",
+    archiveSearch: "",
+    selectedArchiveId: "",
   };
 
   const DEMO_SOURCE = {
@@ -604,7 +608,7 @@
       #s-knowledge .topbar>div:last-child{display:none!important}
       #s-knowledge[data-handoff-view] #knowledgeContextSidebar{display:none!important}
       #s-knowledge[data-handoff-view] #knowledgeContent{padding:16px!important;width:100%;max-width:100%;height:100%;min-height:0}
-      .hf-home{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;width:100%;height:100%;min-height:0}
+      .hf-home{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;height:100%;min-height:0}
       .hf-home-card{position:relative;overflow:hidden;border:1px solid var(--border);background:linear-gradient(180deg,var(--surface) 0%,var(--surface2) 100%);border-radius:8px;padding:34px;text-align:left;color:var(--text);cursor:pointer;height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:28px}
       .hf-home-card:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--accent)}
       .hf-home-card:hover{border-color:var(--accent);box-shadow:0 18px 44px rgba(0,0,0,.16);transform:translateY(-1px)}
@@ -620,6 +624,20 @@
       .hf-home-metrics strong{display:block;font-size:14px;color:var(--text);margin-bottom:7px}
       .hf-home-metrics span{display:block;font-size:12px;color:var(--text3);line-height:1.45}
       .hf-enter{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding-top:20px;font-size:16px;font-weight:900;color:var(--accent)}
+      .hf-archive{display:flex;flex-direction:column;gap:14px;width:100%;min-height:100%}
+      .hf-archive-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px}
+      .hf-archive-search{min-width:240px;flex:1}
+      .hf-archive-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .hf-archive-card{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:12px;min-height:190px}
+      .hf-archive-card:hover{border-color:var(--accent);background:var(--surface2)}
+      .hf-archive-title{font-size:18px;font-weight:900;line-height:1.35;color:var(--text)}
+      .hf-archive-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .hf-archive-empty{border:1px dashed var(--border);background:var(--surface);border-radius:8px;padding:34px;text-align:center;color:var(--text2)}
+      .hf-archive-empty h3{font-size:22px;color:var(--text);margin:0 0 8px}
+      .hf-archive-empty p{margin:0 0 18px;color:var(--text3);line-height:1.6}
+      .hf-archive-detail-head{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+      .hf-archive-detail-head h2{margin:8px 0 0;font-size:26px;line-height:1.3;color:var(--text)}
+      .hf-archive-detail-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
       .hf-detail{display:flex;flex-direction:column;gap:14px;width:100%;min-height:100%}
       .hf-hero{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:22px;display:block}
       .hf-hero-main{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -687,8 +705,8 @@
       .hf-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
       .hf-check{display:flex;gap:9px;align-items:flex-start;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:11px;font-size:12px;color:var(--text2);line-height:1.45}
       .hf-check i{color:var(--success);font-size:16px;margin-top:1px}
-      @media(max-width:1320px){.hf-result-body{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-result-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-center-strip,.hf-pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:960px){.hf-home,.hf-home-metrics,.hf-detail-layout,.hf-result-body,.hf-result-meta,.hf-form-grid.two,.hf-center-strip,.hf-pipeline,.hf-lanes,.hf-checks{grid-template-columns:1fr}.hf-home{height:auto}.hf-home-card{min-height:420px}.hf-home-card h2{font-size:32px}.hf-hero h2{font-size:26px}}
+      @media(max-width:1320px){.hf-home{grid-template-columns:1fr}.hf-result-body{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-result-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.hf-center-strip,.hf-pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:960px){.hf-home,.hf-home-metrics,.hf-detail-layout,.hf-result-body,.hf-result-meta,.hf-form-grid.two,.hf-center-strip,.hf-pipeline,.hf-lanes,.hf-checks,.hf-archive-list,.hf-archive-meta{grid-template-columns:1fr}.hf-home{height:auto}.hf-home-card{min-height:420px}.hf-home-card h2{font-size:32px}.hf-hero h2{font-size:26px}.hf-archive-detail-head{display:block}.hf-archive-detail-actions{justify-content:flex-start;margin-top:14px}}
       .hf-step-tabs{display:flex;align-items:center;gap:6px;padding:14px 18px;border:1px solid var(--border);background:var(--surface);border-radius:8px;margin-bottom:0}
       .hf-step-tab{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
       .hf-step-tab.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -740,6 +758,305 @@
       </button>`;
   }
 
+  function renderArchiveHomeCard() {
+    const count = getHandoffArchives().length;
+    return `
+      <button type="button" class="hf-home-card" onclick="selectKnowledgeType('archive')">
+        <div>
+          <div class="hf-home-top">
+            <span class="badge b-accent">저장된 문서 · localStorage</span>
+            <div class="hf-icon"><i class="ti ti-archive"></i></div>
+          </div>
+          <h2>지난 인수인계 보기</h2>
+          <p>초안 저장한 인수인계서와 온보딩 가이드를 다시 열어 조건, 포함 자료, 문서 본문을 확인합니다.</p>
+          <div class="hf-result-box">
+            <strong><i class="ti ti-folder-open"></i> 저장된 문서</strong>
+            <span>${count ? `${count}건의 mock archive가 저장되어 있습니다.` : "아직 저장된 문서가 없습니다."}</span>
+          </div>
+          <div class="hf-home-metrics">
+            ${metric("저장 방식", "localStorage mock")}
+            ${metric("조회 단위", "문서 1개")}
+            ${metric("포함 정보", "조건값·후보·previewData")}
+          </div>
+        </div>
+        <div class="hf-enter"><span>지난 문서 보기</span><i class="ti ti-arrow-right"></i></div>
+      </button>`;
+  }
+
+  function getHandoffArchives() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HANDOFF_ARCHIVE_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn("handoff archive parse skipped", error);
+      return [];
+    }
+  }
+
+  function saveHandoffArchive(record) {
+    const archives = getHandoffArchives();
+    archives.unshift(record);
+    localStorage.setItem(HANDOFF_ARCHIVE_KEY, JSON.stringify(archives));
+    return archives;
+  }
+
+  function personName(value) {
+    return String(value || "").split("|")[0].trim();
+  }
+
+  function archiveStatusLabel(status) {
+    const labels = { draft: "초안", review: "검토중", confirmed: "확정", shared: "공유됨", archived: "보관" };
+    return labels[status] || status || "초안";
+  }
+
+  function archiveTypeLabel(type) {
+    return type === "onboarding" ? "신입 온보딩" : "업무 인수인계";
+  }
+
+  function formatArchiveDate(value) {
+    if (!value) return "-";
+    try {
+      return new Date(value).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" });
+    } catch {
+      return value;
+    }
+  }
+
+  function selectedArchiveCandidates(type) {
+    const groups = type === "onboarding"
+      ? [
+          ["customers", "주요 고객사", onboardingCandidates.customers],
+          ["suppliers", "주요 구매처", onboardingCandidates.suppliers],
+          ["issues", "반복 이슈", onboardingCandidates.issues],
+          ["todos", "우선 Todo", onboardingCandidates.todos],
+          ["reports", "참고 보고서", onboardingCandidates.reports],
+          ["questions", "추천 질문", onboardingCandidates.questions],
+        ]
+      : [
+          ["todos", "진행 중 Todo", candidateItems.todos],
+          ["issues", "미해결 이슈", candidateItems.issues],
+          ["reports", "참고 보고서", candidateItems.reports],
+          ["documents", "관련 문서", candidateItems.documents],
+          ["cautions", "고객별 주의사항", candidateItems.cautions],
+        ];
+    return groups.flatMap(([group, label, items]) =>
+      items.filter(item => item.checked).map(item => ({
+        id: `${group}-${item.id}`,
+        type: item.type || group,
+        group,
+        label,
+        title: item.title,
+      }))
+    );
+  }
+
+  function buildHandoffArchiveRecord(type) {
+    const selected = normalizeMode(type || state.mode);
+    const previewData = getHandoffPreviewData(selected);
+    const selectedCandidates = selectedArchiveCandidates(selected);
+    const base = {
+      id: `${selected}-${Date.now()}`,
+      type: selected,
+      title: previewData.title || "인수인계 문서",
+      status: "draft",
+      createdAt: new Date().toISOString(),
+      createdBy: "김희진",
+      department: selected === "onboarding" ? state.onboardingTeam : state.handoffDepartment,
+      period: state.period,
+      selectedCandidateIds: selectedCandidates.map(item => item.id),
+      selectedCandidates,
+      selectedSources: selectedCandidates.filter(item => ["reports", "documents"].includes(item.group)).map(item => item.title),
+      previewData,
+    };
+    if (selected === "onboarding") {
+      return {
+        ...base,
+        target: state.onboardingTarget,
+      };
+    }
+    return {
+      ...base,
+      owner: personName(state.owner),
+      nextOwner: personName(state.nextOwner),
+      customer: state.customer,
+      supplier: state.supplier,
+      scope: state.scope,
+      reason: state.reason,
+      selectedIssueId: isIssueScope() ? state.selectedIssueId : "",
+    };
+  }
+
+  function getCurrentDetailMode() {
+    const detailRoot = document.getElementById("handoffDetailRoot");
+    const flowType = detailRoot?.dataset?.flow;
+    if (flowType === "onboarding" || flowType === "handoff") return flowType;
+    const globalType = window.G?.currentKnowledgeType;
+    if (globalType === "onboarding" || globalType === "handoff") return globalType;
+    return normalizeMode(state.mode);
+  }
+
+  function archiveMatches(record) {
+    const typeOk = state.archiveFilter === "all" || record.type === state.archiveFilter;
+    const query = state.archiveSearch.trim().toLowerCase();
+    if (!query) return typeOk;
+    const haystack = [
+      record.title,
+      record.owner,
+      record.nextOwner,
+      record.target,
+      record.department,
+      record.customer,
+      record.supplier,
+      record.scope,
+      archiveTypeLabel(record.type),
+    ].join(" ").toLowerCase();
+    return typeOk && haystack.includes(query);
+  }
+
+  function archiveMetaItem(label, value) {
+    return `<div class="hf-summary-item"><b>${esc(label)}</b>${esc(value || "-")}</div>`;
+  }
+
+  function renderArchiveCard(record) {
+    return `
+      <button type="button" class="hf-archive-card" onclick="openHandoffArchive('${esc(record.id)}')">
+        <div class="hf-badges">
+          <span class="badge b-accent">${archiveTypeLabel(record.type)}</span>
+          <span class="badge b-success">${archiveStatusLabel(record.status)}</span>
+        </div>
+        <div class="hf-archive-title">${esc(record.title)}</div>
+        <div class="hf-archive-meta">
+          ${archiveMetaItem("생성일", formatArchiveDate(record.createdAt))}
+          ${archiveMetaItem("생성자", record.createdBy)}
+          ${archiveMetaItem(record.type === "onboarding" ? "대상자" : "기존 담당자", record.type === "onboarding" ? record.target : record.owner)}
+          ${record.type === "handoff" ? archiveMetaItem("신규 담당자", record.nextOwner) : ""}
+          ${archiveMetaItem("소속 팀", record.department)}
+          ${record.type === "handoff" ? archiveMetaItem("고객사", record.customer) : ""}
+          ${record.type === "handoff" ? archiveMetaItem("구매처", record.supplier) : ""}
+          ${archiveMetaItem("업무 범위", record.type === "onboarding" ? "온보딩 가이드" : record.scope)}
+        </div>
+      </button>`;
+  }
+
+  function renderArchiveEmpty() {
+    return `
+      <div class="hf-archive-empty">
+        <h3>아직 저장된 인수인계 문서가 없습니다.</h3>
+        <p>문서 미리보기 단계에서 초안 저장을 누르면 이곳에 표시됩니다.</p>
+        <div class="hf-cand-actions" style="justify-content:center">
+          <button class="tbtn primary" type="button" onclick="selectKnowledgeType('handoff')"><i class="ti ti-transfer"></i> 업무 인수인계 생성하기</button>
+          <button class="tbtn" type="button" onclick="selectKnowledgeType('onboarding')"><i class="ti ti-user-plus"></i> 신입 온보딩 생성하기</button>
+        </div>
+      </div>`;
+  }
+
+  function renderArchivePreviewSections(previewData) {
+    const sections = Array.isArray(previewData?.sections) ? previewData.sections : [];
+    return sections.map((row) => `
+      <div class="hf-result-row${FULL_WIDTH_SECTIONS.has(row[0]) ? " hf-result-row--full" : ""}">
+        <div class="hf-result-label">${esc(row[0])}</div>
+        <div class="hf-result-value">${list(String(row[1] || "").split("\n").filter(Boolean))}</div>
+      </div>`).join("");
+  }
+
+  function renderArchiveList() {
+    ensureStyle();
+    const root = screen();
+    const content = document.getElementById("knowledgeContent");
+    const context = document.getElementById("knowledgeContextPanel");
+    const title = document.querySelector("#s-knowledge .topbar-title");
+    const archives = getHandoffArchives();
+    const filtered = archives.filter(archiveMatches);
+    if (root) root.dataset.handoffView = "archive";
+    if (title) title.textContent = "지난 인수인계";
+    if (context) context.innerHTML = "";
+    if (!content) return;
+    content.innerHTML = `
+      <section class="hf-archive">
+        <div class="hf-hero">
+          <div class="hf-hero-main">
+            <button type="button" class="hf-back" onclick="selectKnowledgeType('home')"><i class="ti ti-arrow-left"></i> 처음으로</button>
+            <div class="hf-kicker"><i class="ti ti-archive"></i>지난 인수인계 보기</div>
+            <h2>저장된 인수인계서와 온보딩 가이드를 다시 확인합니다.</h2>
+            <p>초안 저장 시점의 조건값, 선택 후보, previewData를 localStorage mock archive로 보관합니다.</p>
+          </div>
+        </div>
+        <div class="hf-archive-toolbar">
+          <button type="button" class="tbtn ${state.archiveFilter === "all" ? "primary" : ""}" onclick="setHandoffArchiveFilter('all')">전체</button>
+          <button type="button" class="tbtn ${state.archiveFilter === "handoff" ? "primary" : ""}" onclick="setHandoffArchiveFilter('handoff')">업무 인수인계</button>
+          <button type="button" class="tbtn ${state.archiveFilter === "onboarding" ? "primary" : ""}" onclick="setHandoffArchiveFilter('onboarding')">신입 온보딩</button>
+          <input class="hf-input hf-archive-search" type="search" placeholder="문서 제목 / 담당자 / 고객사 검색" value="${esc(state.archiveSearch)}" oninput="setHandoffArchiveSearch(this.value)">
+        </div>
+        ${archives.length ? `<div class="hf-archive-list">${filtered.map(renderArchiveCard).join("") || renderArchiveEmpty()}</div>` : renderArchiveEmpty()}
+      </section>`;
+  }
+
+  function renderArchiveDetail(record) {
+    const candidates = Array.isArray(record.selectedCandidates) ? record.selectedCandidates : [];
+    const sourceList = Array.isArray(record.selectedSources) ? record.selectedSources : [];
+    return `
+      <section class="hf-archive">
+        <div class="hf-archive-detail-head">
+          <div>
+            <button type="button" class="hf-back" onclick="renderHandoffArchiveList()"><i class="ti ti-arrow-left"></i> 목록으로</button>
+            <div class="hf-kicker"><i class="ti ti-file-check"></i>${archiveTypeLabel(record.type)} · ${archiveStatusLabel(record.status)}</div>
+            <h2>${esc(record.title)}</h2>
+          </div>
+          <div class="hf-archive-detail-actions">
+            <button class="tbtn" type="button" onclick="editHandoffDraft()"><i class="ti ti-edit"></i> 수정하기</button>
+            <button class="tbtn" type="button" onclick="regenerateArchivedHandoff('${esc(record.id)}')"><i class="ti ti-refresh"></i> 다시 생성</button>
+            <button class="tbtn" type="button" onclick="shareArchivedHandoff('${esc(record.id)}')"><i class="ti ti-share"></i> 공유하기</button>
+            <button class="tbtn primary" type="button" onclick="cloneHandoffArchive('${esc(record.id)}')"><i class="ti ti-copy"></i> 복제해서 새 문서 만들기</button>
+          </div>
+        </div>
+        <section class="hf-panel">
+          <div class="hf-panel-head"><h3>선택 조건 요약</h3><span class="hf-status">${formatArchiveDate(record.createdAt)} · ${esc(record.createdBy)}</span></div>
+          <div class="hf-summary-grid">
+            ${archiveMetaItem("문서 유형", archiveTypeLabel(record.type))}
+            ${archiveMetaItem("상태", archiveStatusLabel(record.status))}
+            ${archiveMetaItem(record.type === "onboarding" ? "대상자" : "기존 담당자", record.type === "onboarding" ? record.target : record.owner)}
+            ${record.type === "handoff" ? archiveMetaItem("신규 담당자", record.nextOwner) : ""}
+            ${archiveMetaItem("소속 팀", record.department)}
+            ${archiveMetaItem("참고 기간", record.period)}
+            ${record.type === "handoff" ? archiveMetaItem("고객사", record.customer) : ""}
+            ${record.type === "handoff" ? archiveMetaItem("구매처", record.supplier) : ""}
+            ${record.type === "handoff" ? archiveMetaItem("업무 범위", record.scope) : archiveMetaItem("업무 범위", "온보딩 가이드")}
+          </div>
+        </section>
+        <section class="hf-panel">
+          <div class="hf-panel-head"><h3>포함 자료</h3><span class="hf-status">${candidates.length}개 후보</span></div>
+          ${candidates.length ? `<div class="hf-archive-list">${candidates.map(item => `
+            <div class="hf-summary-item">
+              <b>${esc(item.label)}</b>${esc(item.title)}
+            </div>`).join("")}</div>` : '<div class="hf-summary-item">저장된 후보 정보가 없습니다.</div>'}
+          ${sourceList.length ? `<div class="hf-result-row hf-result-row--full" style="margin-top:12px"><div class="hf-result-label">선택된 보고서 / 문서</div><div class="hf-result-value">${list(sourceList)}</div></div>` : ""}
+        </section>
+        <div class="hf-result-card">
+          <div class="hf-result-head">
+            <div>
+              <div class="hf-result-eyebrow">ARCHIVED PREVIEW DATA</div>
+              <div class="hf-result-title">${esc(record.previewData?.title || record.title)}</div>
+            </div>
+            <span class="hf-status">${archiveStatusLabel(record.status)}</span>
+          </div>
+          <div class="hf-result-body">${renderArchivePreviewSections(record.previewData)}</div>
+        </div>
+      </section>`;
+  }
+
+  function openArchiveDetail(id) {
+    const record = getHandoffArchives().find(item => item.id === id);
+    const content = document.getElementById("knowledgeContent");
+    const title = document.querySelector("#s-knowledge .topbar-title");
+    if (!record || !content) {
+      renderArchiveList();
+      return;
+    }
+    state.selectedArchiveId = id;
+    if (title) title.textContent = "지난 인수인계 상세";
+    content.innerHTML = renderArchiveDetail(record);
+  }
+
   function renderHandoffHome() {
     ensureStyle();
     state.mode = "home";
@@ -750,7 +1067,7 @@
     if (root) root.dataset.handoffView = "home";
     if (title) title.textContent = "인수인계센터";
     if (context) context.innerHTML = "";
-    if (content) content.innerHTML = `<section class="hf-home">${renderHomeCard("handoff")}${renderHomeCard("onboarding")}</section>`;
+    if (content) content.innerHTML = `<section class="hf-home">${renderHomeCard("handoff")}${renderHomeCard("onboarding")}${renderArchiveHomeCard()}</section>`;
   }
 
   function field(label, html) {
@@ -880,6 +1197,7 @@
   function resultCard(title, rows) {
     const normalized = normalizeRows(rows);
     const metaRows = resultMetaRows();
+    const saveType = state.mode === "onboarding" ? "onboarding" : "handoff";
     return `
       <div class="hf-result-card" id="handoffResultCard">
         <div class="hf-result-head">
@@ -907,9 +1225,20 @@
           <button class="tbtn" type="button" onclick="editHandoffDraft()"><i class="ti ti-edit"></i> 수정하기</button>
           <button class="tbtn" type="button" onclick="regenerateHandoffPreview(G.currentKnowledgeType || 'handoff')"><i class="ti ti-refresh"></i> 다시 생성</button>
           <button class="tbtn" type="button" onclick="shareHandoffDraft()"><i class="ti ti-share"></i> 공유하기</button>
-          <button class="tbtn primary" type="button" onclick="saveHandoffDraft()"><i class="ti ti-device-floppy"></i> 초안 저장</button>
+          <button class="tbtn primary" type="button" data-handoff-action="save-draft" data-flow="${saveType}"><i class="ti ti-device-floppy"></i> 초안 저장</button>
         </div>
       </div>`;
+  }
+
+  function bindHandoffSaveButtons() {
+    document.querySelectorAll('[data-handoff-action="save-draft"]').forEach((button) => {
+      if (button.dataset.bound === "true") return;
+      button.dataset.bound = "true";
+      button.onclick = function (event) {
+        if (event) event.preventDefault();
+        window.saveHandoffDraft(button.dataset.flow);
+      };
+    });
   }
 
   function renderHandoffContext() {
@@ -1164,6 +1493,7 @@
         ${renderStepTabs(selected)}
         <div id="handoffStepContent">${renderCurrentStep(selected)}</div>
       </section>`;
+    bindHandoffSaveButtons();
   }
 
   function refreshIssueUI() {
@@ -1173,6 +1503,7 @@
     const area = document.getElementById("handoffResultArea");
     if (summary) summary.innerHTML = summaryCard();
     if (area) area.innerHTML = resultCard(currentTitle(), currentRows());
+    bindHandoffSaveButtons();
   }
 
   function refreshDetailUI() {
@@ -1180,6 +1511,7 @@
     const area = document.getElementById("handoffResultArea");
     if (summary) summary.innerHTML = summaryCard();
     if (area) area.innerHTML = resultCard(currentTitle(), currentRows());
+    bindHandoffSaveButtons();
   }
 
   window.setHandoffValue = function (key, value) {
@@ -1280,6 +1612,7 @@
     tabs.forEach((tab, i) => tab.classList.toggle("active", steps[i] === step));
     const area = document.getElementById("handoffStepContent");
     if (area) area.innerHTML = renderCurrentStep(type || normalizeMode(state.mode));
+    bindHandoffSaveButtons();
   };
 
   window.toggleCandidate = function(type, id, checked) {
@@ -1326,10 +1659,26 @@
     }
   }
 
+  function patchHandoffActionDelegates() {
+    if (document.body?.dataset?.handoffActionDelegates === "true") return;
+    if (document.body?.dataset) document.body.dataset.handoffActionDelegates = "true";
+    document.addEventListener("click", function (event) {
+      const saveButton = event.target.closest?.('[data-handoff-action="save-draft"]');
+      if (!saveButton) return;
+      event.preventDefault();
+      window.saveHandoffDraft(saveButton.dataset.flow);
+    });
+  }
+
   function selectKnowledgeType(type) {
     if (type === "home" || !type) {
       if (window.G) window.G.currentKnowledgeType = "home";
       renderHandoffHome();
+      return;
+    }
+    if (type === "archive") {
+      if (window.G) window.G.currentKnowledgeType = "archive";
+      renderArchiveList();
       return;
     }
     const selected = type === "onboarding" ? "onboarding" : "handoff";
@@ -1349,6 +1698,7 @@
     state.activeDetailStep = "preview";
     const area = document.getElementById("handoffStepContent");
     if (area) area.innerHTML = renderPreviewStep(selected);
+    bindHandoffSaveButtons();
     document.querySelectorAll(".hf-step-tab").forEach((tab, index) => {
       tab.classList.toggle("active", index === 2);
     });
@@ -1375,12 +1725,17 @@
     return refreshMainPreview(type || state.mode, "문서 미리보기를 다시 생성했습니다.");
   };
 
-  window.saveHandoffDraft = function () {
+  window.saveHandoffDraft = function (type) {
     window.G = window.G || {};
-    G.currentHandoffDraft = window.getHandoffPreviewData(state.mode);
-    G.savedHandoffDraft = { ...G.currentHandoffDraft, savedAt: new Date().toISOString() };
+    const selected = normalizeMode(type || getCurrentDetailMode());
+    state.mode = selected;
+    G.currentKnowledgeType = selected;
+    const record = buildHandoffArchiveRecord(selected);
+    G.currentHandoffDraft = record.previewData;
+    G.savedHandoffDraft = record;
+    saveHandoffArchive(record);
     try {
-      localStorage.setItem("handoffDraftPreview", JSON.stringify(G.savedHandoffDraft));
+      localStorage.setItem("handoffDraftPreview", JSON.stringify(record));
     } catch (error) {
       console.warn("handoff draft localStorage save skipped", error);
     }
@@ -1397,9 +1752,65 @@
     if (typeof window.showToast === "function") window.showToast("공유 링크가 생성되었습니다. 현재는 mock 공유입니다.", "success");
   };
 
+  window.renderHandoffArchiveList = function () {
+    renderArchiveList();
+  };
+
+  window.openHandoffArchive = function (id) {
+    openArchiveDetail(id);
+  };
+
+  window.setHandoffArchiveFilter = function (filter) {
+    state.archiveFilter = ["handoff", "onboarding"].includes(filter) ? filter : "all";
+    renderArchiveList();
+  };
+
+  window.setHandoffArchiveSearch = function (value) {
+    state.archiveSearch = value || "";
+    renderArchiveList();
+  };
+
+  window.shareArchivedHandoff = function (id) {
+    const record = getHandoffArchives().find(item => item.id === id);
+    window.G = window.G || {};
+    G.currentHandoffShareLink = `mock://handoff-archive/${id}`;
+    if (typeof window.showToast === "function") window.showToast(`${record?.title || "지난 인수인계"} 공유 링크가 생성되었습니다.`, "success");
+  };
+
+  window.regenerateArchivedHandoff = function (id) {
+    const record = getHandoffArchives().find(item => item.id === id);
+    if (typeof window.showToast === "function") window.showToast(`${record?.title || "지난 인수인계"}은 저장된 mock 문서입니다. 새 조건으로 다시 생성하려면 복제해서 새 문서 만들기를 사용해 주세요.`, "info");
+  };
+
+  window.cloneHandoffArchive = function (id) {
+    const record = getHandoffArchives().find(item => item.id === id);
+    if (!record) {
+      renderArchiveList();
+      return;
+    }
+    if (record.type === "onboarding") {
+      if (record.target) state.onboardingTarget = record.target;
+      if (record.department) state.onboardingTeam = record.department;
+      if (record.period) state.period = record.period;
+      renderHandoffDetail("onboarding");
+    } else {
+      if (record.owner) state.owner = PEOPLE.owners.find(item => item.startsWith(record.owner)) || state.owner;
+      if (record.nextOwner) state.nextOwner = PEOPLE.nextOwners.find(item => item.startsWith(record.nextOwner)) || state.nextOwner;
+      if (record.department) state.handoffDepartment = record.department;
+      if (record.customer) state.customer = record.customer;
+      if (record.supplier) state.supplier = record.supplier;
+      if (record.scope) state.scope = record.scope;
+      if (record.period) state.period = record.period;
+      if (record.reason) state.reason = record.reason;
+      renderHandoffDetail("handoff");
+    }
+    if (typeof window.showToast === "function") window.showToast("저장된 조건을 복제해 새 문서 생성 화면으로 이동했습니다.", "success");
+  };
+
   function initHandoffCenter() {
     ensureStyle();
     patchKnowledgeNav();
+    patchHandoffActionDelegates();
     window.selectKnowledgeType = selectKnowledgeType;
     window.selectHandoffType = selectKnowledgeType;
     window.renderKnowledgeFlow = selectKnowledgeType;

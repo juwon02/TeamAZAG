@@ -568,6 +568,11 @@ function nav(screen) {
   if (screen === 'chat') initChatSessions();
   if (screen === 'knowledge') {
 
+    if (window.__HANDOFF_REACT_ENABLED__) {
+      window.dispatchEvent(new CustomEvent('opsradar:open-handover'));
+      return;
+    }
+
 setTimeout(initDocumentGenerationActions, 0);
 setTimeout(bindRemainingActionButtons, 0);
     // 버튼 전체 초기화 후 온보딩으로 바로 시작

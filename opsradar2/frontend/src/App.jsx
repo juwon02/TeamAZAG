@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Login from "./Login";
+import Login from "./Login.jsx";
 
 function App() {
   const [session, setSession] = useState(() => {
