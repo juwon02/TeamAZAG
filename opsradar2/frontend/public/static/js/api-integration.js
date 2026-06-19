@@ -553,7 +553,29 @@
     if (typeof renderAnalysisRiskReview === "function") renderAnalysisRiskReview();
   }
 
-  function renderRealDocumentResult({ file, documentId, chunks, todos: docTodos, issues: docIssues }) {
+  function showAnalysisTruncationBanner(truncation) {
+    const host = document.getElementById("resultSection");
+    let banner = document.getElementById("analysisTruncationBanner");
+    if (!truncation || !truncation.truncated) {
+      if (banner) banner.style.display = "none";
+      return;
+    }
+    if (!banner && host) {
+      banner = document.createElement("div");
+      banner.id = "analysisTruncationBanner";
+      banner.style.cssText = "margin:0 0 12px;padding:10px 14px;border:1px solid var(--warning,#c47c00);background:var(--warn-soft,rgba(196,124,0,.1));border-radius:8px;font-size:12px;line-height:1.5;color:var(--text);display:flex;gap:8px;align-items:flex-start";
+      host.insertBefore(banner, host.firstChild);
+    }
+    if (!banner) return;
+    const cap = truncation.cap || 20;
+    const parts = [];
+    if ((truncation.todos_total || 0) > cap) parts.push(`Todo 전체 ${truncation.todos_total}건 중 ${cap}건`);
+    if ((truncation.issues_total || 0) > cap) parts.push(`Issue 전체 ${truncation.issues_total}건 중 ${cap}건`);
+    banner.innerHTML = `<i class="ti ti-alert-triangle" style="color:var(--warning,#c47c00);flex-shrink:0;margin-top:1px"></i><span><b>항목이 많아 상한을 적용했습니다.</b> ${parts.join(", ")}만 등록되었고 나머지는 등록되지 않았습니다(대시보드 보호).</span>`;
+    banner.style.display = "flex";
+  }
+
+  function renderRealDocumentResult({ file, documentId, chunks, todos: docTodos, issues: docIssues, truncation }) {
     const chunk = (chunks || [])[0];
     const chunkCount = chunks?.length || 0;
     const issueCount = docIssues?.length || 0;
@@ -614,6 +636,7 @@
     }
 
     if (resultSection) resultSection.style.display = "block";
+    showAnalysisTruncationBanner(truncation);
     if (window.G?.analysisHistory) {
       window.G.analysisHistory.unshift({
         name: file.name,
@@ -634,7 +657,7 @@
     const documentId = upload.document_id;
     if (!documentId) throw new Error("백엔드에서 document_id를 받지 못했습니다.");
 
-    await waitForDocumentAnalysis(documentId, (status) => {
+    const finalStatus = await waitForDocumentAnalysis(documentId, (status) => {
       const progress = Number(status.progress || 0);
       if (typeof setFlow === "function") {
         if (progress < 40) setFlow(1, "active", "파일 저장 및 텍스트 추출 중", `진행률 ${progress}%`, "s-active");
@@ -665,6 +688,7 @@
       chunks: chunkData.chunks || [],
       todos: docTodos,
       issues: docIssues,
+      truncation: finalStatus?.truncation || null,
     });
 
     await window.opsRadarApi.reload();

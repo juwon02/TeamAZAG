@@ -12,6 +12,11 @@ from app.ai.llm_client import AzureOpenAIConfigError, chat_completion
 from app.core.config import settings
 
 
+# 한 문서에서 등록할 todo/issue 상한(대시보드 폭주 방지). 초과분은 잘리되,
+# truncation 메타로 "전체 N건 중 cap건만 처리됨"을 사용자에게 알린다.
+EXTRACTION_CAP = 20
+
+
 async def answer_question(query: str, context: str) -> dict:
     """답변 생성 - LLM 사용"""
     if not query.strip():
@@ -121,7 +126,7 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
     issues = data.get("issues") if isinstance(data.get("issues"), list) else []
 
     normalized_todos = []
-    for item in todos[:20]:
+    for item in todos[:EXTRACTION_CAP]:
         if isinstance(item, str) and not _is_completed_statement(item):
             concise_title = _concise_todo_title(item, item)
             normalized_todos.append(
@@ -147,7 +152,7 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
                 )
 
     normalized_issues = []
-    for item in issues[:20]:
+    for item in issues[:EXTRACTION_CAP]:
         if isinstance(item, str) and not _is_resolved_issue(item):
             cleaned = _strip_issue_target_date(item)
             if cleaned:
@@ -171,11 +176,19 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
                     }
                 )
 
-    return {
+    result = {
         "todos": normalized_todos,
-        "decisions": [str(item) for item in decisions[:20]],
+        "decisions": [str(item) for item in decisions[:EXTRACTION_CAP]],
         "issues": normalized_issues,
     }
+    if len(todos) > EXTRACTION_CAP or len(issues) > EXTRACTION_CAP:
+        result["truncation"] = {
+            "cap": EXTRACTION_CAP,
+            "todos_total": len(todos),
+            "issues_total": len(issues),
+            "truncated": True,
+        }
+    return result
 
 
 def _strip_issue_target_date(text: str) -> str:
@@ -309,9 +322,19 @@ def _extract_claims_csv(text: str) -> dict | None:
         return {"todos": [], "decisions": [], "issues": []}
 
     ordered = sorted(open_rows, key=_claim_sort_key)
-    issues = [_claim_issue(row) for row in ordered[:20]]
-    todos = [_claim_todo(row) for row in ordered[:20]]
-    return {"todos": todos, "decisions": [], "issues": issues}
+    capped = ordered[:EXTRACTION_CAP]
+    issues = [_claim_issue(row) for row in capped]
+    todos = [_claim_todo(row) for row in capped]
+    result = {"todos": todos, "decisions": [], "issues": issues}
+    total = len(open_rows)
+    if total > EXTRACTION_CAP:
+        result["truncation"] = {
+            "cap": EXTRACTION_CAP,
+            "todos_total": total,
+            "issues_total": total,
+            "truncated": True,
+        }
+    return result
 
 
 def _parse_claim_rows(text: str) -> list[dict[str, str]]:

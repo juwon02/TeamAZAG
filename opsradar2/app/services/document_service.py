@@ -327,6 +327,17 @@ async def _create_ai_summary(db: AsyncSession, document: Document, summary: str 
     summary_text = summary.get("summary") if isinstance(summary, dict) else summary
     if not summary_text:
         summary_text = ""
+    truncation = extracted.get("truncation") if isinstance(extracted, dict) else None
+    if truncation and truncation.get("truncated"):
+        cap = truncation.get("cap", 20)
+        parts = []
+        if (truncation.get("todos_total") or 0) > cap:
+            parts.append(f"Todo 전체 {truncation['todos_total']}건 중 {cap}건")
+        if (truncation.get("issues_total") or 0) > cap:
+            parts.append(f"Issue 전체 {truncation['issues_total']}건 중 {cap}건")
+        if parts:
+            note = "⚠️ 항목이 많아 상한을 적용했습니다: " + ", ".join(parts) + "만 등록(나머지 미등록)."
+            summary_text = f"{note}\n{summary_text}" if summary_text else note
     todos = extracted.get("todos", [])
     issues = extracted.get("issues", [])
     blocked = [
