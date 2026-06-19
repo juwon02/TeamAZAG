@@ -7,12 +7,13 @@ const Field = ({ label, value, options, onChange }) => (
 );
 
 export default function HandoffDetail(props) {
-  const { type, step, conditions, candidates, selectedIds, previewData, onBack, onStep, onCondition, onInclude, onToggle, onEdit, onRegenerate, onShare, onSave } = props;
+  const { type, step, conditions, candidates, selectedIds, previewData, savedDraftId, onBack, onStep, onCondition, onInclude, onToggle, onEdit, onRegenerate, onShare, onSave, onOpenArchive } = props;
   const onboarding = type === "onboarding";
   const includeOptions = onboarding ? ONBOARDING_INCLUDES : HANDOFF_INCLUDES;
+  const stepLabels = ["조건 선택", onboarding ? "포함할 온보딩 자료 선택" : "포함할 업무 선택", onboarding ? "가이드 미리보기" : "결과 미리보기"];
   return <main className={`hc-detail-page${onboarding ? " onboarding-detail" : ""}`}>
     <header className="hc-page-head"><button type="button" className="hc-icon-btn" onClick={onBack} title="처음으로"><i className="ti ti-arrow-left" /></button><div><span>{onboarding ? "NEW EMPLOYEE" : "WORK TRANSFER"}</span><h1>{onboarding ? "신입 온보딩 생성" : "업무 인수인계 생성"}</h1></div></header>
-    <nav className="hc-steps" aria-label="생성 단계">{["조건 선택", "AI 추출 후보", "결과 미리보기"].map((label, index) => <button type="button" key={label} className={step === index + 1 ? "active" : ""} onClick={() => onStep(index + 1)}><b>{index + 1}</b><span>{label}</span></button>)}</nav>
+    <nav className="hc-steps" aria-label="생성 단계">{stepLabels.map((label, index) => <button type="button" key={label} className={step === index + 1 ? "active" : ""} onClick={() => onStep(index + 1)}><b>{index + 1}</b><span>{label}</span></button>)}</nav>
     <section className={`hc-step-body${step === 3 ? " preview-wide" : ""}`}>
       {step === 1 && <div className="hc-condition-panel"><header><h2>생성 조건</h2><p>업무 기록을 찾을 범위와 결과 문서에 포함할 항목을 선택하세요.</p></header>
         <div className="hc-form-grid">{onboarding ? <>
@@ -22,9 +23,9 @@ export default function HandoffDetail(props) {
         </>}</div>
         <div className="hc-includes"><h3>포함할 자료</h3><div>{includeOptions.map((value) => <label key={value}><input type="checkbox" checked={conditions.includes.includes(value)} onChange={() => onInclude(value)} /><span><i className="ti ti-check" /></span>{value}</label>)}</div></div>
       </div>}
-      {step === 2 && <HandoffCandidateList candidates={candidates} selectedIds={selectedIds} onToggle={onToggle} />}
-      {step === 3 && <HandoffPreview previewData={previewData} type={type} onPreviewChange={onEdit} onRegenerate={onRegenerate} onShare={onShare} onSave={onSave} />}
+      {step === 2 && <HandoffCandidateList candidates={candidates} selectedIds={selectedIds} onToggle={onToggle} type={type} />}
+      {step === 3 && <HandoffPreview previewData={previewData} type={type} savedDraftId={savedDraftId} onPreviewChange={onEdit} onRegenerate={onRegenerate} onShare={onShare} onSave={onSave} onOpenArchive={onOpenArchive} />}
     </section>
-    {step < 3 && <footer className="hc-step-footer"><span>{step === 2 ? `${selectedIds.length}개 자료 선택됨` : "조건을 확인한 뒤 다음 단계로 이동하세요."}</span><button type="button" className="primary" onClick={() => onStep(step + 1)}>{step === 1 ? "AI 후보 확인" : "미리보기 생성"}<i className="ti ti-arrow-right" /></button></footer>}
+    {step < 3 && <footer className="hc-step-footer"><span>{step === 2 ? `${selectedIds.length}개 자료 선택됨` : "조건을 확인한 뒤 다음 단계로 이동하세요."}</span><button type="button" className="primary" onClick={() => onStep(step + 1)}>{step === 1 ? (onboarding ? "온보딩 자료 선택" : "포함할 업무 선택") : "미리보기 생성"}<i className="ti ti-arrow-right" /></button></footer>}
   </main>;
 }
