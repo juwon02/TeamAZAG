@@ -226,6 +226,45 @@ async def run_document_pipeline(document_id: str) -> None:
             )
 
 
+async def _resolve_assignee_member_ids(
+    db: AsyncSession, project_id, names: list,
+) -> dict[str, str]:
+    """추출된 담당자 '이름' → project_members.id 매핑.
+
+    안전 규칙:
+    - 해당 프로젝트의 *활성* 멤버 중 그 이름이 **정확히 한 명**일 때만 매핑한다.
+    - 이름이 없거나(0명) 동명이인(2명 이상)이면 매핑에서 제외 → 호출부에서 None 폴백.
+    """
+    wanted = {str(n).strip() for n in names if n and str(n).strip()}
+    if not wanted:
+        return {}
+    rows = (
+        await db.execute(
+            text(
+                """
+                SELECT u.name AS name, pm.id::text AS member_id
+                FROM project_members pm
+                JOIN users u ON u.id = pm.user_id
+                WHERE pm.project_id = :project_id
+                  AND pm.status = 'active'
+                  AND u.deleted_at IS NULL
+                  AND u.name IS NOT NULL
+                """
+            ),
+            {"project_id": project_id},
+        )
+    ).mappings().all()
+    counts: dict[str, int] = {}
+    first: dict[str, str] = {}
+    for row in rows:
+        name = str(row["name"]).strip()
+        if name not in wanted:
+            continue
+        counts[name] = counts.get(name, 0) + 1
+        first.setdefault(name, row["member_id"])
+    return {name: member_id for name, member_id in first.items() if counts[name] == 1}
+
+
 async def _create_extracted_items(
     db: AsyncSession,
     document: Document,
@@ -234,15 +273,21 @@ async def _create_extracted_items(
 ) -> None:
     source_chunk_id = chunk_rows[0].id if chunk_rows else None
 
-    for item in extracted.get("todos", [])[:20]:
+    todo_items = extracted.get("todos", [])[:20]
+    assignee_member_map = await _resolve_assignee_member_ids(
+        db, document.project_id, [item.get("assignee") for item in todo_items]
+    )
+    for item in todo_items:
         title = item.get("title") or item.get("content")
         if title:
             description = item.get("description") or item.get("content") or str(title)
+            assignee_name = str(item.get("assignee") or "").strip()
             db.add(
                 Todo(
                     id=uuid.uuid4(),
                     project_id=document.project_id,
                     created_by_member_id=document.uploaded_by_member_id,
+                    assignee_member_id=assignee_member_map.get(assignee_name) if assignee_name else None,
                     source_document_id=document.id,
                     source_chunk_id=source_chunk_id,
                     title=str(title)[:500],
