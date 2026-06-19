@@ -463,6 +463,7 @@
       insight.id = "wrCalendarMonthNav";
       insight.className = "wr-calendar-month-nav";
       insight.innerHTML = `<button id="calPrevBtn" class="tbtn" onclick="goToPrevMonth()">← 이전 달</button><div id="calMonthTitle" class="chip">현재 월</div><button id="calNextBtn" class="tbtn" onclick="goToNextMonth()">다음 달 →</button>`;
+      if (typeof updateCalendarHeader === 'function') updateCalendarHeader();
     }
     const topbarControls = document.querySelector("#s-calendar .topbar > div:last-child");
     if (topbarControls) topbarControls.style.display = "none";

@@ -27,6 +27,7 @@ async def api_health(db: AsyncSession = Depends(get_db)):
     }
 
 
+
 @router.get("/frontend-config")
 async def frontend_config():
     return {

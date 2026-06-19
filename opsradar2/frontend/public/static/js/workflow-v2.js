@@ -212,6 +212,7 @@
     if (window.opsRadarApi?.reload) await window.opsRadarApi.reload();
     configureRoleScreen();
     if (G.currentIssueTab === "pending") renderPendingIssues();
+    if (G.currentIssueTab === "resolved") renderResolvedIssues();
   }
 
   function queueDetail(item, kind) {
@@ -307,9 +308,10 @@
       if (aiTab) { aiTab.style.display = ""; aiTab.childNodes[0].nodeValue = "승인 대기중 Todo "; }
     }
     configureTodoTabs();
+    ensureIssueResolvedTab();
+    ensureIssueRejectedTab();
     configureIssueTabs();
     removeObsoleteAnalysisUi();
-    ensureIssueRejectedTab();
     relocateCalendarPreferences();
   }
 
@@ -333,9 +335,10 @@
   function configureIssueTabs() {
     const tabs = document.querySelector("#s-issues .tabs");
     if (!tabs || !isLead()) return;
-    const pending = tabs.querySelector(".tab[onclick*=\"'candidate'\"]");
+    const resolved = tabs.querySelector(".tab[onclick*=\"'resolved'\"]") || document.getElementById("issueResolvedTab");
     const rejected = document.getElementById("issueRejectedTab");
-    [pending, rejected].filter(Boolean).forEach((node) => tabs.appendChild(node));
+    const pending = tabs.querySelector(".tab[onclick*=\"'candidate'\"]");
+    [resolved, rejected, pending].filter(Boolean).forEach((node) => tabs.appendChild(node));
   }
 
   function removeObsoleteAnalysisUi() {
@@ -384,11 +387,18 @@
 
   const baseSwitchTodo = window.switchTodoTab;
   window.switchTodoTab = switchTodoTab = function (tab) {
+    G.todoChecked = {};
     const result = baseSwitchTodo(tab);
     const tabBadgeIds = { inprogress: "t-in-cnt", ai: "t-ai-cnt", done: "t-done-cnt", rejected: "t-rej-cnt" };
     Object.entries(tabBadgeIds).forEach(([key, badgeId]) => {
       document.getElementById(badgeId)?.closest(".tab")?.classList.toggle("active", key === tab);
     });
+    const show = (id, visible) => { const el = document.getElementById(id); if (el) el.style.display = visible ? "flex" : "none"; };
+    show("todoBulkDeleteBtn",          ["done", "rejected", "inprogress"].includes(tab));
+    show("todoBulkRejectProgressBtn",  tab === "inprogress");
+    show("todoBulkDeleteAiBtn",        tab === "ai");
+    show("todoBulkRestoreRejectedBtn", tab === "rejected");
+    refreshTodoBulkState();
     return result;
   };
 
@@ -657,7 +667,23 @@
     tab.onclick = () => switchIssueTab("rejected");
     tabs.appendChild(tab);
     tab.style.display = isLead() ? "" : "none";
+  }
 
+  function ensureIssueResolvedTab() {
+    const tabs = document.querySelector("#s-issues .tabs");
+    if (!tabs) return;
+    if (tabs.querySelector(".tab[onclick*=\"'resolved'\"]") || document.getElementById("issueResolvedTab")) return;
+    const tab = document.createElement("div");
+    tab.id = "issueResolvedTab";
+    tab.className = "tab";
+    tab.innerHTML = `완료 <span class="badge b-gray" id="i-done-cnt">0</span>`;
+    tab.onclick = () => switchIssueTab("resolved");
+    const firstTab = tabs.querySelector(".tab");
+    if (firstTab?.nextSibling) {
+      tabs.insertBefore(tab, firstTab.nextSibling);
+    } else {
+      tabs.appendChild(tab);
+    }
   }
 
   const baseSwitchIssue = window.switchIssueTab;
@@ -668,16 +694,38 @@
       renderPendingRisks();
       return;
     }
+    if (tab === "resolved") {
+      G.currentIssueTab = "resolved";
+      G.selectedIssueId = null;
+      if (typeof hideIssueDetail === "function") hideIssueDetail();
+      document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => {
+        const onclickAttr = String(node.getAttribute("onclick") || "");
+        node.classList.toggle("active", onclickAttr.includes("'resolved'") || node.id === "issueResolvedTab");
+      });
+      renderResolvedIssues();
+      return;
+    }
     if (tab !== "rejected") return baseSwitchIssue(tab);
     G.currentIssueTab = "rejected";
     document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => node.classList.toggle("active", node.id === "issueRejectedTab"));
-    const result = await api("/workflow/risks/rejected");
-    G.rejectedRisks = result.issues || [];
+    try {
+      const result = await api("/workflow/risks/rejected");
+      G.rejectedRisks = result.issues || [];
+    } catch (e) {
+      G.rejectedRisks = [];
+      const msg = String(e?.message || "");
+      if (msg.includes("invalid token") || msg.includes("401") || msg.includes("login")) {
+        showToast("인증이 만료됐습니다. 다시 로그인해 주세요.", "warn");
+      } else {
+        showToast("반려 목록을 불러올 수 없습니다.", "warn");
+      }
+    }
     renderRejectedRisks();
   };
 
   function renderPendingRisks() {
     const host = document.getElementById("issueList");
+    if (!host) return;
     const pendingRisks = G.workflowReview?.pending_risks || [];
     const candidateIssues = typeof issues !== "undefined" ? issues.filter((i) => i.type === "candidate") : [];
     const allItems = [
@@ -686,10 +734,46 @@
     ];
     const badge = document.getElementById("i-cand-cnt");
     if (badge) badge.textContent = allItems.length;
+    if (!allItems.length) {
+      host.innerHTML = '<div class="wr-empty">승인 대기 이슈가 없습니다.</div>';
+      return;
+    }
     host.innerHTML = allItems.map((item) => {
       const id = esc(item.apiId || item.id);
-      return `<article class="issue-card candidate" onclick="showPendingRiskDetail('${id}')"><div class="issue-hd"><span class="badge b-warn">승인 대기</span><div class="issue-title">${esc(item.title)}</div><span class="badge b-gray">${esc(item.sent_by || item.assignee || "팀원 전송")}</span></div><div class="issue-desc">${esc(description(item))}</div><div class="issue-footer"><span>마감일 ${esc(due(item))}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn primary" onclick="approvePendingRisk('${id}')">이슈 확정</button><button class="tbtn" onclick="editPendingItem('risk','${id}')">수정</button><button class="tbtn danger" onclick="rejectPendingItem('risk','${id}')">반려</button></div></div></article>`;
-    }).join("") || '<div class="wr-empty">승인 대기 이슈가 없습니다.</div>';
+      const sev = item.severity || item.risk_level || null;
+      const sevBadge = sev === "high"
+        ? '<span class="badge b-danger">High</span>'
+        : sev === "medium"
+        ? '<span class="badge b-warn">Medium</span>'
+        : '<span class="badge b-warn">승인 대기</span>';
+      const title = esc(item.title || "제목 없음");
+      const desc = esc(description(item));
+      const assignee = esc(item.sent_by || item.assignee || "");
+      return `<div class="issue-card has-issue-chk" style="display:flex;align-items:flex-start;gap:8px">
+        <input type="checkbox" class="issue-row-chk" value="${id}" style="accent-color:var(--danger);cursor:pointer;margin-top:6px;flex-shrink:0" onclick="event.stopPropagation();toggleIssueChk('${id}',this.checked)" ${G.issueChecked?.[id] ? "checked" : ""}>
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="showPendingRiskDetail('${id}')">
+          <div class="issue-hd">
+            ${sevBadge}
+            <div class="issue-title">${title}</div>
+          </div>
+          ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
+          <div class="issue-footer">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${assignee ? `<span class="badge b-gray">담당: ${assignee}</span>` : ""}
+            </div>
+            <div class="wr-queue-actions" onclick="event.stopPropagation()">
+              <button class="tbtn primary" style="font-size:10px;padding:4px 8px" onclick="approvePendingRisk('${id}')"><i class="ti ti-check"></i> 이슈 확정</button>
+              <button class="tbtn danger" style="font-size:10px;padding:4px 8px" onclick="deletePendingRisk('${id}')"><i class="ti ti-trash"></i> 삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+    const toolbar = document.createElement("div");
+    toolbar.className = "wr-issue-bulk-bar";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap";
+    toolbar.innerHTML = `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="issueChkAll" onchange="toggleAllIssueChk(this)" style="accent-color:var(--danger)"> 전체선택</label><button class="tbtn primary" onclick="bulkApprovePendingRisks()" style="font-size:11px;padding:3px 10px;margin-left:auto"><i class="ti ti-check"></i> 선택항목 이슈확정</button><button class="tbtn danger" onclick="bulkDeleteCurrentIssues()" style="font-size:11px;padding:3px 10px"><i class="ti ti-trash"></i> 선택항목 영구삭제</button>`;
+    host.insertBefore(toolbar, host.firstChild);
   }
   window.showPendingRiskDetail = function (id) {
     const item = G.workflowReview?.pending_risks?.find((row) => String(row.id) === String(id))
@@ -697,10 +781,21 @@
         ? issues.find((row) => String(row.apiId || row.id) === String(id))
         : null);
     if (!item) return;
-    const host = document.getElementById("issueDetailContent");
-    document.getElementById("issueDetailEmpty").style.display = "none";
-    host.style.display = "block";
-    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span><span>마감일 <b>${esc(due(item))}</b></span><span>전송자 <b>${esc(item.sent_by || "-")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}','${esc(item.source_file_name || "")}')">${esc(item.source_file_name || "출처 파일")}</button>` : "<span>출처 없음</span>"}</div>`;
+    const issue = {
+      title: item.title,
+      src: item.document_id || item.src || null,
+      sourceFileName: item.source_file_name || item.sourceFileName || null,
+      desc: item.description || item.desc || "",
+      description: item.description || item.desc || "",
+      severity: item.risk_level || item.severity || "medium",
+      assignee: item.assignee || item.sent_by || "",
+      days: 0,
+    };
+    renderIssueDetailPanel(issue, `
+      <div style="display:flex;gap:5px;justify-content:flex-end">
+        <div class="tbtn primary" onclick="approvePendingRisk('${esc(id)}')"><i class="ti ti-check"></i> 이슈 확정</div>
+        <div class="tbtn danger" onclick="deletePendingRisk('${esc(id)}')"><i class="ti ti-trash"></i> 삭제</div>
+      </div>`);
   };
 
   function renderPendingIssues() {
@@ -737,28 +832,112 @@
   function renderRejectedRisks() {
     const host = document.getElementById("issueList");
     const items = G.rejectedRisks || [];
-    document.getElementById("i-rej-cnt").textContent = items.length;
-    host.innerHTML = items.map((item) => `<article class="issue-card" onclick="showRejectedRiskDetail('${esc(item.id)}')"><div class="issue-hd"><span class="badge b-gray">반려</span><div class="issue-title">${esc(item.title)}</div></div><div class="issue-desc">${esc(description(item))}</div><div class="issue-footer"><span>${esc(String(item.created_at || "").slice(0,10))}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn" onclick="restoreRejectedRisk('${esc(item.id)}')">되돌리기</button><button class="tbtn danger" onclick="deleteRejectedRisk('${esc(item.id)}')">삭제</button><button class="tbtn" onclick="showRejectedRiskReason('${esc(item.id)}')">반려 사유</button></div></div></article>`).join("") || '<div class="wr-empty">반려된 이슈가 없습니다.</div>';
+    const badge = document.getElementById("i-rej-cnt");
+    if (badge) badge.textContent = items.length;
+    if (typeof hideIssueDetail === "function") hideIssueDetail();
+    if (!items.length) { host.innerHTML = '<div class="wr-empty">반려된 이슈가 없습니다.</div>'; return; }
+    host.innerHTML = items.map((item) => {
+      const id = esc(item.id);
+      const title = esc(item.title || "제목 없음");
+      const desc = esc(description(item));
+      const sev = item.risk_level || item.severity || null;
+      const sevBadge = sev === "high"
+        ? '<span class="badge b-danger">High</span>'
+        : sev === "medium"
+        ? '<span class="badge b-warn">Medium</span>'
+        : '<span class="badge b-gray">반려</span>';
+      return `<div class="issue-card has-issue-chk" style="display:flex;align-items:flex-start;gap:8px">
+        <input type="checkbox" class="issue-row-chk" value="${id}" style="accent-color:var(--danger);cursor:pointer;margin-top:6px;flex-shrink:0" onclick="event.stopPropagation();toggleIssueChk('${id}',this.checked)" ${G.issueChecked?.[id] ? "checked" : ""}>
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="showRejectedRiskDetail('${id}')">
+          <div class="issue-hd">${sevBadge}<div class="issue-title">${title}</div></div>
+          ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
+          <div class="issue-footer">
+            <span style="font-size:11px;color:var(--text3)">${esc(String(item.created_at || "").slice(0,10))}</span>
+            <div class="wr-queue-actions" onclick="event.stopPropagation()">
+              <button class="tbtn" style="color:var(--accent)" onclick="restoreRejectedRisk('${id}')"><i class="ti ti-arrow-back-up"></i> 되돌리기</button>
+              <button class="tbtn" onclick="showRejectedRiskReason('${id}')"><i class="ti ti-info-circle"></i> 반려사유</button>
+              <button class="tbtn danger" onclick="deleteRejectedRisk('${id}')"><i class="ti ti-trash"></i> 삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+    const toolbar = document.createElement("div");
+    toolbar.className = "wr-issue-bulk-bar";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap";
+    toolbar.innerHTML = `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="issueChkAll" onchange="toggleAllIssueChk(this)" style="accent-color:var(--danger)"> 전체선택</label><button class="tbtn" onclick="bulkRestoreRejectedRisks()" style="font-size:11px;padding:3px 10px;margin-left:auto;color:var(--accent)"><i class="ti ti-arrow-back-up"></i> 선택항목 전체 되돌리기</button><button class="tbtn danger" onclick="bulkDeleteRejectedRisks()" style="font-size:11px;padding:3px 10px"><i class="ti ti-trash"></i> 선택항목 영구삭제</button>`;
+    host.insertBefore(toolbar, host.firstChild);
   }
   window.showRejectedRiskDetail = function (id) {
     const item = G.rejectedRisks?.find((row) => String(row.id) === String(id));
     if (!item) return;
-    const host = document.getElementById("issueDetailContent");
-    document.getElementById("issueDetailEmpty").style.display = "none";
-    host.style.display = "block";
-    host.innerHTML = `<h3>${esc(item.title)}</h3><section class="wr-detail-description"><b>내용</b><p>${esc(description(item))}</p></section><div class="wr-queue-meta"><span>상태 <b>반려</b></span><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span></div><div class="wr-todo-source"><b>출처</b>${item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}','${esc(item.source_file_name || "")}')">${esc(item.source_file_name || "출처 파일 다운로드")}</button>` : "<span>출처 없음</span>"}</div>`;
+    const issue = {
+      title: item.title,
+      src: item.document_id || null,
+      sourceFileName: item.source_file_name || null,
+      desc: item.description || item.desc || "",
+      description: item.description || item.desc || "",
+      severity: item.risk_level || item.severity || "medium",
+      assignee: item.assignee || "",
+      days: 0,
+    };
+    renderIssueDetailPanel(issue, `
+      <div style="display:flex;gap:5px;justify-content:flex-end">
+        <div class="tbtn" style="color:var(--accent)" onclick="restoreRejectedRisk('${esc(id)}')"><i class="ti ti-arrow-back-up"></i> 되돌리기</div>
+        <div class="tbtn" onclick="showRejectedRiskReason('${esc(id)}')"><i class="ti ti-info-circle"></i> 반려사유</div>
+        <div class="tbtn danger" onclick="deleteRejectedRisk('${esc(id)}')"><i class="ti ti-trash"></i> 삭제</div>
+      </div>`);
   };
   window.restoreRejectedRisk = async function (id) {
-    await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "pending" }) });
-    switchIssueTab("rejected"); showToast("이슈 후보로 되돌렸습니다.", "success");
+    try {
+      await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "pending" }) });
+      switchIssueTab("candidate");
+      showToast("승인대기로 되돌렸습니다.", "success");
+    } catch (_) { showToast("되돌리기에 실패했습니다.", "warn"); }
   };
   window.deleteRejectedRisk = async function (id) {
-    if (!confirm("반려 이슈를 삭제하시겠습니까?")) return;
-    await api(`/issues/${id}`, { method: "DELETE" }); switchIssueTab("rejected"); showToast("이슈를 삭제했습니다.", "success");
+    if (!confirm("반려 이슈를 영구 삭제하시겠습니까?")) return;
+    try {
+      await api(`/issues/${id}`, { method: "DELETE" });
+      if (G.rejectedRisks) {
+        const idx = G.rejectedRisks.findIndex(r => String(r.id) === String(id));
+        if (idx !== -1) G.rejectedRisks.splice(idx, 1);
+      }
+      clearIssueChecks();
+      renderRejectedRisks();
+      showToast("이슈를 삭제했습니다.", "success");
+    } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
   };
   window.showRejectedRiskReason = function (id) {
     const item = G.rejectedRisks?.find((row) => String(row.id) === String(id));
     alert(`반려 사유: ${item?.risk_reason || "없음"}`);
+  };
+  window.bulkRestoreRejectedRisks = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    if (!confirm(`${checkedIds.length}개 이슈를 승인대기로 되돌리시겠습니까?`)) return;
+    try {
+      await Promise.all(checkedIds.map(id => api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "pending" }) })));
+      clearIssueChecks();
+      switchIssueTab("candidate");
+      showToast(`${checkedIds.length}개 이슈를 승인대기로 되돌렸습니다.`, "success");
+    } catch (_) { showToast("되돌리기에 실패했습니다.", "warn"); }
+  };
+  window.bulkDeleteRejectedRisks = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    if (!confirm(`선택한 ${checkedIds.length}개 이슈를 영구 삭제하시겠습니까?`)) return;
+    try {
+      await Promise.all(checkedIds.map(id => api(`/issues/${id}`, { method: "DELETE" })));
+      if (G.rejectedRisks) {
+        for (let i = G.rejectedRisks.length - 1; i >= 0; i--) {
+          if (checkedIds.includes(String(G.rejectedRisks[i].id))) G.rejectedRisks.splice(i, 1);
+        }
+      }
+      clearIssueChecks();
+      renderRejectedRisks();
+      showToast(`${checkedIds.length}개 이슈를 삭제했습니다.`, "success");
+    } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
   };
 
   function relocateCalendarPreferences() {
@@ -800,6 +979,506 @@
       return result;
     };
   }
+
+  // ── 이슈 체크박스 상태 ──
+  G.issueChecked = G.issueChecked || {};
+  function getCheckedIssueIds() {
+    return Object.keys(G.issueChecked || {}).filter((id) => G.issueChecked[id]);
+  }
+  function clearIssueChecks() {
+    G.issueChecked = {};
+    const chkAll = document.getElementById("issueChkAll");
+    if (chkAll) chkAll.checked = false;
+  }
+  window.toggleIssueChk = function (id, checked) {
+    if (!G.issueChecked) G.issueChecked = {};
+    G.issueChecked[String(id)] = checked;
+  };
+  window.toggleAllIssueChk = function (el) {
+    document.querySelectorAll(".issue-row-chk").forEach((cb) => {
+      cb.checked = el.checked;
+      if (!G.issueChecked) G.issueChecked = {};
+      G.issueChecked[String(cb.value)] = el.checked;
+    });
+  };
+
+  // ── 이슈 목록 체크박스/벌크 툴바 주입 ──
+  function injectIssueBulkUi() {
+    const host = document.getElementById("issueList");
+    if (!host) return;
+    host.querySelector(".wr-issue-bulk-bar")?.remove();
+    const toolbar = document.createElement("div");
+    toolbar.className = "wr-issue-bulk-bar";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap";
+    toolbar.innerHTML = `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="issueChkAll" onchange="toggleAllIssueChk(this)" style="accent-color:var(--danger)"> 전체선택</label><button class="tbtn danger" onclick="bulkDeleteCurrentIssues()" style="font-size:11px;padding:3px 10px;margin-left:auto"><i class="ti ti-trash"></i> 선택항목 영구삭제</button>`;
+    host.insertBefore(toolbar, host.firstChild);
+    host.querySelectorAll(".issue-card:not(.has-issue-chk)").forEach((card) => {
+      card.classList.add("has-issue-chk");
+      const onclick = card.getAttribute("onclick") || "";
+      const selM = onclick.match(/selectIssue\((.*?)\)/);
+      const pendM = onclick.match(/showPendingRiskDetail\('([^']+)'\)/);
+      let id;
+      if (selM) { try { id = JSON.parse(selM[1]); } catch (_) { id = selM[1]; } }
+      else if (pendM) { id = pendM[1]; }
+      if (!id) return;
+      id = String(id);
+      const chkWrap = document.createElement("div");
+      chkWrap.style.cssText = "display:flex;align-items:flex-start;padding-top:4px;flex-shrink:0";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.className = "issue-row-chk";
+      chk.value = id;
+      chk.checked = !!(G.issueChecked && G.issueChecked[id]);
+      chk.style.cssText = "accent-color:var(--danger);cursor:pointer";
+      chk.onclick = (e) => { e.stopPropagation(); window.toggleIssueChk(id, chk.checked); };
+      chkWrap.appendChild(chk);
+      card.style.cssText = (card.getAttribute("style") || "") + ";display:flex;align-items:flex-start;gap:8px";
+      card.insertBefore(chkWrap, card.firstChild);
+    });
+  }
+
+  // ── 진행/승인대기 탭 벌크 영구삭제 ──
+  window.bulkDeleteCurrentIssues = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    // checkedIds may be numeric UI IDs (inprogress) or UUID strings (candidate) — resolve both
+    const apiIds = [...new Set(
+      checkedIds.map(cid => {
+        const byUiId = allIssues.find(i => String(i.id) === cid);
+        if (byUiId?.apiId) return byUiId.apiId;
+        const byApiId = allIssues.find(i => String(i.apiId || "") === cid);
+        return byApiId?.apiId || cid;
+      }).filter(Boolean)
+    )];
+    if (!apiIds.length) return showToast("삭제할 이슈를 찾을 수 없습니다.", "warn");
+    if (!confirm(`선택한 ${apiIds.length}개 이슈를 영구 삭제하시겠습니까?`)) return;
+    try {
+      await Promise.all(apiIds.map(apiId => api(`/issues/${apiId}`, { method: "DELETE" })));
+      for (let i = allIssues.length - 1; i >= 0; i--) {
+        if (apiIds.includes(String(allIssues[i].apiId || ""))) allIssues.splice(i, 1);
+      }
+      clearIssueChecks();
+      if (window.opsRadarApi?.loadIssues) await window.opsRadarApi.loadIssues();
+      if (typeof renderIssues === "function") renderIssues();
+      showToast(`${apiIds.length}개 이슈를 영구 삭제했습니다.`, "success");
+    } catch (_) { showToast("이슈 삭제에 실패했습니다.", "warn"); }
+  };
+
+  // ── 완료 탭 렌더링 ──
+  function renderResolvedIssues() {
+    const host = document.getElementById("issueList");
+    if (!host) return;
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const items = allIssues.filter((i) => i.type === "resolved");
+    const badge = document.getElementById("i-done-cnt");
+    if (badge) badge.textContent = items.length;
+    if (typeof hideIssueDetail === "function") hideIssueDetail();
+    if (!items.length) { host.innerHTML = '<div class="wr-empty">완료된 이슈가 없습니다.</div>'; return; }
+    host.innerHTML = items.map((issue) => {
+      const id = esc(String(issue.apiId || issue.id || ""));
+      const title = esc(issue.title || "제목 없음");
+      const desc = esc(issue.desc || issue.description || "");
+      const assignee = esc(issue.assignee || "미지정");
+      return `<div class="issue-card has-issue-chk" style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" class="issue-row-chk" value="${id}" style="accent-color:var(--danger);cursor:pointer;margin-top:6px;flex-shrink:0" onclick="event.stopPropagation();toggleIssueChk('${id}',this.checked)" ${G.issueChecked?.[id] ? "checked" : ""}><div style="flex:1;min-width:0;cursor:pointer" onclick="showResolvedIssueDetail('${id}')"><div class="issue-hd"><span class="badge b-success">완료</span><div class="issue-title">${title}</div></div>${desc ? `<div class="issue-desc">${desc}</div>` : ""}<div class="issue-footer"><span>담당자 ${assignee}</span><div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn" style="color:var(--accent)" onclick="restoreResolvedIssue('${id}')"><i class="ti ti-arrow-back-up"></i> 되돌리기</button><button class="tbtn danger" onclick="deleteSingleResolvedIssue('${id}')"><i class="ti ti-trash"></i> 삭제</button></div></div></div></div>`;
+    }).join("");
+    const toolbar = document.createElement("div");
+    toolbar.className = "wr-issue-bulk-bar";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap";
+    toolbar.innerHTML = `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="issueChkAll" onchange="toggleAllIssueChk(this)" style="accent-color:var(--danger)"> 전체선택</label><button class="tbtn" onclick="bulkRestoreResolvedIssues()" style="font-size:11px;padding:3px 10px;margin-left:auto;color:var(--accent)"><i class="ti ti-arrow-back-up"></i> 선택항목 전체 되돌리기</button><button class="tbtn danger" onclick="bulkDeleteResolvedIssues()" style="font-size:11px;padding:3px 10px"><i class="ti ti-trash"></i> 선택항목 영구삭제</button>`;
+    host.insertBefore(toolbar, host.firstChild);
+  }
+
+  // ── 완료 이슈 단건 되돌리기/삭제 ──
+  function resolveApiIdFromChecked(cid) {
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const byApiId = allIssues.find(i => String(i.apiId || "") === cid);
+    if (byApiId?.apiId) return { issue: byApiId, apiId: byApiId.apiId };
+    const byUiId = allIssues.find(i => String(i.id) === cid);
+    if (byUiId?.apiId) return { issue: byUiId, apiId: byUiId.apiId };
+    if (isUUID(cid)) return { issue: byApiId || null, apiId: cid };
+    return null;
+  }
+  window.restoreResolvedIssue = async function (id) {
+    if (!confirm("이 이슈를 진행 이슈로 되돌리시겠습니까?")) return;
+    const resolved = resolveApiIdFromChecked(id);
+    if (!resolved) return showToast("이슈 ID를 확인할 수 없습니다.", "warn");
+    try {
+      await api(`/issues/${resolved.apiId}`, { method: "PATCH", body: JSON.stringify({ status: "open" }) });
+      if (resolved.issue) { resolved.issue.status = "open"; resolved.issue.type = "confirmed"; }
+      renderResolvedIssues();
+      showToast("진행 이슈로 되돌렸습니다.", "success");
+    } catch (_) { showToast("되돌리기에 실패했습니다.", "warn"); }
+  };
+  window.deleteSingleResolvedIssue = async function (id) {
+    if (!confirm("이슈를 영구 삭제하시겠습니까?")) return;
+    try {
+      await api(`/issues/${id}`, { method: "DELETE" });
+      if (typeof issues !== "undefined") {
+        const idx = issues.findIndex((i) => String(i.apiId || i.id) === String(id));
+        if (idx !== -1) issues.splice(idx, 1);
+      }
+      clearIssueChecks();
+      renderResolvedIssues();
+      showToast("이슈를 영구 삭제했습니다.", "success");
+    } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
+  };
+
+  // ── 완료 이슈 벌크 되돌리기/삭제 ──
+  window.bulkRestoreResolvedIssues = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    const targets = checkedIds.map(resolveApiIdFromChecked).filter(Boolean);
+    if (!targets.length) return showToast("되돌릴 이슈를 찾을 수 없습니다.", "warn");
+    if (!confirm(`${targets.length}개 이슈를 진행 이슈로 되돌리시겠습니까?`)) return;
+    try {
+      await Promise.all(targets.map(({ apiId }) => api(`/issues/${apiId}`, { method: "PATCH", body: JSON.stringify({ status: "open" }) })));
+      targets.forEach(({ issue }) => { if (issue) { issue.status = "open"; issue.type = "confirmed"; } });
+      clearIssueChecks();
+      switchIssueTab("inprogress");
+      showToast(`${targets.length}개 이슈를 진행 이슈로 되돌렸습니다.`, "success");
+    } catch (_) { showToast("되돌리기에 실패했습니다.", "warn"); }
+  };
+  window.bulkDeleteResolvedIssues = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    if (!confirm(`선택한 ${checkedIds.length}개 이슈를 영구 삭제하시겠습니까?`)) return;
+    try {
+      await Promise.all(checkedIds.map((id) => api(`/issues/${id}`, { method: "DELETE" })));
+      if (typeof issues !== "undefined") {
+        for (let i = issues.length - 1; i >= 0; i--) {
+          if (checkedIds.includes(String(issues[i].apiId || issues[i].id))) issues.splice(i, 1);
+        }
+      }
+      clearIssueChecks();
+      renderResolvedIssues();
+      showToast(`${checkedIds.length}개 이슈를 영구 삭제했습니다.`, "success");
+    } catch (_) { showToast("이슈 삭제에 실패했습니다.", "warn"); }
+  };
+
+  // ── 승인대기 단건 삭제 / 벌크 이슈확정 ──
+  window.deletePendingRisk = async function (id) {
+    const resolved = resolveApiIdFromChecked(id);
+    if (!resolved?.apiId) return showToast("이슈 ID를 확인할 수 없습니다.", "warn");
+    if (!confirm("이슈를 영구 삭제하시겠습니까?")) return;
+    try {
+      await api(`/issues/${resolved.apiId}`, { method: "DELETE" });
+      if (resolved.issue) {
+        const allIssues = typeof issues !== "undefined" ? issues : [];
+        const idx = allIssues.indexOf(resolved.issue);
+        if (idx !== -1) allIssues.splice(idx, 1);
+      }
+      if (G.workflowReview?.pending_risks) {
+        const wIdx = G.workflowReview.pending_risks.findIndex(r => String(r.id) === String(id));
+        if (wIdx !== -1) G.workflowReview.pending_risks.splice(wIdx, 1);
+      }
+      clearIssueChecks();
+      renderPendingRisks();
+      showToast("이슈를 영구 삭제했습니다.", "success");
+    } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
+  };
+  window.bulkApprovePendingRisks = async function () {
+    const checkedIds = getCheckedIssueIds();
+    if (!checkedIds.length) return showToast("선택된 항목이 없습니다.", "info");
+    if (!confirm(`${checkedIds.length}개 이슈를 확정하시겠습니까?`)) return;
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const targets = checkedIds.map(cid => {
+      const byApiId = allIssues.find(i => String(i.apiId || "") === cid);
+      if (byApiId?.apiId) return { issue: byApiId, apiId: byApiId.apiId };
+      const byUiId = allIssues.find(i => String(i.id) === cid);
+      if (byUiId?.apiId) return { issue: byUiId, apiId: byUiId.apiId };
+      if (isUUID(cid)) return { issue: null, apiId: cid };
+      return null;
+    }).filter(Boolean);
+    if (!targets.length) return showToast("확정할 이슈를 찾을 수 없습니다.", "warn");
+    try {
+      await Promise.all(targets.map(({ apiId }) => api(`/issues/${apiId}`, { method: "PATCH", body: JSON.stringify({ approval_status: "approved", status: "open" }) })));
+      targets.forEach(({ issue }) => { if (issue) { issue.type = "confirmed"; issue.status = "open"; issue.approvalStatus = "approved"; } });
+      clearIssueChecks();
+      await refreshWorkflowViews();
+      switchIssueTab("inprogress");
+      showToast(`${targets.length}개 이슈를 확정했습니다.`, "success");
+    } catch (_) { showToast("이슈 확정에 실패했습니다.", "warn"); }
+  };
+
+  // ── 진행 이슈 탭 렌더링 (클린 카드: UUID/Open/AI자동탐지 제거) ──
+  function isUUID(str) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(str || ""));
+  }
+  function renderInProgressIssues() {
+    const host = document.getElementById("issueList");
+    if (!host) return;
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const items = allIssues.filter(i => i.type === "confirmed");
+    const badge = document.getElementById("i-prog-cnt");
+    if (badge) badge.textContent = items.length;
+    const doneCnt = document.getElementById("i-done-cnt");
+    if (doneCnt) doneCnt.textContent = allIssues.filter(i => i.type === "resolved").length;
+    if (!items.length) {
+      host.innerHTML = '<div class="wr-empty">진행 중인 이슈가 없습니다.</div>';
+      injectIssueBulkUi();
+      return;
+    }
+    host.innerHTML = items.map(issue => {
+      const id = issue.id;
+      const sev = issue.severity || "medium";
+      const sevCls = sev === "high" ? "b-danger" : sev === "medium" ? "b-warn" : "b-gray";
+      const sevLabel = sev === "high" ? "High" : "Medium";
+      const title = esc(issue.title || "제목 없음");
+      const desc = esc(issue.desc || issue.description || "");
+      const hasTodo = (G.createdTodosFromIssue || []).some(t => t.issueId === issue.id);
+      const todoTag = hasTodo ? '<span class="badge b-success" style="font-size:9px">Todo 생성됨</span>' : "";
+      const isSelected = G.selectedIssueId === id;
+      return `<div class="issue-card ${isSelected ? "selected" : ""}" onclick="selectIssue(${id})" style="cursor:pointer">
+          <div class="issue-hd">
+              <span class="badge ${sevCls}">${sevLabel}</span>
+              <div class="issue-title">${title}</div>
+              ${todoTag}
+          </div>
+          ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
+          <div class="issue-footer">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  ${issue.assignee ? `<span class="badge b-gray">담당: ${esc(issue.assignee)}</span>` : ""}
+                  ${issue.days > 0 ? `<span class="badge b-gray">${issue.days}일째</span>` : ""}
+              </div>
+              <div class="wr-queue-actions" onclick="event.stopPropagation()">
+                  <button class="tbtn" style="font-size:10px;padding:4px 8px;color:var(--success)" onclick="resolveAndSwitchTab(${id})"><i class="ti ti-check"></i> 완료</button>
+                  <button class="tbtn" style="font-size:10px;padding:4px 8px;color:var(--accent)" onclick="revertIssue(${id})"><i class="ti ti-arrow-back-up"></i> 되돌리기</button>
+                  <button class="tbtn" style="font-size:10px;padding:4px 8px" onclick="openTodoCreate(${id})"><i class="ti ti-plus"></i> 대응 Todo 생성</button>
+              </div>
+          </div>
+      </div>`;
+    }).join("");
+    injectIssueBulkUi();
+  }
+
+  // ── 이슈 상세보기 공통 패널 렌더 ──
+  function renderIssueDetailPanel(issue, actionsHtml) {
+    const detailEmpty = document.getElementById("issueDetailEmpty");
+    const dc = document.getElementById("issueDetailContent");
+    const actions = document.getElementById("issueDetailActions");
+    if (detailEmpty) detailEmpty.style.display = "none";
+    if (!dc) return;
+    dc.style.display = "block";
+    dc.className = "fade-up";
+    const sev = issue.severity || "medium";
+    const sevCls = sev === "high" ? "b-danger" : sev === "medium" ? "b-warn" : "b-gray";
+    const sevLabel = sev === "high" ? "High" : "Medium";
+    // issue.src = document UUID (download target), issue.sourceFileName = display filename
+    const hasDocSrc = issue.src && isUUID(String(issue.src));
+    const srcHtml = hasDocSrc
+      ? `<div class="detail-section">출처</div><div style="font-size:11px;padding:4px 0"><span class="wr-source-link" style="cursor:pointer;color:var(--accent)" onclick="downloadSource('${esc(issue.src)}','${esc(issue.sourceFileName || "")}')"><i class="ti ti-download" style="font-size:10px"></i> ${esc(issue.sourceFileName || "출처 파일 다운로드")}</span></div>`
+      : "";
+    dc.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.5">${esc(issue.title || "제목 없음")}</div>
+      ${srcHtml}
+      <div class="detail-section">내용</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(issue.desc || issue.description || "(내용 없음)")}</div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="badge ${sevCls}">${sevLabel}</span>
+        ${issue.assignee ? `<span class="badge b-gray">담당: ${esc(issue.assignee)}</span>` : ""}
+        ${issue.days > 0 ? `<span class="badge b-gray">${issue.days}일째</span>` : ""}
+      </div>`;
+    if (actions) {
+      actions.style.display = "flex";
+      actions.innerHTML = actionsHtml;
+    }
+  }
+  window.showResolvedIssueDetail = function (apiId) {
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const issue = allIssues.find(i => String(i.apiId || "") === String(apiId));
+    if (!issue) return;
+    renderIssueDetailPanel(issue, `
+      <div style="display:flex;gap:5px;justify-content:flex-end">
+        <div class="tbtn" style="color:var(--accent)" onclick="restoreResolvedIssue('${esc(apiId)}')"><i class="ti ti-arrow-back-up"></i> 되돌리기</div>
+        <div class="tbtn danger" onclick="deleteSingleResolvedIssue('${esc(apiId)}')"><i class="ti ti-trash"></i> 삭제</div>
+      </div>`);
+  };
+  // ── 진행 이슈 상세보기 패널 ──
+  const baseRenderIssueDetail = window.renderIssueDetail;
+  window.renderIssueDetail = renderIssueDetail = function (id) {
+    if (G.currentIssueTab !== "inprogress") {
+      if (typeof baseRenderIssueDetail === "function") baseRenderIssueDetail(id);
+      return;
+    }
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const issue = allIssues.find(i => i.id === id);
+    if (!issue) return;
+    renderIssueDetailPanel(issue, `
+      <div class="tbtn primary" onclick="openTodoCreate(${id})" style="justify-content:center"><i class="ti ti-plus"></i> 대응 Todo 생성</div>
+      <div style="display:flex;gap:5px;margin-top:4px">
+        <div class="tbtn" style="flex:1;justify-content:center;color:var(--success)" onclick="resolveAndSwitchTab(${id})"><i class="ti ti-check"></i> 완료</div>
+        <div class="tbtn" style="flex:1;justify-content:center" onclick="openIssueEditInDetail(${id})"><i class="ti ti-edit"></i> 수정</div>
+        <div class="tbtn" style="flex:1;justify-content:center;color:var(--accent)" onclick="revertIssue(${id})"><i class="ti ti-arrow-back-up"></i> 되돌리기</div>
+      </div>`);
+  };
+  window.resolveAndSwitchTab = async function (id) {
+    if (typeof resolveIssue === "function") await resolveIssue(id);
+    if (typeof switchIssueTab === "function") switchIssueTab("resolved");
+  };
+  window.openIssueEditInDetail = function (id) {
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const issue = allIssues.find(i => i.id === id);
+    if (!issue) return;
+    const dc = document.getElementById("issueDetailContent");
+    const actions = document.getElementById("issueDetailActions");
+    if (!dc) return;
+    dc.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">제목</div>
+          <input class="form-input" id="issueEditTitle" value="${esc(issue.title || "")}" style="width:100%;box-sizing:border-box;font-size:12px">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">내용</div>
+          <textarea class="form-input" id="issueEditDesc" rows="5" style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px">${esc(issue.desc || issue.description || "")}</textarea>
+        </div>
+      </div>`;
+    if (actions) {
+      actions.innerHTML = `
+        <div class="tbtn primary" onclick="saveIssueEdit(${id})" style="justify-content:center"><i class="ti ti-device-floppy"></i> 저장</div>
+        <div class="tbtn" onclick="selectIssue(${id})" style="justify-content:center;margin-top:4px">취소</div>`;
+    }
+  };
+  window.saveIssueEdit = async function (id) {
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const issue = allIssues.find(i => i.id === id);
+    if (!issue) return showToast("이슈를 찾을 수 없습니다.", "warn");
+    const title = document.getElementById("issueEditTitle")?.value?.trim();
+    const description = document.getElementById("issueEditDesc")?.value?.trim() || "";
+    if (!title) return showToast("제목을 입력해 주세요.", "warn");
+    const apiId = issue.apiId || (isUUID(String(issue.id || "")) ? String(issue.id) : null);
+    if (!apiId) return showToast("이슈 ID를 확인할 수 없습니다.", "warn");
+    try {
+      await api(`/issues/${apiId}`, { method: "PATCH", body: JSON.stringify({ title, description }) });
+      issue.title = title;
+      issue.desc = description;
+      issue.description = description;
+      if (typeof selectIssue === "function") selectIssue(id);
+      showToast("이슈를 수정했습니다.", "success");
+    } catch (_) { showToast("수정 저장에 실패했습니다.", "warn"); }
+  };
+
+  // ── renderIssues override ──
+  const baseRenderIssues = window.renderIssues;
+  window.renderIssues = renderIssues = function () {
+    if (G.currentIssueTab === "resolved") { renderResolvedIssues(); return; }
+    if (G.currentIssueTab === "inprogress") { renderInProgressIssues(); return; }
+    if (G.currentIssueTab === "candidate") { renderPendingRisks(); return; }
+    if (G.currentIssueTab === "rejected") { renderRejectedRisks(); return; }
+    if (typeof baseRenderIssues === "function") baseRenderIssues();
+    const allIssues = typeof issues !== "undefined" ? issues : [];
+    const progCnt = document.getElementById("i-prog-cnt");
+    if (progCnt) progCnt.textContent = allIssues.filter((i) => i.type === "confirmed").length;
+    const doneCnt = document.getElementById("i-done-cnt");
+    if (doneCnt) doneCnt.textContent = allIssues.filter((i) => i.type === "resolved").length;
+  };
+
+  // ── Todo 벌크 버튼 enable/disable ──
+  function refreshTodoBulkState() {
+    const tabStatusMap = { inprogress: "approved", ai: "pending", done: "done", rejected: "rejected" };
+    const status = tabStatusMap[G.currentTodoTab];
+    const checked = Object.keys(G.todoChecked || {}).filter((id) => G.todoChecked[id]).map(Number);
+    const allTodos = typeof todos !== "undefined" ? todos : [];
+    const hasChecked = allTodos.some((t) => (status ? t.status === status : true) && checked.includes(t.id));
+    const container = document.getElementById("todoBulkActions");
+    if (!container) return;
+    container.querySelectorAll(".tbtn").forEach((btn) => {
+      if (btn.style.display === "none") return;
+      btn.style.opacity = hasChecked ? "" : "0.4";
+      btn.style.pointerEvents = hasChecked ? "" : "none";
+    });
+  }
+  window.refreshTodoBulkState = refreshTodoBulkState;
+
+  const baseToggleChk = window.toggleChk;
+  window.toggleChk = toggleChk = function (id, checked) {
+    if (typeof baseToggleChk === "function") baseToggleChk(id, checked);
+    refreshTodoBulkState();
+  };
+  const baseToggleAllChk = window.toggleAllChk;
+  window.toggleAllChk = toggleAllChk = function (el) {
+    if (typeof baseToggleAllChk === "function") baseToggleAllChk(el);
+    refreshTodoBulkState();
+  };
+
+  // ── 반려 탭: 체크항목 전체 되돌리기 (→ 승인 대기) ──
+  window.bulkRestoreRejectedTodos = async function () {
+    const checked = Object.keys(G.todoChecked || {}).filter((id) => G.todoChecked[id]).map(Number);
+    const allTodos = typeof todos !== "undefined" ? todos : [];
+    const items = allTodos.filter((t) => t.status === "rejected" && checked.includes(t.id));
+    if (!items.length) return showToast("선택된 반려 Todo가 없습니다.", "info");
+    if (!confirm(`${items.length}개 반려 Todo를 승인 대기로 되돌리시겠습니까?`)) return;
+    try {
+      await Promise.all(items.filter((t) => t.apiId).map((t) =>
+        api(`/todos/${t.apiId}`, { method: "PATCH", body: JSON.stringify({ status: "pending", approval_status: "pending" }) })
+      ));
+      items.forEach((t) => { t.status = "pending"; if (G.todoChecked) G.todoChecked[t.id] = false; });
+      if (window.opsRadarApi?.loadTodos) await window.opsRadarApi.loadTodos();
+      if (typeof syncTodoCalendar === "function") syncTodoCalendar();
+      switchTodoTab("ai");
+      showToast(`${items.length}개 Todo를 승인 대기로 되돌렸습니다.`, "success");
+    } catch (_) { showToast("되돌리기에 실패했습니다.", "warn"); }
+  };
+
+  // ── 승인대기 탭: 체크항목 전체 삭제 (관리자 비번) ──
+  window.bulkDeleteAiTodos = function () {
+    const checked = Object.keys(G.todoChecked || {}).filter((id) => G.todoChecked[id]).map(Number);
+    const allTodos = typeof todos !== "undefined" ? todos : [];
+    const items = allTodos.filter((t) => t.status === "pending" && checked.includes(t.id));
+    if (!items.length) return showToast("선택된 Todo가 없습니다.", "info");
+    showAdminPasswordModal(async () => {
+      try {
+        await Promise.all(items.filter((t) => t.apiId).map((t) =>
+          api(`/todos/${t.apiId}`, { method: "DELETE" })
+        ));
+        items.forEach((t) => {
+          const idx = allTodos.indexOf(t);
+          if (idx !== -1) allTodos.splice(idx, 1);
+          if (G.todoChecked) G.todoChecked[t.id] = false;
+        });
+        if (window.opsRadarApi?.loadTodos) await window.opsRadarApi.loadTodos();
+        if (typeof syncTodoCalendar === "function") syncTodoCalendar();
+        if (typeof renderTodos === "function") renderTodos();
+        if (typeof updateTodoCounts === "function") updateTodoCounts();
+        showToast(`${items.length}개 Todo를 영구 삭제했습니다.`, "success");
+      } catch (_) { showToast("Todo 삭제에 실패했습니다.", "warn"); }
+    });
+  };
+
+  // ── Todo 진행/승인대기 벌크 영구삭제 ──
+  async function bulkDeleteProgressTodos() {
+    const statusMap = { inprogress: "approved", ai: "pending" };
+    const status = statusMap[G.currentTodoTab];
+    if (!status) return;
+    const checked = Object.keys(G.todoChecked || {}).filter((id) => G.todoChecked[id]).map(Number);
+    const allTodos = typeof todos !== "undefined" ? todos : [];
+    const targets = allTodos.filter((t) => t.status === status && checked.includes(t.id));
+    if (!targets.length) return showToast("선택된 Todo가 없습니다.", "info");
+    showAdminPasswordModal(async () => {
+      try {
+        await Promise.all(targets.filter((t) => t.apiId).map((t) => api(`/todos/${t.apiId}`, { method: "DELETE" })));
+        targets.forEach((t) => {
+          const idx = allTodos.indexOf(t);
+          if (idx !== -1) allTodos.splice(idx, 1);
+          if (G.todoChecked) G.todoChecked[t.id] = false;
+        });
+        if (window.opsRadarApi?.loadTodos) await window.opsRadarApi.loadTodos();
+        if (typeof renderTodos === "function") renderTodos();
+        if (typeof updateTodoCounts === "function") updateTodoCounts();
+        showToast(`${targets.length}개 Todo를 영구 삭제했습니다.`, "success");
+      } catch (_) { showToast("Todo 삭제에 실패했습니다.", "warn"); }
+    });
+  }
+  window.showAdminPasswordModal = showAdminPasswordModal;
+  const baseBulkDeleteTodos = window.bulkDeleteTodos;
+  window.bulkDeleteTodos = function () {
+    if (G.currentTodoTab === "inprogress" || G.currentTodoTab === "ai") {
+      bulkDeleteProgressTodos();
+    } else {
+      if (typeof baseBulkDeleteTodos === "function") baseBulkDeleteTodos();
+    }
+  };
 
   async function init() {
     await loadWorkflow();

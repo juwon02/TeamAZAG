@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -7,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.api import api_router
 from app.core.config import settings
+from app.core.database import engine
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,10 +31,17 @@ FRONTEND_ENTRY = (
     FRONTEND / "index.html"
 )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await engine.dispose()
+
+
 app = FastAPI(
     title="WorkRader API",
     version="1.0.0",
     description="WorkRader operations intelligence API",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

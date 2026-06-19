@@ -7,11 +7,11 @@
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="/static/css/theme.css">
-<link rel="stylesheet" href="/static/css/layout.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/css/role-workflow-enhancements.css">
-<link rel="stylesheet" href="/static/css/workflow-v2.css">
+<link rel="stylesheet" href="/static/css/theme.css?v=20260619">
+<link rel="stylesheet" href="/static/css/layout.css?v=20260619">
+<link rel="stylesheet" href="/static/css/components.css?v=20260619">
+<link rel="stylesheet" href="/static/css/role-workflow-enhancements.css?v=20260619">
+<link rel="stylesheet" href="/static/css/workflow-v2.css?v=20260619">
 </head>
 
 <body><script>
@@ -334,9 +334,12 @@ window.OPSRADAR_API_BASE = window.location.port === "8002"
     <div id="todoBulkActions" style="margin-left:auto;display:flex;align-items:center;gap:6px;padding-right:150px">
       <div class="tbtn" id="todoBulkApproveBtn" onclick="bulkApprove()"><i class="ti ti-checks"></i> 체크항목 전체승인</div>
       <div class="tbtn" id="todoBulkRejectBtn" onclick="bulkReject()" style="color:var(--danger)"><i class="ti ti-ban"></i> 체크항목 반려</div>
+      <div class="tbtn" id="todoBulkDeleteAiBtn" onclick="bulkDeleteAiTodos()" style="display:none;color:var(--danger)"><i class="ti ti-trash"></i> 체크항목 전체 삭제</div>
       <div class="tbtn" id="todoBulkUndoBtn" onclick="bulkUndoApprove()" style="display:none"><i class="ti ti-rotate-2"></i> 체크항목 되돌리기</div>
+      <div class="tbtn" id="todoBulkRejectProgressBtn" onclick="bulkRejectProgressTodos()" style="display:none;color:var(--danger)"><i class="ti ti-ban"></i> 선택 반려</div>
       <div class="tbtn" id="todoBulkCompleteBtn" onclick="bulkCompleteTodos()" style="display:none;color:var(--success)"><i class="ti ti-check"></i> 체크항목 완료</div>
       <div class="tbtn" id="todoBulkRestoreDoneBtn" onclick="bulkRestoreDoneTodos()" style="display:none;color:var(--accent)"><i class="ti ti-arrow-back-up"></i> 선택항목 진행Todo 되돌리기</div>
+      <div class="tbtn" id="todoBulkRestoreRejectedBtn" onclick="bulkRestoreRejectedTodos()" style="display:none;color:var(--accent)"><i class="ti ti-arrow-back-up"></i> 체크항목 전체 되돌리기</div>
       <div class="tbtn" id="todoBulkDeleteBtn" onclick="bulkDeleteTodos()" style="display:none;color:var(--danger)"><i class="ti ti-trash"></i> 선택항목 영구삭제</div>
     </div>
   </div>
@@ -390,7 +393,8 @@ window.OPSRADAR_API_BASE = window.location.port === "8002"
     <div class="tbtn" onclick="nav('todo')" style="margin-left:auto;font-size:10px;padding:3px 8px;color:var(--success);border-color:var(--success)">Todo 확인 →</div>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="switchIssueTab('inprogress')">진행중인 이슈 <span class="badge b-danger" id="i-prog-cnt">0</span></div>
+    <div class="tab active" onclick="switchIssueTab('inprogress')">진행 이슈 <span class="badge b-danger" id="i-prog-cnt">0</span></div>
+    <div class="tab" onclick="switchIssueTab('resolved')">완료 <span class="badge b-gray" id="i-done-cnt">0</span></div>
     <div class="tab" onclick="switchIssueTab('candidate')">승인 대기 이슈 <span class="badge b-warn" id="i-cand-cnt">0</span></div>
   </div>
   <div class="body-wrap">
@@ -1017,23 +1021,23 @@ Content: API 연결 일정과 담당자 확인이 필요합니다.</pre></div>
   </button>
 </div>
 </div>
-<script src="/static/js/app.js?v=20260617"></script>
-<script src="/static/js/api-integration.js?v=20260617"></script>
-<script src="/static/js/storage.js?v=20260617"></script>
-<script src="/static/js/dashboard.js?v=20260617"></script>
-<script src="/static/js/todo.js?v=20260617"></script>
-<script src="/static/js/issue.js?v=20260617"></script>
-<script src="/static/js/calendar.js?v=20260617"></script>
-<script src="/static/js/handoff.js?v=20260617"></script>
-<script src="/static/js/report.js?v=20260617"></script>
-<script src="/static/js/assistant.js?v=20260617"></script>
-<script src="/static/js/settings.js?v=20260617"></script>
-<script src="/static/js/ops-workflow-enhancements.js?v=20260617"></script>
-<script src="/static/js/todo-calendar-enhancements.js?v=20260617"></script>
-<script src="/static/js/role-workflow-enhancements.js?v=20260617"></script>
-<script src="/static/js/workflow-v2.js?v=20260617"></script>
+<script src="/static/js/app.js?v=20260619"></script>
+<script src="/static/js/api-integration.js?v=20260619"></script>
+<script src="/static/js/storage.js?v=20260619"></script>
+<script src="/static/js/dashboard.js?v=20260619"></script>
+<script src="/static/js/todo.js?v=20260619"></script>
+<script src="/static/js/issue.js?v=20260619"></script>
+<script src="/static/js/calendar.js?v=20260619"></script>
+<script src="/static/js/handoff.js?v=20260619"></script>
+<script src="/static/js/report.js?v=20260619"></script>
+<script src="/static/js/assistant.js?v=20260619"></script>
+<script src="/static/js/settings.js?v=20260619"></script>
+<script src="/static/js/ops-workflow-enhancements.js?v=20260619"></script>
+<script src="/static/js/todo-calendar-enhancements.js?v=20260619"></script>
+<script src="/static/js/role-workflow-enhancements.js?v=20260619"></script>
+<script src="/static/js/workflow-v2.js?v=20260619"></script>
 <!-- React strangler-fig mount: Todo 탭/목록/카드/상세는 React 렌더링, 기존 Todo 전역 함수는 compatibility wrapper 유지. -->
 <div id="react-mount"></div>
-<script type="module" src="/static/react/main.js?v=20260617"></script>
+<script type="module" src="/static/react/main.js?v=20260619"></script>
 <div id="root"></div></body>
 </html>

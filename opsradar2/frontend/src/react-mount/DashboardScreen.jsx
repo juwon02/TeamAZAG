@@ -34,24 +34,25 @@ const TOPBAR_INNER = `
 
 const CONTENT_INNER = `
     <div id="db-admin-view" class="ops-dashboard-view active">
-      <section class="ops-ai-summary-card">
-        <div class="ops-card-header">
-          <div class="ops-card-title"><i class="ti ti-sparkles"></i> AI 운영 판단 요약</div>
-          <span class="ops-updated"><i class="ti ti-clock"></i> 마지막 업데이트 15분 전</span>
-        </div>
-        <div class="ops-ai-body">
-          <p>운영 로그와 Todo 데이터가 연결되면 AI가 현재 운영 상태, 위험 요인, 우선 실행 항목을 요약합니다.</p>
-          <div class="ops-evidence-chips">
-            <span class="ops-chip blue" id="db-data-chip" onclick="nav('analysis')" style="cursor:pointer">운영 데이터 0건</span>
-            <span class="ops-chip warn" id="db-blocked-chip" onclick="openDashboardTodoTab('inprogress')" style="cursor:pointer">Blocked Todo 0건</span>
-            <span class="ops-chip green" id="db-pending-chip" onclick="openDashboardTodoTab('ai')" style="cursor:pointer">AI 제안 0건</span>
+      <section>
+        <div class="ops-panel">
+          <div class="ops-panel-title">Todo 실행 현황</div>
+          <div class="ops-stat-row">
+            <div onclick="openDashboardTodoTab('inprogress')" style="cursor:pointer"><span class="ops-stat-num blue" id="db-progress-count">0</span><span class="ops-stat-label">진행중</span></div>
+            <div onclick="openDashboardTodoTab('rejected')" style="cursor:pointer"><span class="ops-stat-num warn" id="db-rejected-count">0</span><span class="ops-stat-label">반려</span></div>
+            <div onclick="openDashboardTodoTab('ai')" style="cursor:pointer"><span class="ops-stat-num" id="db-approval-count">0</span><span class="ops-stat-label">승인대기</span></div>
+          </div>
+          <div class="ops-progress-stack">
+            <div style="width:0%;background:var(--success)" title="완료"></div>
+            <div style="width:0%;background:var(--accent-blue)" title="진행중"></div>
+            <div id="db-todo-bar" style="width:0%;background:var(--warning)" title="Blocked"></div>
           </div>
         </div>
       </section>
 
       <section>
         <div class="ops-section-heading">
-          <div><i class="ti ti-alert-triangle"></i> 미해결 이슈</div>
+          <div><i class="ti ti-alert-triangle"></i> 진행 이슈</div>
           <button class="ops-link-btn" onclick="nav('issues')">전체 이슈 보기 <i class="ti ti-arrow-right"></i></button>
         </div>
         <div class="ops-risk-grid" id="db-high-risk-grid">
@@ -81,21 +82,7 @@ const CONTENT_INNER = `
 
       <section class="ops-bottom-grid">
         <div class="ops-panel">
-          <div class="ops-panel-title">Todo 실행 현황</div>
-          <div class="ops-stat-row">
-            <div onclick="openDashboardTodoTab('inprogress')" style="cursor:pointer"><span class="ops-stat-num blue" id="db-progress-count">0</span><span class="ops-stat-label">진행중</span></div>
-            <div onclick="openDashboardTodoTab('done')" style="cursor:pointer"><span class="ops-stat-num success" id="db-done-count">0</span><span class="ops-stat-label">완료</span></div>
-            <div onclick="openDashboardTodoTab('rejected')" style="cursor:pointer"><span class="ops-stat-num warn" id="db-rejected-count">0</span><span class="ops-stat-label">반려</span></div>
-          </div>
-          <div class="ops-progress-stack">
-            <div style="width:0%;background:var(--success)" title="완료"></div>
-            <div style="width:0%;background:var(--accent-blue)" title="진행중"></div>
-            <div id="db-todo-bar" style="width:0%;background:var(--warning)" title="Blocked"></div>
-          </div>
-          <div class="ops-muted-line"><span id="db-todo-rate">0 / 0</span> 완료, 운영 데이터 연결 대기 중</div>
-        </div>
-        <div class="ops-panel">
-          <div class="ops-panel-title">AI 제안</div>
+          <div class="ops-panel-title">진행중 Todo</div>
           <div class="ops-approval-list" id="db-ai-todo-list">
             <div class="ops-approval-item" onclick="nav('todo')"><div><strong>승인 대기 항목 없음</strong><span>AI 생성 Todo 승인 요청이 생성되면 표시됩니다.</span></div><i class="ti ti-arrow-right"></i></div>
           </div>

@@ -14,6 +14,8 @@ if sys.platform.startswith("win") and hasattr(asyncio, "WindowsSelectorEventLoop
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
+    pool_size=3,
+    max_overflow=2,
     pool_pre_ping=True,
     pool_recycle=300,
     connect_args={"server_settings": {"search_path": f"{settings.DB_SCHEMA},public"}},
