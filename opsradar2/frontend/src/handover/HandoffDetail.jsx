@@ -23,7 +23,7 @@ export default function HandoffDetail(props) {
         <div className="hc-includes"><h3>포함할 자료</h3><div>{includeOptions.map((value) => <label key={value}><input type="checkbox" checked={conditions.includes.includes(value)} onChange={() => onInclude(value)} /><span><i className="ti ti-check" /></span>{value}</label>)}</div></div>
       </div>}
       {step === 2 && <HandoffCandidateList candidates={candidates} selectedIds={selectedIds} onToggle={onToggle} />}
-      {step === 3 && <HandoffPreview previewData={previewData} type={type} onEdit={onEdit} onRegenerate={onRegenerate} onShare={onShare} onSave={onSave} />}
+      {step === 3 && <HandoffPreview previewData={previewData} type={type} onPreviewChange={onEdit} onRegenerate={onRegenerate} onShare={onShare} onSave={onSave} />}
     </section>
     {step < 3 && <footer className="hc-step-footer"><span>{step === 2 ? `${selectedIds.length}개 자료 선택됨` : "조건을 확인한 뒤 다음 단계로 이동하세요."}</span><button type="button" className="primary" onClick={() => onStep(step + 1)}>{step === 1 ? "AI 후보 확인" : "미리보기 생성"}<i className="ti ti-arrow-right" /></button></footer>}
   </main>;
