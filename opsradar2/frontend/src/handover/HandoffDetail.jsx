@@ -10,7 +10,7 @@ export default function HandoffDetail(props) {
   const { type, step, conditions, candidates, selectedIds, previewData, onBack, onStep, onCondition, onInclude, onToggle, onEdit, onRegenerate, onShare, onSave } = props;
   const onboarding = type === "onboarding";
   const includeOptions = onboarding ? ONBOARDING_INCLUDES : HANDOFF_INCLUDES;
-  return <main className="hc-detail-page">
+  return <main className={`hc-detail-page${onboarding ? " onboarding-detail" : ""}`}>
     <header className="hc-page-head"><button type="button" className="hc-icon-btn" onClick={onBack} title="처음으로"><i className="ti ti-arrow-left" /></button><div><span>{onboarding ? "NEW EMPLOYEE" : "WORK TRANSFER"}</span><h1>{onboarding ? "신입 온보딩 생성" : "업무 인수인계 생성"}</h1></div></header>
     <nav className="hc-steps" aria-label="생성 단계">{["조건 선택", "AI 추출 후보", "결과 미리보기"].map((label, index) => <button type="button" key={label} className={step === index + 1 ? "active" : ""} onClick={() => onStep(index + 1)}><b>{index + 1}</b><span>{label}</span></button>)}</nav>
     <section className={`hc-step-body${step === 3 ? " preview-wide" : ""}`}>
