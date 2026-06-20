@@ -1124,7 +1124,7 @@ function updateTodoCounts(){
   ['t-ai-cnt','t-in-cnt','t-done-cnt','t-rej-cnt'].forEach((id)=>{const el=document.getElementById(id);if(!el)return;el.className=(id==='t-ai-cnt'&&ai>0)?'badge b-warn':'badge b-gray';});
 }
 function switchTodoTab(tab){G.currentTodoTab=tab;G.todoPage[tab]=1;G.selectedTodoId=null;document.getElementById('todoDetailEmpty').style.display='flex';document.getElementById('todoDetailContent').style.display='none';document.querySelectorAll('#s-todo .tab').forEach((el,i)=>{el.classList.toggle('active',['inprogress','ai','done','rejected'][i]===tab);});const notice=document.getElementById('todoAINotice');const isAi=tab==='ai';const isProgress=tab==='inprogress';notice.style.display=(isAi||isProgress)?'flex':'none';document.getElementById('todoNoticeIcon').className=isAi?'ti ti-sparkles':'ti ti-rotate-2';document.getElementById('todoNoticeText').textContent=isAi?'AI가 추출한 Todo 제안입니다. 검토 후 승인 또는 반려해주세요.':'체크한 진행 Todo를 AI 제안으로 되돌릴 수 있습니다.';document.getElementById('todoBulkApproveBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkRejectBtn').style.display=isAi?'flex':'none';document.getElementById('todoBulkUndoBtn').style.display=isProgress?'flex':'none';renderTodos();}
-function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=cleanTodoTitle(t.title);document.getElementById('editDescription').value=briefTodoText(t);document.getElementById('editAssignee').value=t.assignee||t.recommendedAssignee||((window.opsRadarMembers||[])[0]?.name)||'이성우';document.getElementById('editModal').classList.add('show');}
+function openEditModal(id){G.editTargetId=id;const t=todos.find(x=>x.id===id);document.getElementById('editTitle').value=cleanTodoTitle(t.title);document.getElementById('editDescription').value=briefTodoText(t);document.getElementById('editAssignee').value=t.assignee||t.recommendedAssignee||'';document.getElementById('editModal').classList.add('show');}
 function saveEdit(){const t=todos.find(x=>x.id===G.editTargetId);t.title=document.getElementById('editTitle').value.trim();t.description=document.getElementById('editDescription').value.trim();t.assignee=document.getElementById('editAssignee').value;closeModal('editModal');renderTodos();if(G.selectedTodoId===G.editTargetId)renderTodoDetail(G.editTargetId);showToast('수정되었습니다.','info');}
 function openManualModal(){document.getElementById('manualModal').classList.add('show');}
 async function saveManual(){
@@ -1226,7 +1226,7 @@ function openTodoCreate(issueId){
   document.getElementById('tcModalFrom').textContent=`이 Todo는 "${issue.title.slice(0,30)}..." 이슈와 연결됩니다.`;
   document.getElementById('tcTitle').value=issue.suggestTodo||'';
   document.getElementById('tcDescription').value=`${issue.title} 대응을 위한 원인 확인 및 조치 결과 공유`;
-  document.getElementById('tcAssignee').value=issue.suggestAssignee||((window.opsRadarMembers||[])[0]?.name)||'이성우';
+  document.getElementById('tcAssignee').value=issue.suggestAssignee||issue.assignee||'';
   document.getElementById('tcPriority').value=issue.suggestPriority||'high';
   document.getElementById('tcDue').value=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   document.getElementById('todoCreateModal').classList.add('show');
@@ -1312,7 +1312,7 @@ function toIssueModel(data){
     dominoFinal: normalizeText(data.domino_impact || data.dominoImpact || '운영 영향 분석 대기'),
     history: [{ date: now.toLocaleDateString('ko-KR'), s: 'Open', note: '수동 등록', cls: '' }],
     suggestTodo: `${normalizeText(data.title || '이슈')} 대응 Todo`,
-    suggestAssignee: normalizeText(data.assignee || ((window.opsRadarMembers||[])[0]?.name) || '이성우'),
+    suggestAssignee: normalizeText(data.assignee || ''),
     suggestPriority: data.severity === 'low' ? 'low' : data.severity === 'medium' ? 'medium' : 'high'
   };
 }

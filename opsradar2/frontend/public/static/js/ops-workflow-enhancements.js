@@ -29,7 +29,7 @@
       const member = members.find((candidate) => rule.roles.includes(String(candidate.user_role || "").toLowerCase()) || rule.roles.includes(String(candidate.project_role || "").toLowerCase()));
       if (member) return member.name;
     }
-    return members.find((member) => member.project_role === "admin")?.name || members[0]?.name || "";
+    return "";
   };
 
   function getAnalysisRisks() {

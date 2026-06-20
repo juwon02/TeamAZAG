@@ -464,7 +464,7 @@
     document.getElementById("tcModalFrom").textContent = `이 Todo는 "${issue.title.slice(0, 30)}..." 이슈와 연결됩니다.`;
     document.getElementById("tcTitle").value = issue.suggestTodo || `${issue.title} 대응 Todo`;
     document.getElementById("tcDescription").value = `${issue.title} 대응을 위한 원인 확인 및 조치 결과 공유`;
-    document.getElementById("tcAssignee").value = issue.suggestAssignee || issue.assignee || (window.opsRadarMembers || [])[0]?.name || "";
+    document.getElementById("tcAssignee").value = issue.suggestAssignee || issue.assignee || "";
     document.getElementById("tcPriority").value = issue.suggestPriority || issue.severity || "medium";
     const recommendation = recommendedDueDate({ ...issue, priority: issue.suggestPriority || issue.severity });
     document.getElementById("tcDue").value = recommendation;

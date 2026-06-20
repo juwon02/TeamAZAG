@@ -225,8 +225,7 @@
       const member = members.find((candidate) => rule.roles.includes(String(candidate.user_role || "").toLowerCase()) || rule.roles.includes(String(candidate.project_role || "").toLowerCase()));
       if (member) return { name: member.name, reason: `${rule.keywords.find((keyword) => text.includes(keyword))} 키워드와 ${member.user_role || member.project_role} 역할 일치` };
     }
-    const fallback = members.find((member) => member.project_role === "admin") || members[0];
-    return fallback ? { name: fallback.name, reason: "명확한 역할 키워드가 없어 프로젝트 관리자 추천" } : null;
+    return null;
   }
 
   function applyTodoRecommendations() {
@@ -263,7 +262,7 @@
 
   function hydrateAssigneeControls() {
     const names = activeAssigneeNames();
-    const fallback = names[0] || "";
+    const fallback = "";
     ["manualAssignee", "editAssignee", "tcAssignee"].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -279,8 +278,8 @@
     }
     document.querySelectorAll('[onclick*="담당자 A"]').forEach((el) => {
       const html = el.getAttribute("onclick");
-      if (html) el.setAttribute("onclick", html.replaceAll("담당자 A", fallback || "이성우"));
-      if (el.textContent.includes("담당자 A")) el.textContent = el.textContent.replaceAll("담당자 A", fallback || "이성우");
+      if (html) el.setAttribute("onclick", html.replaceAll("담당자 A", fallback));
+      if (el.textContent.includes("담당자 A")) el.textContent = el.textContent.replaceAll("담당자 A", fallback);
     });
   }
 
