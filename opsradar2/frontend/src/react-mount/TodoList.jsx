@@ -5,7 +5,6 @@ import {
   formatTodoDate,
   statusBadgeClass,
   statusLabel,
-  todoAssigneeLabel,
 } from './todoStateAdapter.js'
 
 function TodoActions({ todo }) {
@@ -80,7 +79,6 @@ export function TodoTable({ activeTab, checked, selectedTodoId, todos, visible, 
           {todos.map((todo) => {
             const title = cleanTodoTitle(todo.title)
             const brief = briefTodoText(todo)
-            const assignee = todoAssigneeLabel(todo)
             return (
               <tr
                 key={todo.id}
@@ -117,7 +115,7 @@ export function TodoTable({ activeTab, checked, selectedTodoId, todos, visible, 
                       </span>
                     ) : null}
                   </div>
-                  <div className="todo-src text-content">[담당자: {assignee}] {brief}</div>
+                  <div className="todo-src text-content">{brief}</div>
                 </td>
                 <td className="todo-center-cell todo-created-at" style={{ display: activeTab === 'ai' ? 'none' : 'table-cell' }}>
                   {formatTodoDate(todo.createdAt)}

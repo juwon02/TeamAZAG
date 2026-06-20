@@ -47,7 +47,7 @@ async def get_issues(
 @router.patch("/{issue_id}")
 async def update_issue(issue_id: str, body: IssueUpdate, db: AsyncSession = Depends(get_db)):
     service = IssueService(IssueRepository(db))
-    updated = await service.update_issue(issue_id, body.model_dump(exclude_unset=True, exclude_none=True))
+    updated = await service.update_issue(issue_id, body.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(404, "issue not found")
     return {"status": "success", "issue_id": issue_id}

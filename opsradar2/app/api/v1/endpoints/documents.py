@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, verify_password
 from app.models import Document
 from app.repositories.issue_repository import IssueRepository
 from app.repositories.todo_repository import TodoRepository
@@ -334,12 +333,17 @@ async def download_document(document_id: str, db: AsyncSession = Depends(get_db)
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: str,
+    payload: dict | None = Body(default=None),
     authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     actor = await _resolve_actor(db, authorization)
     if actor["username"] != "hj" and str(actor["role"]).lower() not in {"admin", "pm", "leader"}:
         raise HTTPException(403, "lead role required")
+    password = str((payload or {}).get("password") or "")
+    if not password:
+        raise HTTPException(status_code=400, detail="admin password required")
+    await _verify_actor_password(db, actor["user_id"], password)
     try:
         doc_uuid = uuid.UUID(document_id)
     except ValueError as exc:
@@ -348,11 +352,81 @@ async def delete_document(
     if not document or document.deleted_at is not None:
         raise HTTPException(status_code=404, detail="document not found")
     file_path = Path(document.storage_uri) if document.storage_uri else None
-    document.deleted_at = datetime.now(timezone.utc)
+
+    delete_counts: dict[str, int] = {}
+    related_filter = """
+      source_document_id = CAST(:document_id AS uuid)
+      OR source_chunk_id IN (
+        SELECT id FROM document_chunks WHERE document_id = CAST(:document_id AS uuid)
+      )
+    """
+    issue_ids = text(
+        f"""
+        SELECT id
+        FROM issues
+        WHERE {related_filter}
+        """
+    )
+    delete_statements = [
+        (
+            "calendar_events",
+            text(
+                """
+                DELETE FROM calendar_events
+                WHERE source_chunk_id IN (
+                  SELECT id FROM document_chunks WHERE document_id = CAST(:document_id AS uuid)
+                )
+                """
+            ),
+        ),
+        (
+            "todo_issue_links",
+            text(
+                f"""
+                UPDATE todos
+                SET linked_issue_id = NULL
+                WHERE linked_issue_id IN ({issue_ids.text})
+                """
+            ),
+        ),
+        ("todos", text(f"DELETE FROM todos WHERE {related_filter}")),
+        ("issues", text(f"DELETE FROM issues WHERE {related_filter}")),
+        (
+            "ai_summaries",
+            text("DELETE FROM ai_summaries WHERE document_id = CAST(:document_id AS uuid)"),
+        ),
+        (
+            "embedding_jobs",
+            text("DELETE FROM embedding_jobs WHERE document_id = CAST(:document_id AS uuid)"),
+        ),
+        (
+            "chunk_embeddings",
+            text(
+                """
+                DELETE FROM chunk_embeddings
+                WHERE chunk_id IN (
+                  SELECT id FROM document_chunks WHERE document_id = CAST(:document_id AS uuid)
+                )
+                """
+            ),
+        ),
+        (
+            "document_chunks",
+            text("DELETE FROM document_chunks WHERE document_id = CAST(:document_id AS uuid)"),
+        ),
+        ("documents", text("DELETE FROM documents WHERE id = CAST(:document_id AS uuid)")),
+    ]
+
+    for label, statement in delete_statements:
+        result = await db.execute(statement, {"document_id": str(doc_uuid)})
+        delete_counts[label] = int(result.rowcount or 0)
     await db.commit()
-    if file_path and file_path.is_file():
-        file_path.unlink(missing_ok=True)
-    return {"status": "success", "document_id": document_id}
+    try:
+        if file_path and file_path.is_file():
+            file_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+    return {"status": "success", "document_id": document_id, "deleted": delete_counts}
 
 
 async def _resolve_uploaded_by_member_id(
@@ -389,13 +463,45 @@ async def _resolve_actor(db: AsyncSession, authorization: str | None) -> dict:
     if not payload or not payload.get("sub"):
         raise HTTPException(401, "invalid token")
     result = await db.execute(
-        text("SELECT username, role FROM users WHERE id = CAST(:user_id AS uuid) AND deleted_at IS NULL"),
+        text(
+            """
+            SELECT
+              u.id::text AS user_id,
+              u.username,
+              u.role AS user_role,
+              pm.role AS project_role,
+              COALESCE(pm.role, u.role) AS role
+            FROM users u
+            LEFT JOIN project_members pm ON pm.user_id = u.id AND pm.status = 'active'
+            WHERE u.id = CAST(:user_id AS uuid)
+              AND u.deleted_at IS NULL
+            ORDER BY pm.joined_at
+            LIMIT 1
+            """
+        ),
         {"user_id": payload["sub"]},
     )
     actor = result.mappings().one_or_none()
     if not actor:
         raise HTTPException(403, "active user required")
     return dict(actor)
+
+
+async def _verify_actor_password(db: AsyncSession, user_id: str, password: str) -> None:
+    result = await db.execute(
+        text(
+            """
+            SELECT password_hash
+            FROM users
+            WHERE id = CAST(:user_id AS uuid)
+              AND deleted_at IS NULL
+            """
+        ),
+        {"user_id": user_id},
+    )
+    password_hash = result.scalar_one_or_none()
+    if not password_hash or not verify_password(password, password_hash):
+        raise HTTPException(status_code=401, detail="관리자 비밀번호가 올바르지 않습니다.")
 
 
 async def _get_chunk(db: AsyncSession, document_id: str, chunk_id: str) -> dict | None:

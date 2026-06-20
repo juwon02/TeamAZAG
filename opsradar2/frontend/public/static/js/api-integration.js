@@ -240,6 +240,8 @@
     hydrateAssigneeControls();
     renderMemberAdminPanel();
     applyTodoRecommendations();
+    window.applyWorkflowRoleVisibility?.();
+    window.renderTodos?.();
     return members;
   }
 
@@ -448,9 +450,14 @@
   }
 
   window.deleteDocumentFromHistory = async function (documentId) {
+    if (typeof window.deleteUploadedDocument === "function") {
+      return window.deleteUploadedDocument(documentId);
+    }
     if (!confirm("이 파일과 관련 분석 데이터를 삭제할까요?")) return;
+    const password = prompt("관리자 비밀번호를 입력하세요.");
+    if (!password) return;
     try {
-      await request(`/documents/${documentId}`, { method: "DELETE" });
+      await request(`/documents/${documentId}`, { method: "DELETE", body: JSON.stringify({ password }) });
       if (window.G?.analysisHistory) {
         window.G.analysisHistory = window.G.analysisHistory.filter((h) => h.documentId !== documentId);
       }
@@ -915,22 +922,8 @@
     };
   }
   function patchCalendarActions() {
-    if (typeof deleteCalTag === "function") {
-      const original = deleteCalTag;
-      window.deleteCalTag = deleteCalTag = async function (day, index) {
-        const tag = window.G?.calEvents?.find((x) => x.d === day)?.tags[index];
-        if (tag?.apiId) {
-          try {
-            await request(`/calendar/${tag.apiId}`, { method: "DELETE" });
-          } catch (error) {
-            console.warn("Calendar delete API failed", error);
-            showToast("캘린더 삭제에 실패했습니다.", "warn");
-            return;
-          }
-        }
-        original(day, index);
-      };
-    }
+    // deleteCalTag in app.js already handles DB deletion and reload.
+    // Keep this hook as a no-op to avoid double DELETE requests.
   }
 
   function patchReportActions() {

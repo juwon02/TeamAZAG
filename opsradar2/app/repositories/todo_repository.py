@@ -267,20 +267,29 @@ class TodoRepository:
         ]
         params = {"todo_id": todo_id, **allowed}
         if "assignee" in data:
-            assignments.append(
-                """
-                assignee_member_id = (
-                  SELECT pm.id
-                  FROM project_members pm
-                  JOIN users u ON u.id = pm.user_id
-                  WHERE pm.project_id = todos.project_id
-                    AND u.name = :assignee
-                    AND pm.status = 'active'
-                  LIMIT 1
+            assignee = (data.get("assignee") or "").strip()
+            if not assignee:
+                assignments.append("assignee_member_id = NULL")
+            else:
+                assignee_member_id = await self.db.scalar(
+                    text(
+                        """
+                        SELECT pm.id
+                        FROM todos t
+                        JOIN project_members pm ON pm.project_id = t.project_id
+                        JOIN users u ON u.id = pm.user_id
+                        WHERE t.id = CAST(:todo_id AS uuid)
+                          AND u.name = :assignee
+                          AND pm.status = 'active'
+                        LIMIT 1
+                        """
+                    ),
+                    {"todo_id": todo_id, "assignee": assignee},
                 )
-                """
-            )
-            params["assignee"] = data["assignee"]
+                if assignee_member_id is None:
+                    raise ValueError("현재 프로젝트의 활성 담당자를 찾을 수 없습니다.")
+                assignments.append("assignee_member_id = CAST(:assignee_member_id AS uuid)")
+                params["assignee_member_id"] = str(assignee_member_id)
         if not assignments:
             return True
         result = await self.db.execute(

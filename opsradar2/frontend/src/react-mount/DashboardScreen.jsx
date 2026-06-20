@@ -92,58 +92,22 @@ const CONTENT_INNER = `
     </div>
 
     <div id="db-member-view" class="ops-dashboard-view">
-      <section class="ops-ai-summary-card member">
-        <div class="ops-card-header">
-          <div class="ops-card-title"><i class="ti ti-user-check"></i> 오늘 내 업무 요약</div>
-          <span class="ops-updated"><i class="ti ti-clock"></i> 오전 스탠드업 기준</span>
-        </div>
-        <div class="ops-ai-body">
-          <p>내 Todo와 일정 데이터가 연결되면 오늘 우선 작업, 관련 이슈, 필요한 브리핑이 표시됩니다.</p>
-          <div class="ops-evidence-chips">
-            <span class="ops-chip blue">내 Todo 5건</span>
-            <span class="ops-chip warn">Blocked 0건</span>
-            <span class="ops-chip green">오늘 일정 2건</span>
+      <section>
+        <div class="ops-panel">
+          <div class="ops-panel-title">나의 Todo 실행 현황</div>
+          <div class="ops-stat-row">
+            <div><span class="ops-stat-num blue">0</span><span class="ops-stat-label">진행중</span></div>
+            <div><span class="ops-stat-num warn">0</span><span class="ops-stat-label">반려</span></div>
+            <div><span class="ops-stat-num">0</span><span class="ops-stat-label">승인대기</span></div>
           </div>
+          <div class="ops-progress-stack"><div style="width:0%;background:var(--success)"></div><div style="width:0%;background:var(--accent-blue)"></div><div style="width:0%;background:var(--warning)"></div></div>
         </div>
       </section>
-
-      <section class="ops-member-grid">
-        <div class="ops-panel">
-          <div class="ops-panel-title">오늘 우선 작업</div>
-          <div class="ops-task-list">
-            <div class="ops-task-item high"><span>P0</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
-            <div class="ops-task-item"><span>P1</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
-            <div class="ops-task-item"><span>P1</span><div><strong>등록된 우선 작업 없음</strong><small>Todo 데이터 연결 후 표시됩니다.</small></div></div>
-          </div>
-        </div>
-        <div class="ops-panel">
-          <div class="ops-panel-title">내 관련 이슈</div>
-          <div class="ops-issue-mini danger"><div><strong>Risk 데이터 없음</strong><span>관련 이슈 없음</span></div><button onclick="nav('issues')">보기</button></div>
-          <div class="ops-issue-mini warn"><div><strong>Risk 데이터 없음</strong><span>관련 이슈 없음</span></div><button onclick="nav('issues')">보기</button></div>
-        </div>
+      <section>
+        <div class="ops-section-heading"><div><i class="ti ti-alert-triangle"></i> 진행 이슈</div><button class="ops-link-btn" onclick="nav('issues')">전체 이슈 보기 <i class="ti ti-arrow-right"></i></button></div>
+        <div class="ops-risk-grid"><article class="ops-risk-card"><div class="ops-risk-card-top"><h3>High Risk 이슈 없음</h3><span class="badge b-success">안정</span></div><p>현재 확정된 High Risk 이슈가 없습니다.</p></article></div>
       </section>
-
-      <section class="ops-bottom-grid">
-        <div class="ops-panel">
-          <div class="ops-panel-title">내 Todo 진행 현황</div>
-          <div class="ops-stat-row compact">
-            <div><span class="ops-stat-num success">2</span><span class="ops-stat-label">완료</span></div>
-            <div><span class="ops-stat-num blue">2</span><span class="ops-stat-label">진행중</span></div>
-            <div><span class="ops-stat-num warn">1</span><span class="ops-stat-label">Blocked</span></div>
-          </div>
-          <div class="ops-progress-stack"><div style="width:40%;background:var(--success)"></div><div style="width:40%;background:var(--accent-blue)"></div><div style="width:20%;background:var(--warning)"></div></div>
-          <button class="ops-wide-btn" onclick="nav('todo')">내 Todo 확인</button>
-        </div>
-        <div class="ops-panel">
-          <div class="ops-panel-title">내 일정 / 필요한 브리핑</div>
-          <div class="ops-brief-list">
-            <div><i class="ti ti-calendar-event"></i><span>등록된 일정 없음</span></div>
-            <div><i class="ti ti-message-report"></i><span>필요한 브리핑 없음</span></div>
-            <div><i class="ti ti-file-text"></i><span>필요한 브리핑 없음</span></div>
-          </div>
-          <button class="ops-wide-btn" onclick="nav('knowledge')">내 브리핑 보기</button>
-        </div>
-      </section>
+      <section class="ops-bottom-grid"><div class="ops-panel"><div class="ops-panel-title">진행중 Todo</div><div class="ops-approval-list"><div class="ops-approval-item"><div><strong>진행중 Todo 없음</strong><span>진행 Todo가 생성되면 표시됩니다.</span></div></div></div></div></section>
     </div>`
 
 const DashboardScreen = memo(function DashboardScreen() {

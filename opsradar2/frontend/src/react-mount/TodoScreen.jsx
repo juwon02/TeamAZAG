@@ -19,6 +19,7 @@ import {
   setTodoPageValue,
   setTodoSearchFieldValue,
   setTodoSearchValue,
+  setTodoTeamFilterValue,
   setTodoTab,
   setTodoView,
   tabCounts,
@@ -75,17 +76,18 @@ function TodoScreen() {
   const activeTab = snapshot.activeTab
   const viewMode = snapshot.viewMode
   const allTodos = snapshot.todos
+  const teamTodos = useMemo(() => window.getTeamScopedTodos?.() || allTodos, [snapshot, allTodos])
   const visibleTodos = useMemo(() => getVisibleTodos(), [snapshot])
   const totalPages = pageCount(visibleTodos.length)
   const currentPage = Math.min(snapshot.page[activeTab] || 1, totalPages)
   const pageTodos = useMemo(() => getPageTodos(visibleTodos, activeTab), [activeTab, visibleTodos, snapshot.page])
   const selectedTodo = getTodoById(snapshot.selectedTodoId)
-  const counts = tabCounts(allTodos)
+  const counts = tabCounts(teamTodos)
   const notice = noticeForTab(activeTab)
   const isAi = activeTab === 'ai'
   const isProgress = activeTab === 'inprogress'
   const showDelete = activeTab === 'done' || activeTab === 'rejected'
-  const checkedProgressCount = allTodos.filter((todo) => todo.status === 'approved' && snapshot.checked[todo.id]).length
+  const checkedProgressCount = teamTodos.filter((todo) => todo.status === 'approved' && snapshot.checked[todo.id]).length
   const showProgressBulk = isProgress && checkedProgressCount > 0
 
   const changeTab = (tab) => {
@@ -171,6 +173,23 @@ function TodoScreen() {
       <TodoTabs activeTab={activeTab} counts={counts} onTabChange={changeTab} />
 
       <div className="todo-list-tools">
+        <select
+          id="todoTeamFilter"
+          className="todo-search-field"
+          value={snapshot.teamFilter}
+          onChange={(event) => {
+            setTodoTeamFilterValue(event.target.value)
+            refresh()
+          }}
+          aria-label="Todo 팀 필터"
+        >
+          <option value="전체">전체</option>
+          <option value="영업관리팀">영업관리팀</option>
+          <option value="구매팀">구매팀</option>
+          <option value="품질 클레임팀">품질 클레임팀</option>
+          <option value="물류팀">물류팀</option>
+          <option value="총괄">총괄</option>
+        </select>
         <select
           id="todoSearchField"
           className="todo-search-field"

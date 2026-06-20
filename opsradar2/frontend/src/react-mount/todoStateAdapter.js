@@ -22,6 +22,7 @@ export function getTodoSnapshot() {
   const snapshot = bridge()?.getSnapshot?.() || {}
   const g = snapshot.G || window.G || {}
   const activeTab = g.currentTodoTab || 'inprogress'
+  const teamFilter = g.todoTeamFilter || window.getTodoTeamFilter?.() || '전체'
   return {
     todos: Array.isArray(snapshot.todos) ? snapshot.todos : [],
     activeTab,
@@ -29,6 +30,7 @@ export function getTodoSnapshot() {
     checked: { ...(g.todoChecked || {}) },
     search: { ...(g.todoSearch || {}) },
     searchField: { ...(g.todoSearchField || {}) },
+    teamFilter,
     page: { ...(g.todoPage || {}) },
     viewMode: snapshot.viewMode || 'table',
   }
@@ -151,6 +153,11 @@ export function setTodoSearchValue(value) {
 export function setTodoSearchFieldValue(value) {
   bridge()?.setSearchField?.(value)
   emitTodoRefresh({ reason: 'search-field' })
+}
+
+export function setTodoTeamFilterValue(value) {
+  bridge()?.setTeamFilter?.(value)
+  emitTodoRefresh({ reason: 'team-filter' })
 }
 
 export function setTodoPageValue(page) {

@@ -11,7 +11,25 @@
   const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
   const session = () => read("opsradar_session", {});
   const user = () => session().user || {};
-  const isLead = () => user().username === "hj" || user().username === "admin" || ["admin", "pm", "leader", "시스템 관리자"].includes(String(user().role || "").toLowerCase());
+  const LEAD_ROLES = ["admin", "pm", "leader", "lead", "시스템 관리자", "운영총괄"];
+  const currentMember = () => (window.opsRadarMembers || []).find((member) => (
+    String(member.user_id || "") === String(user().id || user().user_id || "")
+    || String(member.username || "") === String(user().username || "")
+    || String(member.name || "") === String(user().name || "")
+  ));
+  const isLead = () => {
+    const actor = user();
+    const member = currentMember();
+    if (member) {
+      const roles = [member.project_role, member.role, member.user_role]
+        .map((role) => String(role || "").toLowerCase());
+      return roles.some((role) => LEAD_ROLES.includes(role));
+    }
+    if (actor.username === "hj" || actor.username === "admin") return true;
+    return [actor.role, actor.project_role, actor.user_role]
+      .map((role) => String(role || "").toLowerCase())
+      .some((role) => LEAD_ROLES.includes(role));
+  };
   const memberName = () => user().name || localStorage.getItem("opsradar_user_name") || "";
   const todoKey = (todo) => String(todo?.apiId || todo?.id || "");
   const issueKey = (issue) => String(issue?.apiId || issue?.id || "");
@@ -201,33 +219,37 @@
     const aiTab = document.getElementById("t-ai-cnt")?.closest(".tab");
     if (aiTab) aiTab.style.display = lead ? "" : "none";
     const candidateTab = document.querySelector("#s-issues .tabs .tab[onclick*=\"'candidate'\"]");
-    if (candidateTab) candidateTab.style.display = lead ? "" : "none";
+    if (candidateTab) candidateTab.style.display = "";
+    if (!lead) Array.from(document.querySelectorAll("#s-issues .topbar .tbtn")).find((item) => item.textContent.includes("수동 등록"))?.remove();
     const memberPanel = document.getElementById("memberAdminPanel");
     if (memberPanel) memberPanel.style.display = lead ? "" : "none";
     const reflect = Array.from(document.querySelectorAll("#resultSection .tbtn")).find((item) => item.textContent.includes("Dashboard 반영"));
     reflect?.remove();
     switchDbRole(lead ? "pm" : "member");
     if (!lead && G.currentTodoTab === "ai") switchTodoTab("inprogress");
-    if (!lead && G.currentIssueTab === "candidate") switchIssueTab("inprogress");
   }
+  window.applyWorkflowRoleVisibility = applyRoleVisibility;
 
   function renderMemberDashboard() {
-    if (isLead()) return;
     const name = memberName();
+    if (!name) return;
     const mine = todos.filter((todo) => extraAssignees(todo).includes(name));
     const progress = mine.filter((todo) => todo.status === "approved");
     const done = mine.filter((todo) => todo.status === "done");
     const rejected = mine.filter((todo) => todo.status === "rejected");
-    const related = issues.filter((issue) => issue.assignee === name && issue.type === "confirmed");
+    const pending = mine.filter((todo) => todo.status === "pending");
+    const highRisks = issues.filter((issue) => issue.type === "confirmed" && issue.severity === "high" && issue.status !== "resolved");
+    const total = mine.length;
+    const ratio = (count) => total ? `${Math.round((count / total) * 100)}%` : "0%";
     const root = document.getElementById("db-member-view");
     if (!root) return;
-    root.innerHTML = `<section class="ops-ai-summary-card member"><div class="ops-card-header"><div class="ops-card-title"><i class="ti ti-user-check"></i> 내 업무 요약</div><span class="ops-updated">${escapeHtml(name)}</span></div>
-      <div class="ops-ai-body"><p>팀장이 배정한 Todo와 확정 이슈를 기준으로 표시합니다.</p><div class="ops-evidence-chips">
-      <span class="ops-chip blue" onclick="nav('todo');switchTodoTab('inprogress')">내 Todo ${progress.length}건</span><span class="ops-chip warn" onclick="nav('todo');switchTodoTab('rejected')">Blocked ${rejected.length}건</span></div></div></section>
-      <section class="ops-member-grid"><div class="ops-panel"><div class="ops-panel-title">우선작업</div><div class="ops-task-list">${progress.sort((a,b)=>({high:0,medium:1,low:2}[a.priority]??3)-({high:0,medium:1,low:2}[b.priority]??3)).slice(0,5).map((todo)=>`<div class="ops-task-item ${todo.priority === "high" ? "high" : ""}" onclick="nav('todo');switchTodoTab('inprogress');selectTodo(${todo.id})"><span>${String(todo.priority || "medium").toUpperCase()}</span><div><strong>${escapeHtml(cleanTodoTitle(todo.title))}</strong><small>${escapeHtml(briefTodoText(todo))}</small></div></div>`).join("") || '<div class="ops-task-item"><div><strong>진행 Todo 없음</strong></div></div>'}</div></div>
-      <div class="ops-panel"><div class="ops-panel-title">내 관련 이슈</div>${related.slice(0,5).map((issue)=>`<div class="ops-issue-mini"><div><strong>${escapeHtml(issue.title)}</strong><span>${escapeHtml(issue.status)}</span></div><button onclick="nav('issues');selectIssue(${JSON.stringify(issue.id)})">보기</button></div>`).join("") || '<div class="ops-issue-mini"><div><strong>관련 이슈 없음</strong></div></div>'}</div></section>
-      <section class="ops-bottom-grid"><div class="ops-panel"><div class="ops-panel-title">내 Todo 진행 현황</div><div class="ops-stat-row compact"><div><span class="ops-stat-num success">${done.length}</span><span class="ops-stat-label">완료</span></div><div><span class="ops-stat-num blue">${progress.length}</span><span class="ops-stat-label">진행중</span></div><div><span class="ops-stat-num warn">${rejected.length}</span><span class="ops-stat-label">Blocked</span></div></div></div>
-      <div class="ops-panel"><div class="ops-panel-title">내 일정</div><div class="ops-brief-list"><div><i class="ti ti-calendar-event"></i><span>캘린더에서 내 일정과 Todo 마감일을 확인하세요.</span></div></div><button class="ops-wide-btn" onclick="nav('calendar')">내 일정 보기</button></div></section>`;
+    root.innerHTML = `<section><div class="ops-panel"><div class="ops-panel-title">나의 Todo 실행 현황</div><div class="ops-stat-row">
+      <div onclick="nav('todo');switchTodoTab('inprogress')" style="cursor:pointer"><span class="ops-stat-num blue">${progress.length}</span><span class="ops-stat-label">진행중</span></div>
+      <div onclick="nav('todo');switchTodoTab('rejected')" style="cursor:pointer"><span class="ops-stat-num warn">${rejected.length}</span><span class="ops-stat-label">반려</span></div>
+      <div onclick="nav('todo');switchTodoTab('ai')" style="cursor:pointer"><span class="ops-stat-num">${pending.length}</span><span class="ops-stat-label">승인대기</span></div>
+      </div><div class="ops-progress-stack"><div style="width:${ratio(done)};background:var(--success)" title="완료"></div><div style="width:${ratio(progress)};background:var(--accent-blue)" title="진행중"></div><div style="width:${ratio(rejected)};background:var(--warning)" title="반려"></div></div></div></section>
+      <section><div class="ops-section-heading"><div><i class="ti ti-alert-triangle"></i> 진행 이슈</div><button class="ops-link-btn" onclick="nav('issues')">전체 이슈 보기 <i class="ti ti-arrow-right"></i></button></div><div class="ops-risk-grid">${highRisks.slice(0,3).map((issue)=>`<article class="ops-risk-card"><div class="ops-risk-card-top"><h3>${escapeHtml(issue.title)}</h3><span class="badge b-danger">HIGH</span></div><p>${escapeHtml(issue.desc || '설명이 없습니다.')}</p><div class="ops-risk-meta"><span>${escapeHtml(issue.status)}</span><span>${escapeHtml(issue.assignee || '담당자 미지정')}</span></div><div class="ops-domino"><strong>도미노 영향</strong><span>${escapeHtml(issue.dominoFinal || '운영 영향 분석 대기')}</span></div><div class="ops-card-actions"><button onclick="openTodoCreate(${JSON.stringify(issue.id)})">대응 Todo 생성</button><button onclick="openDashboardIssue(${JSON.stringify(issue.id)})">상세 보기</button></div></article>`).join("") || '<article class="ops-risk-card"><div class="ops-risk-card-top"><h3>High Risk 이슈 없음</h3><span class="badge b-success">안정</span></div><p>현재 확정된 High Risk 이슈가 없습니다.</p><div class="ops-card-actions"><button onclick="nav(\'issues\')">이슈 로그 보기</button></div></article>'}</div></section>
+      <section class="ops-bottom-grid"><div class="ops-panel"><div class="ops-panel-title">진행중 Todo</div><div class="ops-approval-list">${progress.sort((a,b)=>({high:0,medium:1,low:2}[a.priority]??3)-({high:0,medium:1,low:2}[b.priority]??3)).slice(0,4).map((todo)=>`<div class="ops-approval-item" onclick="nav('todo');switchTodoTab('inprogress');selectTodo(${todo.id})"><div><strong>${escapeHtml(cleanTodoTitle(todo.title))}</strong><span>${escapeHtml(briefTodoText(todo))}</span></div><i class="ti ti-arrow-right"></i></div>`).join("") || '<div class="ops-approval-item" onclick="nav(\'todo\');switchTodoTab(\'inprogress\')"><div><strong>진행중 Todo 없음</strong><span>진행 Todo가 생성되면 표시됩니다.</span></div><i class="ti ti-arrow-right"></i></div>'}</div><div class="ops-muted-line">승인 대기 <span>${pending.length}</span>건</div></div></section>`;
   }
 
   const baseRenderDashboard = window.renderDashboardLive;
@@ -284,7 +306,7 @@
   };
   const baseSwitchIssueTab = window.switchIssueTab;
   window.switchIssueTab = switchIssueTab = function (tab) {
-    return baseSwitchIssueTab(!isLead() && tab === "candidate" ? "inprogress" : tab);
+    return baseSwitchIssueTab(tab);
   };
 
   function ensureApprovalCenter() {

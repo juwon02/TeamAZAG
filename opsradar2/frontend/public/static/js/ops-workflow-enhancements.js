@@ -70,15 +70,13 @@
     list.innerHTML = items.map((item, index) => {
       const key = riskKey(item);
       const checked = G.analysisRiskChecked?.[key] !== false;
-      const assignee = item.assignee || item.suggestAssignee || recommendRiskAssignee(item);
       const description = item.desc || item.description || item.title || "";
-      return `<div style="border:1px solid var(--border);background:var(--surface2);border-radius:var(--radius-sm);padding:10px;display:grid;grid-template-columns:24px minmax(0,1fr) 170px 145px;gap:10px;align-items:start">
+      return `<div style="border:1px solid var(--border);background:var(--surface2);border-radius:var(--radius-sm);padding:10px;display:grid;grid-template-columns:24px minmax(0,1fr) 145px;gap:10px;align-items:start">
         <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleAnalysisRiskChecked('${escapeHtml(key)}',this.checked)" style="accent-color:var(--danger);margin-top:7px">
         <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
           <input class="form-input" value="${escapeHtml(item.title || "")}" oninput="updateAnalysisRiskField(${index},'title',this.value)" placeholder="Risk 제목">
           <textarea class="form-input" rows="2" style="resize:vertical" oninput="updateAnalysisRiskField(${index},'desc',this.value)" placeholder="간단한 내용">${escapeHtml(description)}</textarea>
         </div>
-        <div><div class="form-label">추천 담당자</div><select class="form-input" onchange="updateAnalysisRiskField(${index},'assignee',this.value)">${assigneeOptions(assignee)}</select></div>
         <div><div class="form-label">마감기한</div><input class="form-input" type="date" value="${escapeHtml(item.dueDate || defaultDueDate())}" onchange="updateAnalysisRiskField(${index},'dueDate',this.value)"></div>
       </div>`;
     }).join("");
@@ -118,7 +116,7 @@
             body: JSON.stringify({
               title: item.title,
               description: item.desc || item.description || "",
-              assignee: item.assignee || item.suggestAssignee || null,
+              assignee: null,
               status: item.status === "blocked" ? "blocked" : "open",
               approval_status: "approved",
             }),
@@ -205,6 +203,7 @@
     setText("db-progress-count", progress.length);
     setText("db-done-count", done.length);
     setText("db-rejected-count", rejected.length);
+    setText("db-approval-count", pending.length);
     setText("db-pending", pending.length);
     setText("db-todo-rate", `${done.length} / ${todos.length}`);
 
@@ -217,9 +216,9 @@
 
     const approvalList = document.getElementById("db-ai-todo-list");
     if (approvalList) {
-      approvalList.innerHTML = pending.length
-        ? pending.slice(0, 4).map((todo) => `<div class="ops-approval-item" onclick="openDashboardTodoTab('ai')"><div><strong>${escapeHtml(cleanTodoTitle(todo.title))}</strong><span>${escapeHtml(briefTodoText(todo))}</span></div><i class="ti ti-arrow-right"></i></div>`).join("")
-        : '<div class="ops-approval-item" onclick="openDashboardTodoTab(\'ai\')"><div><strong>AI 제안 항목 없음</strong><span>새 제안이 생성되면 표시됩니다.</span></div><i class="ti ti-arrow-right"></i></div>';
+      approvalList.innerHTML = progress.length
+        ? progress.slice(0, 4).map((todo) => `<div class="ops-approval-item" onclick="openDashboardTodoTab('inprogress')"><div><strong>${escapeHtml(cleanTodoTitle(todo.title))}</strong><span>${escapeHtml(briefTodoText(todo))}</span></div><i class="ti ti-arrow-right"></i></div>`).join("")
+        : '<div class="ops-approval-item" onclick="openDashboardTodoTab(\'inprogress\')"><div><strong>진행중 Todo 없음</strong><span>진행 Todo가 생성되면 표시됩니다.</span></div><i class="ti ti-arrow-right"></i></div>';
     }
 
     const riskGrid = document.getElementById("db-high-risk-grid");

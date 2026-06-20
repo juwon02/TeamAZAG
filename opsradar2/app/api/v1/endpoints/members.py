@@ -64,10 +64,12 @@ async def list_members(project_id: str | None = None, active_only: bool = True, 
               pm.project_id::text AS project_id,
               p.name AS project_name,
               pm.team_id::text AS team_id,
+              team.name AS team_name,
               pm.joined_at
             FROM project_members pm
             JOIN users u ON u.id = pm.user_id
             JOIN projects p ON p.id = pm.project_id
+            LEFT JOIN teams team ON team.id = pm.team_id
             {where_clause}
             ORDER BY u.name
             """

@@ -11,6 +11,7 @@ const G = {
   todoChecked: {},
   todoSearch: { ai: '', inprogress: '', done: '', rejected: '' },
   todoSearchField: { ai: 'all', inprogress: 'all', done: 'all', rejected: 'all' },
+  todoTeamFilter: null,
   todoPage: { ai: 1, inprogress: 1, done: 1, rejected: 1 },
   editTargetId: null,
   createIssueId: null,
@@ -903,11 +904,10 @@ function renderAnalysisRiskReview(){
     const title=escapeHtml(item.title||`Risk 후보 ${idx+1}`);
     const severity=escapeHtml(item.severity||item.level||'medium');
     const desc=escapeHtml(item.reason||item.desc||item.description||'운영 로그 기반으로 검토가 필요한 Risk 후보입니다.');
-    const assignee=escapeHtml(item.assignee||'미지정');
     return `<div style="border:1px solid var(--border);background:var(--surface2);border-radius:var(--radius-sm);padding:10px;display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleAnalysisRiskChecked('${escapeHtml(key)}',this.checked)" style="accent-color:var(--danger);margin-top:5px">
       <div style="min-width:0">
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><strong style="font-size:12px;color:var(--text)">${title}</strong><span class="badge b-danger">${severity}</span><span class="badge b-gray">${assignee}</span></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><strong style="font-size:12px;color:var(--text)">${title}</strong><span class="badge b-danger">${severity}</span></div>
         <div class="text-content" style="font-size:11px;color:var(--text2);line-height:1.6">${desc}</div>
       </div>
     </div>`;
@@ -1002,8 +1002,6 @@ function renderTodoPager(total){
 
 function cleanTodoTitle(title){return normalizeText(title||'').replace(/^\s*\[[^\]]+\]\s*/,'').trim()||'Untitled';}
 function briefTodoText(t){const raw=normalizeText(t.description||'').replace(/\s+/g,' ').trim();const base=raw||`${cleanTodoTitle(t.title)} 관련 업무 진행 및 결과 확인`;return base.length>72?base.slice(0,69)+'...':base;}
-function todoAssigneeLabel(t){return t.assignee||(t.status==='pending'?t.recommendedAssignee:null)||'미지정';}
-
 function renderTodos() {
   const list = getFilteredTodos();
   const pageList = todoPageItems(list);
@@ -1018,10 +1016,9 @@ function renderTodos() {
   body.innerHTML = pageList.map(t=>{
     const title=cleanTodoTitle(t.title);
     const brief=briefTodoText(t);
-    const assignee=todoAssigneeLabel(t);
     return `<tr class="todo-tr ${G.selectedTodoId===t.id?'selected':''} ${t.status}" onclick="toggleTodoRow(event,${t.id})">
       <td class="todo-check-cell"><input type="checkbox" class="row-chk" id="chk-${t.id}" ${G.todoChecked[t.id]?'checked':''} onclick="event.stopPropagation();toggleTodoCheck(event,${t.id},true)" style="accent-color:var(--accent);cursor:pointer"></td>
-      <td class="todo-main-cell"><div class="todo-title ${t.status==='rejected'?'done-text':''} text-content" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>${escapeHtml(title)}</span>${t.status==='pending'&&!t.assignee&&t.recommendedAssignee?`<span class="badge b-accent" title="${escapeHtml(t.recommendationReason||'업무 내용 기반 추천')}"><i class="ti ti-sparkles"></i> 추천: ${escapeHtml(t.recommendedAssignee)}</span>`:''}</div><div class="todo-src text-content">[담당자: ${escapeHtml(assignee)}] ${escapeHtml(brief)}</div></td>
+      <td class="todo-main-cell"><div class="todo-title ${t.status==='rejected'?'done-text':''} text-content" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>${escapeHtml(title)}</span>${t.status==='pending'&&!t.assignee&&t.recommendedAssignee?`<span class="badge b-accent" title="${escapeHtml(t.recommendationReason||'업무 내용 기반 추천')}"><i class="ti ti-sparkles"></i> 추천: ${escapeHtml(t.recommendedAssignee)}</span>`:''}</div><div class="todo-src text-content">${escapeHtml(brief)}</div></td>
       <td class="todo-center-cell todo-created-at" style="display:${G.currentTodoTab==='ai'?'none':'table-cell'}">${formatTodoCreatedAt(t.createdAt)}</td>
       <td class="todo-center-cell todo-created-at" style="display:${G.currentTodoTab==='inprogress'?'table-cell':'none'}">${formatTodoCreatedAt(t.updatedAt)}</td>
       <td class="todo-center-cell">${statusB(t.status)}</td>
@@ -2546,6 +2543,7 @@ window.opsRadarTodoBridge = {
         todoChecked: { ...G.todoChecked },
         todoSearch: { ...G.todoSearch },
         todoSearchField: { ...G.todoSearchField },
+        todoTeamFilter: G.todoTeamFilter,
         todoPage: { ...G.todoPage },
       },
       viewMode: todoViewMode,
@@ -2565,6 +2563,10 @@ window.opsRadarTodoBridge = {
   },
   setSearchField(value) {
     G.todoSearchField[G.currentTodoTab] = value;
+    G.todoPage[G.currentTodoTab] = 1;
+  },
+  setTeamFilter(value) {
+    G.todoTeamFilter = value;
     G.todoPage[G.currentTodoTab] = 1;
   },
   setPage(page) {
@@ -2823,13 +2825,14 @@ async function deleteCalTag(d, idx) {
   const tag = ev.tags[idx];
 
   try{
-    if(tag?.apiId){
+    const eventId = tag?.apiId || tag?.id || tag?.eventId;
+    if(eventId){
       if(!window.opsRadarApi){
         showToast('DB 연결을 준비 중입니다. 잠시 후 다시 시도해주세요.','warn');
         return;
       }
 
-      await window.opsRadarApi.request(`/calendar/${tag.apiId}`,{method:'DELETE'});
+      await window.opsRadarApi.request(`/calendar/${eventId}`,{method:'DELETE'});
       await window.opsRadarApi.loadCalendar();
     }else{
       ev.tags.splice(idx,1);

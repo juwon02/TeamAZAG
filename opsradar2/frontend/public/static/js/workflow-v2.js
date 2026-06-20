@@ -8,8 +8,19 @@
   const LEAD_ROLES = ["admin", "pm", "leader", "lead", "시스템 관리자"];
   const isLead = () => {
     const a = actor();
+    const currentMember = (window.opsRadarMembers || []).find((member) => (
+      String(member.user_id || "") === String(a.id || a.user_id || "")
+      || String(member.username || "") === String(a.username || "")
+      || String(member.name || "") === String(a.name || "")
+    ));
+    if (currentMember) {
+      const memberRoles = [currentMember.project_role, currentMember.role, currentMember.user_role]
+        .map((role) => String(role || "").toLowerCase());
+      return memberRoles.some((role) => LEAD_ROLES.includes(role));
+    }
     if (a.username === "hj" || a.username === "admin") return true;
-    if (LEAD_ROLES.includes(String(a.role || "").toLowerCase())) return true;
+    const actorRoles = [a.role, a.project_role, a.user_role].map((role) => String(role || "").toLowerCase());
+    if (actorRoles.some((role) => LEAD_ROLES.includes(role))) return true;
     const stored = (
       localStorage.getItem("opsradar_user_role") ||
       localStorage.getItem("role") ||
@@ -17,9 +28,7 @@
     ).toLowerCase();
     if (LEAD_ROLES.includes(stored)) return true;
     if (G.workflowReview?.role) return LEAD_ROLES.includes(G.workflowReview.role.toLowerCase());
-    if (document.getElementById("db-tab-pm")?.classList.contains("active")) return true;
-    const isMemberTab = document.getElementById("db-tab-member")?.classList.contains("active");
-    return !isMemberTab;
+    return false;
   };
   const memberName = () => actor().name || "";
   const keyOf = (item) => String(item?.apiId || item?.id || "");
@@ -28,6 +37,50 @@
   const description = (item) => item?.description || item?.desc || item?.reason || `${item?.title || "업무"} 수행 범위와 완료 기준을 확인합니다.`;
   const members = () => (window.opsRadarMembers || []).filter((item) => (item.status || "active") === "active");
   const assigneeOptions = (selected) => [`<option value="">미지정</option>`, ...members().map((item) => `<option value="${esc(item.name)}" ${item.name === selected ? "selected" : ""}>${esc(item.name)}</option>`)].join("");
+  const TODO_TEAMS = new Set(["전체", "영업관리팀", "구매팀", "품질 클레임팀", "물류팀", "총괄"]);
+
+  function currentMember() {
+    const a = actor();
+    return members().find((member) => (
+      String(member.user_id || "") === String(a.id || a.user_id || "")
+      || String(member.username || "") === String(a.username || "")
+      || String(member.name || "") === String(a.name || "")
+    ));
+  }
+
+  function normalizeTodoTeam(value) {
+    return TODO_TEAMS.has(value) ? value : "전체";
+  }
+
+  function getTodoTeamFilter() {
+    if (G.todoTeamFilter) return normalizeTodoTeam(G.todoTeamFilter);
+    if (isLead()) {
+      G.todoTeamFilter = "전체";
+      return G.todoTeamFilter;
+    }
+    const teamName = currentMember()?.team_name;
+    if (TODO_TEAMS.has(teamName)) G.todoTeamFilter = teamName;
+    return G.todoTeamFilter || "전체";
+  }
+
+  function todoTeamName(todo) {
+    const assignee = todo?.assignee || (todo?.status === "pending" ? todo?.recommendedAssignee : "");
+    return members().find((member) => member.name === assignee)?.team_name || "";
+  }
+
+  function filterTodosByTeam(items, team = getTodoTeamFilter()) {
+    return team === "전체" ? items : items.filter((todo) => todoTeamName(todo) === team);
+  }
+
+  window.getTodoTeamFilter = getTodoTeamFilter;
+  window.getTeamScopedTodos = () => filterTodosByTeam(todos);
+  window.setTodoTeamFilter = function (value) {
+    G.todoTeamFilter = normalizeTodoTeam(value);
+    G.todoPage[G.currentTodoTab] = 1;
+    window.opsRadarTodoBridge?.setTeamFilter?.(G.todoTeamFilter);
+    if (typeof renderTodos === "function") renderTodos();
+    if (typeof updateTodoCounts === "function") updateTodoCounts();
+  };
 
   function recommendedDue(item) {
     const date = new Date();
@@ -94,7 +147,7 @@
         <label><span>업무 내용</span><textarea class="form-input" rows="3" oninput="${isTodo ? "updateAnalysisTodoField" : "updateAnalysisRiskField"}(${index},'description',this.value)">${esc(description(item))}</textarea></label>
       </div>
       <div class="wr-review-meta">
-        <label><span>추천 담당자</span><select class="form-input" onchange="${isTodo ? "updateAnalysisTodoField" : "updateAnalysisRiskField"}(${index},'assignee',this.value)">${assigneeOptions(item.assignee || item.recommendedAssignee || "")}</select></label>
+        ${isTodo ? `<label><span>추천 담당자</span><select class="form-input" onchange="updateAnalysisTodoField(${index},'assignee',this.value)">${assigneeOptions(item.assignee || item.recommendedAssignee || "")}</select></label>` : ""}
         <label><span>AI 추천 마감일</span><input class="form-input" type="date" value="${esc(due(item))}" onchange="${isTodo ? "updateAnalysisTodoField" : "updateAnalysisRiskField"}(${index},'due_at',this.value)"></label>
       </div>
     </article>`;
@@ -152,7 +205,7 @@
     const selected = selectedReviewItems("risk");
     if (!selected.length) return showToast("선택된 Risk가 없습니다.", "info");
     const items = Object.fromEntries(selected.map((item) => [keyOf(item), {
-      title: item.title, description: description(item), assignee: item.assignee || null,
+      title: item.title, description: description(item),
       severity: item.severity || item.level || "medium", due_at: due(item),
     }]));
     await api("/workflow/risks/send", { method: "POST", body: JSON.stringify({ items }) });
@@ -217,7 +270,8 @@
 
   function queueDetail(item, kind) {
     const source = item.document_id ? `<button class="wr-source-link" onclick="downloadSource('${esc(item.document_id)}')"><i class="ti ti-download"></i>${esc(item.source_file_name || "출처 파일")}</button>` : "<span>출처 파일 없음</span>";
-    return `<div class="wr-queue-detail"><div><b>업무 내용</b><p>${esc(description(item))}</p></div><div class="wr-queue-meta"><span>담당자 <b>${esc(item.assignee || "미지정")}</b></span><span>마감일 <b>${esc(due(item))}</b></span><span>전송자 <b>${esc(item.sent_by || "-")}</b></span></div><div><b>출처</b>${source}</div></div>`;
+    const assignee = kind === "todo" ? `<span>담당자 <b>${esc(item.assignee || "미지정")}</b></span>` : "";
+    return `<div class="wr-queue-detail"><div><b>업무 내용</b><p>${esc(description(item))}</p></div><div class="wr-queue-meta">${assignee}<span>마감일 <b>${esc(due(item))}</b></span><span>전송자 <b>${esc(item.sent_by || "-")}</b></span></div><div><b>출처</b>${source}</div></div>`;
   }
 
   function queueRow(item, kind) {
@@ -256,7 +310,7 @@
     await refreshWorkflowViews(); if (G.currentTodoTab === "ai") renderTodos(); showToast("진행 Todo로 승인했습니다.", "success");
   };
   window.approvePendingRisk = async function (id) {
-    await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "approved", status: "open" }) });
+    await api(`/issues/${id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "approved", status: "open", assignee: null }) });
     await refreshWorkflowViews(); if (G.currentIssueTab === "candidate") renderPendingRisks(); showToast("확정 이슈로 이동했습니다.", "success");
   };
   window.rejectPendingItem = async function (kind, id) {
@@ -329,12 +383,12 @@
       node.appendChild(badge);
       tabs.appendChild(node);
     });
-    ensureAllTodoToggle();
+    removeAllTodoToggle();
   }
 
   function configureIssueTabs() {
     const tabs = document.querySelector("#s-issues .tabs");
-    if (!tabs || !isLead()) return;
+    if (!tabs) return;
     const resolved = tabs.querySelector(".tab[onclick*=\"'resolved'\"]") || document.getElementById("issueResolvedTab");
     const rejected = document.getElementById("issueRejectedTab");
     const pending = tabs.querySelector(".tab[onclick*=\"'candidate'\"]");
@@ -374,15 +428,9 @@
     if (risk) risk.textContent = riskCount;
   }
 
-  function ensureAllTodoToggle() {
-    const tools = document.querySelector("#s-todo .todo-list-tools");
-    if (isLead() || !tools || document.getElementById("allTodoToggle")) return;
-    const label = document.createElement("label");
-    label.id = "allTodoToggle";
-    label.className = "wr-all-todo-toggle";
-    label.innerHTML = `<input type="checkbox"> 전체 Todo 보기`;
-    label.querySelector("input").onchange = (event) => { G.showAllTodos = event.target.checked; renderTodos(); updateTodoCounts(); };
-    tools.appendChild(label);
+  function removeAllTodoToggle() {
+    document.getElementById("allTodoToggle")?.remove();
+    delete G.showAllTodos;
   }
 
   const baseSwitchTodo = window.switchTodoTab;
@@ -470,14 +518,8 @@
     const statuses = { ai: "pending", inprogress: "approved", rejected: "rejected", done: "done" };
     const query = String(G.todoSearch?.[G.currentTodoTab] || "").toLowerCase().trim();
     const field = G.todoSearchField?.[G.currentTodoTab] || "all";
-    let items = todos.filter((todo) => todo.status === statuses[G.currentTodoTab]);
-    if (G.currentTodoTab === "ai") {
-      const allowed = new Set((G.workflowReview?.pending_todos || []).map((item) => String(item.id)));
-      items = isLead() ? todos.filter((todo) => todo.status === "pending") : todos.filter((todo) => allowed.has(String(todo.apiId)));
-      if (!isLead() && G.showAllTodos) items = todos.filter((todo) => todo.status === "pending" && todo.assignee);
-    } else if (!isLead() && !G.showAllTodos) {
-      items = items.filter((todo) => todo.assignee === memberName());
-    }
+    const team = getTodoTeamFilter();
+    let items = filterTodosByTeam(todos.filter((todo) => todo.status === statuses[G.currentTodoTab]), team);
     return items.filter((todo) => {
       if (!query) return true;
       const values = { title: todo.title || "", description: todo.description || "", assignee: todo.assignee || "", all: `${todo.title || ""} ${todo.description || ""} ${todo.assignee || ""}` };
@@ -529,6 +571,24 @@
   window.renderHistory = async function () {
     const host = document.getElementById("historyList");
     if (!host) return;
+    const formatUploadedAt = (value) => {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      const parts = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(date).reduce((acc, part) => {
+        if (part.type !== "literal") acc[part.type] = part.value;
+        return acc;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+    };
     try {
       const result = await api("/documents");
       const docs = result.documents || [];
@@ -552,7 +612,7 @@
           <button class="wr-source-link" onclick="downloadSource('${id}','${name}')" style="flex:1;text-align:left">
             <i class="ti ti-file-download"></i>${name}
           </button>
-          <span style="font-size:11px;color:var(--text3);white-space:nowrap">${esc(doc.uploaded_by || "-")} · ${esc(String(doc.created_at || "").slice(0, 10))}</span>
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">${esc(doc.uploaded_by || "-")} · ${esc(formatUploadedAt(doc.created_at))}</span>
           ${admin ? `<button class="tbtn danger" onclick="deleteUploadedDocument('${id}')" style="font-size:11px;padding:3px 8px;flex-shrink:0"><i class="ti ti-trash"></i></button>` : ""}
         </div>`;
       }).join("");
@@ -578,9 +638,27 @@
     const input = overlay.querySelector("#adminPwInput");
     const errorEl = overlay.querySelector("#adminPwError");
     const close = () => overlay.remove();
-    const verify = () => {
-      if (input.value === "1234") { close(); onConfirm(); }
-      else { errorEl.style.display = "block"; input.value = ""; input.focus(); }
+    const verify = async () => {
+      const password = input.value;
+      if (!password) {
+        errorEl.textContent = "비밀번호를 입력해주세요.";
+        errorEl.style.display = "block";
+        input.focus();
+        return;
+      }
+      const confirmBtn = overlay.querySelector("#adminPwConfirmBtn");
+      confirmBtn.disabled = true;
+      try {
+        await onConfirm(password);
+        close();
+      } catch (error) {
+        errorEl.textContent = error?.message || "비밀번호가 올바르지 않거나 삭제에 실패했습니다.";
+        errorEl.style.display = "block";
+        input.value = "";
+        input.focus();
+      } finally {
+        confirmBtn.disabled = false;
+      }
     };
     overlay.querySelector("#adminPwConfirmBtn").addEventListener("click", verify);
     overlay.querySelector("#adminPwCancelBtn").addEventListener("click", close);
@@ -590,12 +668,10 @@
   }
 
   window.deleteUploadedDocument = async function (id) {
-    showAdminPasswordModal(async () => {
-      try {
-        await api(`/documents/${id}`, { method: "DELETE" });
-        renderHistory();
-        showToast("업로드 파일을 삭제했습니다.", "success");
-      } catch (_) { showToast("삭제에 실패했습니다.", "warn"); }
+    showAdminPasswordModal(async (password) => {
+      await api(`/documents/${id}`, { method: "DELETE", body: JSON.stringify({ password }) });
+      renderHistory();
+      showToast("업로드 파일을 삭제했습니다.", "success");
     });
   };
   window.toggleAllHistorySelect = function (checkbox) {
@@ -604,8 +680,8 @@
   window.deleteCheckedDocuments = async function () {
     const checked = Array.from(document.querySelectorAll(".history-doc-check:checked")).map((cb) => cb.value);
     if (!checked.length) return showToast("삭제할 파일을 선택해주세요.", "info");
-    showAdminPasswordModal(async () => {
-      await Promise.all(checked.map((id) => api(`/documents/${id}`, { method: "DELETE" }).catch(() => {})));
+    showAdminPasswordModal(async (password) => {
+      await Promise.all(checked.map((id) => api(`/documents/${id}`, { method: "DELETE", body: JSON.stringify({ password }) })));
       renderHistory();
       showToast(`${checked.length}개 파일을 삭제했습니다.`, "success");
     });
@@ -659,14 +735,18 @@
 
   function ensureIssueRejectedTab() {
     const tabs = document.querySelector("#s-issues .tabs");
-    if (!tabs || document.getElementById("issueRejectedTab")) return;
+    const existing = document.getElementById("issueRejectedTab");
+    if (!tabs) return;
+    if (existing) {
+      existing.style.display = "";
+      return;
+    }
     const tab = document.createElement("div");
     tab.id = "issueRejectedTab";
     tab.className = "tab";
     tab.innerHTML = `반려 <span class="badge b-gray" id="i-rej-cnt">0</span>`;
     tab.onclick = () => switchIssueTab("rejected");
     tabs.appendChild(tab);
-    tab.style.display = isLead() ? "" : "none";
   }
 
   function ensureIssueResolvedTab() {
@@ -688,7 +768,7 @@
 
   const baseSwitchIssue = window.switchIssueTab;
   window.switchIssueTab = switchIssueTab = async function (tab) {
-    if (tab === "candidate" && isLead()) {
+    if (tab === "candidate") {
       G.currentIssueTab = "candidate";
       document.querySelectorAll("#s-issues .tabs .tab").forEach((node) => node.classList.toggle("active", String(node.getAttribute("onclick") || "").includes("'candidate'")));
       renderPendingRisks();
@@ -748,7 +828,6 @@
         : '<span class="badge b-warn">승인 대기</span>';
       const title = esc(item.title || "제목 없음");
       const desc = esc(description(item));
-      const assignee = esc(item.sent_by || item.assignee || "");
       return `<div class="issue-card has-issue-chk" style="display:flex;align-items:flex-start;gap:8px">
         <input type="checkbox" class="issue-row-chk" value="${id}" style="accent-color:var(--danger);cursor:pointer;margin-top:6px;flex-shrink:0" onclick="event.stopPropagation();toggleIssueChk('${id}',this.checked)" ${G.issueChecked?.[id] ? "checked" : ""}>
         <div style="flex:1;min-width:0;cursor:pointer" onclick="showPendingRiskDetail('${id}')">
@@ -758,9 +837,7 @@
           </div>
           ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
           <div class="issue-footer">
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              ${assignee ? `<span class="badge b-gray">담당: ${assignee}</span>` : ""}
-            </div>
+            <div></div>
             <div class="wr-queue-actions" onclick="event.stopPropagation()">
               <button class="tbtn primary" style="font-size:10px;padding:4px 8px" onclick="approvePendingRisk('${id}')"><i class="ti ti-check"></i> 이슈 확정</button>
               <button class="tbtn danger" style="font-size:10px;padding:4px 8px" onclick="deletePendingRisk('${id}')"><i class="ti ti-trash"></i> 삭제</button>
@@ -788,7 +865,7 @@
       desc: item.description || item.desc || "",
       description: item.description || item.desc || "",
       severity: item.risk_level || item.severity || "medium",
-      assignee: item.assignee || item.sent_by || "",
+      assignee: "",
       days: 0,
     };
     renderIssueDetailPanel(issue, `
@@ -813,17 +890,17 @@
     host.innerHTML = allItems.map((item) => {
       const id = esc(item.apiId || item.id);
       const title = esc(item.title || "제목 없음");
-      const sentBy = esc(item.sent_by || item.assignee || "팀원");
+      const sentBy = esc(item.sent_by || "팀원");
       const desc = esc(item.description || item.desc || "");
       const dueDate = esc(due(item));
+      const actions = isLead()
+        ? `<div class="wr-queue-actions" onclick="event.stopPropagation()"><button class="tbtn primary" onclick="approvePendingRisk('${id}')">이슈 확정</button><button class="tbtn danger" onclick="rejectPendingItem('risk','${id}')">반려</button></div>`
+        : "";
       return `<article class="issue-card candidate" onclick="showPendingRiskDetail('${id}')">
         <div class="issue-hd"><span class="badge b-warn">승인 대기</span><div class="issue-title">${title}</div><span class="badge b-gray">${sentBy}</span></div>
         <div class="issue-desc">${desc}</div>
         <div class="issue-footer"><span>마감일 ${dueDate}</span>
-          <div class="wr-queue-actions" onclick="event.stopPropagation()">
-            <button class="tbtn primary" onclick="approvePendingRisk('${id}')">이슈 확정</button>
-            <button class="tbtn danger" onclick="rejectPendingItem('risk','${id}')">반려</button>
-          </div>
+          ${actions}
         </div>
       </article>`;
     }).join("");
@@ -1216,7 +1293,7 @@
     if (doneCnt) doneCnt.textContent = allIssues.filter(i => i.type === "resolved").length;
     if (!items.length) {
       host.innerHTML = '<div class="wr-empty">진행 중인 이슈가 없습니다.</div>';
-      injectIssueBulkUi();
+      if (isLead()) injectIssueBulkUi();
       return;
     }
     host.innerHTML = items.map(issue => {
@@ -1229,27 +1306,30 @@
       const hasTodo = (G.createdTodosFromIssue || []).some(t => t.issueId === issue.id);
       const todoTag = hasTodo ? '<span class="badge b-success" style="font-size:9px">Todo 생성됨</span>' : "";
       const isSelected = G.selectedIssueId === id;
-      return `<div class="issue-card ${isSelected ? "selected" : ""}" onclick="selectIssue(${id})" style="cursor:pointer">
-          <div class="issue-hd">
-              <span class="badge ${sevCls}">${sevLabel}</span>
-              <div class="issue-title">${title}</div>
-              ${todoTag}
-          </div>
-          ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
-          <div class="issue-footer">
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  ${issue.assignee ? `<span class="badge b-gray">담당: ${esc(issue.assignee)}</span>` : ""}
-                  ${issue.days > 0 ? `<span class="badge b-gray">${issue.days}일째</span>` : ""}
-              </div>
-              <div class="wr-queue-actions" onclick="event.stopPropagation()">
+      const actions = isLead() ? `<div class="wr-queue-actions wr-progress-issue-actions" onclick="event.stopPropagation()">
                   <button class="tbtn" style="font-size:10px;padding:4px 8px;color:var(--success)" onclick="resolveAndSwitchTab(${id})"><i class="ti ti-check"></i> 완료</button>
                   <button class="tbtn" style="font-size:10px;padding:4px 8px;color:var(--accent)" onclick="revertIssue(${id})"><i class="ti ti-arrow-back-up"></i> 되돌리기</button>
                   <button class="tbtn" style="font-size:10px;padding:4px 8px" onclick="openTodoCreate(${id})"><i class="ti ti-plus"></i> 대응 Todo 생성</button>
+              </div>` : "";
+      return `<div class="issue-card ${isSelected ? "selected" : ""}" onclick="selectIssue(${id})" style="cursor:pointer">
+          <div class="wr-progress-issue-body">
+              <div class="wr-progress-issue-copy">
+                  <div class="issue-hd">
+                      <span class="badge ${sevCls}">${sevLabel}</span>
+                      <div class="issue-title">${title}</div>
+                      ${todoTag}
+                  </div>
+                  ${desc ? `<div class="issue-desc">${desc}</div>` : ""}
+                  <div class="wr-progress-issue-meta">
+                      ${issue.assignee ? `<span class="badge b-gray">담당: ${esc(issue.assignee)}</span>` : ""}
+                      ${issue.days > 0 ? `<span class="badge b-gray">${issue.days}일째</span>` : ""}
+                  </div>
               </div>
+              ${actions}
           </div>
       </div>`;
     }).join("");
-    injectIssueBulkUi();
+    if (isLead()) injectIssueBulkUi();
   }
 
   // ── 이슈 상세보기 공통 패널 렌더 ──
