@@ -361,6 +361,7 @@ function renderReportDetail(report){
       </div>
     </div>
     ${reportBody}`;
+  window.bindReportDocumentDownloads?.(detail);
 }
 function getReportDraftData(type){
   const selected = type || G.currentReportPeriod || 'weekly';
@@ -420,6 +421,7 @@ function renderReportDraft(data){
       <div class="text-content" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:10px">${escapeHtml(data.title)}</div>
       <p style="margin-bottom:12px;color:var(--text2)">${escapeHtml(getReportTypeLabel(data.type))} 초안입니다. 필요 시 본문을 직접 수정한 뒤 저장할 수 있습니다.</p>
       ${sectionHtml}`;
+  window.bindReportDocumentDownloads?.(editor);
   G.currentReportDraft = data;
   G.selectedReportId = null;
   document.querySelectorAll('#reportList .report-item').forEach(item => item.classList.remove('active'));

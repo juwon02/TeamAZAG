@@ -21,8 +21,20 @@
       .replace(/"/g, "&quot;");
   }
 
+  function renderReportInline(value) {
+    const escaped = escapeMarkdownHtml(value);
+    const linked = escaped.replace(
+      /\[([^\]]+)\]\(doc:\/\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/gi,
+      (_, title, documentId) => `<button type="button" class="report-source-download" data-document-id="${documentId}" data-document-name="${title}" title="원본 문서 다운로드">${title}</button>`,
+    );
+    return linked.replace(
+      /^(.+?)\s*\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)$/i,
+      (_, title, documentId) => `<button type="button" class="report-source-download" data-document-id="${documentId}" data-document-name="${title}" title="원본 문서 다운로드">${title}</button>`,
+    );
+  }
+
   function tableCells(line) {
-    return String(line || "").trim().replace(/^\||\|$/g, "").split("|").map((cell) => escapeMarkdownHtml(cell.trim()));
+    return String(line || "").trim().replace(/^\||\|$/g, "").split("|").map((cell) => renderReportInline(cell.trim()));
   }
 
   function isTableDivider(line) {
@@ -35,7 +47,7 @@
     let paragraph = [];
     let listType = null;
     const flushParagraph = () => {
-      if (paragraph.length) html.push(`<p class="text-content">${paragraph.map(escapeMarkdownHtml).join(" ")}</p>`);
+      if (paragraph.length) html.push(`<p class="text-content">${paragraph.map(renderReportInline).join(" ")}</p>`);
       paragraph = [];
     };
     const closeList = () => {
@@ -72,7 +84,7 @@
         const nextType = numbered ? "ol" : "ul";
         if (listType && listType !== nextType) closeList();
         if (!listType) { html.push(`<${nextType} class="report-markdown-list">`); listType = nextType; }
-        html.push(`<li class="text-content">${escapeMarkdownHtml((bullet || numbered)[1])}</li>`);
+        html.push(`<li class="text-content">${renderReportInline((bullet || numbered)[1])}</li>`);
         continue;
       }
       if (!line.trim()) { flushParagraph(); closeList(); continue; }
@@ -82,13 +94,47 @@
     return html.join("");
   };
 
+  window.bindReportDocumentDownloads = function (container) {
+    container?.querySelectorAll(".report-source-download").forEach((button) => {
+      if (button._reportDownloadBound) return;
+      button._reportDownloadBound = true;
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const documentId = button.dataset.documentId;
+        const documentName = button.dataset.documentName || "source-document";
+        if (!window.opsRadarApi?.downloadDocument) {
+          window.showToast?.("문서 다운로드 연결을 준비 중입니다. 잠시 후 다시 시도해주세요.", "warn");
+          return;
+        }
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "다운로드 중...";
+        try {
+          await window.opsRadarApi.downloadDocument(documentId, documentName);
+        } catch (error) {
+          console.warn("Report source document download failed", error);
+          window.showToast?.(error.message || "출처 문서를 다운로드하지 못했습니다.", "warn");
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+    });
+  };
+
   window.sanitizeStoredReportHtml = function (content) {
     const template = document.createElement("template");
     template.innerHTML = String(content || "");
     template.content.querySelectorAll("script,style,iframe,object,embed,link,meta").forEach((node) => node.remove());
     template.content.querySelectorAll("*").forEach((node) => {
       Array.from(node.attributes).forEach((attribute) => {
-        if (attribute.name !== "class") node.removeAttribute(attribute.name);
+        if (![
+          "class",
+          "type",
+          "data-document-id",
+          "data-document-name",
+          "title",
+        ].includes(attribute.name)) node.removeAttribute(attribute.name);
       });
       if (node.hasAttribute("class")) {
         const safeClasses = node.className.split(/\s+/).filter((name) => name === "text-content" || name.startsWith("report-markdown-"));

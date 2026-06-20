@@ -75,14 +75,17 @@ async def extract_todos(document_text: str) -> dict:
 문장 그대로 복사하지 말고 실행 가능한 업무 항목으로 정리하세요.
 Todo title은 담당자가 목록만 보고도 할 일을 즉시 이해하도록 핵심 행동과 대상을 짧고 직관적으로 작성하세요.
 Todo description은 title을 반복하지 말고 업무 배경, 수행 범위, 산출물 또는 완료 기준을 1~3문장으로 구체적으로 작성하세요.
+문서에 고객사, 구매처, 제품명, 품목명, 모델명 또는 부품번호(예: AP-SC-330)가 있으면 Todo와 Issue의 subject에 원문 표현을 그대로 넣고,
+title과 description에도 그 대상을 명확히 포함하세요. 정확한 대상이 문서에 있는데 "물품", "재고", "제품"처럼 일반명으로만 바꾸지 마세요.
+정확한 제품/품목을 확인할 수 없으면 subject는 null로 두고, title 또는 description에 "대상 품목 확인 필요"를 표시하세요. 원문에 없는 품번이나 제품명을 만들지 마세요.
 이미 완료되었거나 해결되었다고 명확히 표현된 문장은 Todo 또는 Issue 후보로 추출하지 마세요.
 이미 완료/해결/반영된 과거 작업은 todos 또는 issues에 포함하지 마세요. 완료 여부를 확인해야 하는 후속 작업만 포함하세요.
 
 형식:
 {{
-  "todos": [{{"title": "해야 할 일", "description": "업무 수행 방법과 완료 기준", "assignee": null, "due_date": null}}],
+  "todos": [{{"title": "해야 할 일", "description": "업무 수행 방법과 완료 기준", "subject": null, "assignee": null, "due_date": null}}],
   "decisions": [""],
-  "issues": [{{"title": "", "description": "", "severity": "medium"}}]
+  "issues": [{{"title": "", "description": "", "subject": null, "severity": "medium"}}]
 }}
 
 [문서]
@@ -116,11 +119,13 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
     normalized_todos = []
     for item in todos[:20]:
         if isinstance(item, str) and not _is_completed_statement(item):
-            concise_title = _concise_todo_title(item, item)
+            subject = _detect_subject(item)
+            concise_title = _with_subject_title(_concise_todo_title(item, item), subject)
             normalized_todos.append(
                 {
                     "title": concise_title,
-                    "description": _detailed_todo_description(concise_title, item),
+                    "description": _with_subject_description(_detailed_todo_description(concise_title, item), subject),
+                    "subject": subject,
                     "assignee": None,
                     "due_date": None,
                 }
@@ -129,11 +134,13 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
             title = item.get("title") or item.get("content")
             description = item.get("description") or item.get("content") or title
             if title and not _is_completed_statement(f"{title} {description}"):
-                concise_title = _concise_todo_title(str(title), str(description))
+                subject = _normalize_subject(item.get("subject")) or _detect_subject(f"{title} {description}")
+                concise_title = _with_subject_title(_concise_todo_title(str(title), str(description)), subject)
                 normalized_todos.append(
                     {
                         "title": concise_title,
-                        "description": _detailed_todo_description(concise_title, str(description)),
+                        "description": _with_subject_description(_detailed_todo_description(concise_title, str(description)), subject),
+                        "subject": subject,
                         "assignee": item.get("assignee"),
                         "due_date": item.get("due_date") or item.get("due_at"),
                     }
@@ -144,7 +151,15 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
         if isinstance(item, str) and not _is_resolved_issue(item):
             cleaned = _strip_issue_target_date(item)
             if cleaned:
-                normalized_issues.append({"title": cleaned, "description": cleaned, "severity": "medium"})
+                subject = _detect_subject(cleaned)
+                normalized_issues.append(
+                    {
+                        "title": _with_subject_title(cleaned, subject),
+                        "description": _with_subject_description(cleaned, subject),
+                        "subject": subject,
+                        "severity": "medium",
+                    }
+                )
         elif isinstance(item, dict):
             title = item.get("title") or item.get("description")
             if title and not _is_resolved_issue(f"{title} {item.get('description') or ''}"):
@@ -152,10 +167,12 @@ def _normalize_extraction(data: dict[str, Any]) -> dict:
                 cleaned_description = _strip_issue_target_date(str(item.get("description") or title))
                 if not cleaned_title:
                     continue
+                subject = _normalize_subject(item.get("subject")) or _detect_subject(f"{cleaned_title} {cleaned_description}")
                 normalized_issues.append(
                     {
-                        "title": cleaned_title,
-                        "description": cleaned_description or cleaned_title,
+                        "title": _with_subject_title(cleaned_title, subject),
+                        "description": _with_subject_description(cleaned_description or cleaned_title, subject),
+                        "subject": subject,
                         "severity": item.get("severity") or "medium",
                     }
                 )
@@ -176,6 +193,63 @@ def _strip_issue_target_date(text: str) -> str:
         flags=re.IGNORECASE,
     )
     return re.sub(r"\s{2,}", " ", cleaned).strip(" \t\r\n-·,")
+
+
+_GENERIC_SUBJECTS = {
+    "물품", "재고", "제품", "품목", "부품", "자재", "원자재", "상품", "대상", "대상 품목",
+}
+
+
+def _normalize_subject(value: object) -> str | None:
+    subject = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n-·,.:;")
+    if not subject or subject.lower() in _GENERIC_SUBJECTS:
+        return None
+    return subject[:120]
+
+
+def _detect_subject(text: str) -> str | None:
+    """Extract an explicitly named product, part, or model without inventing one."""
+    normalized = " ".join(str(text or "").split())
+    labelled = re.search(
+        r"(?:제품|품목|부품|모델|자재|물품|재고)(?:명|번호|코드)?\s*[:：]\s*([^,;\n]{2,100})",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if labelled:
+        subject = _normalize_subject(labelled.group(1))
+        if subject:
+            return subject
+
+    for match in re.finditer(r"\b[A-Z]{1,6}(?:-[A-Z0-9]{1,10}){1,4}\b", normalized):
+        code = match.group(0)
+        if code.split("-", 1)[0] in {"DOC", "ISSUE", "TODO", "API"}:
+            continue
+        trailing = normalized[match.end():]
+        suffix = re.match(r"(?:\s+[A-Za-z가-힣0-9]+){0,3}", trailing)
+        candidate = f"{code}{suffix.group(0) if suffix else ''}".strip()
+        subject = _normalize_subject(candidate)
+        if subject:
+            return subject
+    return None
+
+
+def _with_subject_title(title: str, subject: str | None) -> str:
+    cleaned = re.sub(r"\s+", " ", str(title or "")).strip()
+    if subject:
+        if subject.lower() not in cleaned.lower():
+            cleaned = f"{subject} - {cleaned}"
+    elif re.search(r"(?:물품|재고|제품|품목|부품|자재)", cleaned) and "대상 품목 확인 필요" not in cleaned:
+        cleaned = f"{cleaned} (대상 품목 확인 필요)"
+    return cleaned[:160] or "업무 항목 확인"
+
+
+def _with_subject_description(description: str, subject: str | None) -> str:
+    cleaned = re.sub(r"\s+", " ", str(description or "")).strip()
+    if subject and subject.lower() not in cleaned.lower():
+        return f"대상 품목: {subject}. {cleaned}"[:500]
+    if not subject and re.search(r"(?:물품|재고|제품|품목|부품|자재)", cleaned) and "대상 품목 확인 필요" not in cleaned:
+        return f"{cleaned} 대상 품목 확인 필요."[:500]
+    return cleaned[:500]
 
 
 def _concise_todo_title(title: str, description: str = "") -> str:
@@ -246,11 +320,13 @@ def _heuristic_extract(text: str) -> dict:
     issues = []
     for line in lines:
         if not _is_completed_statement(line) and any(token in line for token in ("해야", "필요", "담당", "마감", "TODO", "todo")):
-            title = _concise_todo_title(line, line)
+            subject = _detect_subject(line)
+            title = _with_subject_title(_concise_todo_title(line, line), subject)
             todos.append(
                 {
                     "title": title,
-                    "description": _detailed_todo_description(title, line[:500]),
+                    "description": _with_subject_description(_detailed_todo_description(title, line[:500]), subject),
+                    "subject": subject,
                     "assignee": None,
                     "due_date": None,
                 }
@@ -260,7 +336,15 @@ def _heuristic_extract(text: str) -> dict:
         if not _is_resolved_issue(line) and any(token in line for token in ("이슈", "문제", "blocked", "Blocked", "리스크", "주의 필요")):
             cleaned_issue = _strip_issue_target_date(line)
             if cleaned_issue:
-                issues.append({"title": cleaned_issue[:160], "description": cleaned_issue[:300], "severity": "medium"})
+                subject = _detect_subject(cleaned_issue)
+                issues.append(
+                    {
+                        "title": _with_subject_title(cleaned_issue, subject),
+                        "description": _with_subject_description(cleaned_issue, subject),
+                        "subject": subject,
+                        "severity": "medium",
+                    }
+                )
     return {"todos": todos[:20], "decisions": decisions[:20], "issues": issues[:20]}
 
 

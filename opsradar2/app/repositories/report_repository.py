@@ -160,10 +160,10 @@ class ReportRepository:
                 "반복 여부와 운영 병목은 아래 Issue, Todo, 참고 자료의 근거를 기준으로 확인이 필요합니다.",
                 "",
                 "## 2. 주요 운영 이슈",
-                *table(["이슈", "관련 대상", "상태", "심각도", "영향 범위"], [
-                    [issue["title"], issue["source"], issue["status_label"], issue["severity_label"], issue["department"]]
+                *table(["이슈", "관련 대상", "등록일", "상태", "심각도", "영향 범위"], [
+                    [issue["title"], issue["source"], issue["registered_at"], issue["status_label"], issue["severity_label"], issue["department"]]
                     for issue in primary_issues
-                ] or [["해당 기간의 미해결 Issue가 없습니다.", "확인 필요", "-", "-", "-"]]),
+                ] or [["해당 기간의 미해결 Issue가 없습니다.", "확인 필요", "-", "-", "-", "-"]]),
                 "",
                 "## 3. 월간 리스크 분석",
                 *table(["리스크", "영향", "원인", "대응 방향"], [
@@ -196,7 +196,7 @@ class ReportRepository:
                 *([f"{index}. {clean(item['title'])} 상태와 담당 부서의 다음 조치를 확인" for index, item in enumerate([*active_todos, *primary_issues][:6], 1)] or ["1. 추가 운영 데이터 확인 필요"]),
                 "",
                 "## 8. 참고 자료",
-                *([f"- {clean(doc['title'])} ({clean(doc['doc_id'])})" for doc in documents] or ["- 해당 기간에 연결된 문서가 없습니다."]),
+                *([f"- [{clean(doc['title'])}](doc://{clean(doc['doc_id'])})" for doc in documents] or ["- 해당 기간에 연결된 문서가 없습니다."]),
             ])
             return "\n".join(lines)
 
@@ -211,10 +211,10 @@ class ReportRepository:
             "세부 영향과 우선 대응은 아래 근거 항목을 기준으로 확인해야 합니다.",
             "",
             "## 2. 주요 발생 이슈",
-            *table(["구분", "내용", "상태", "심각도", "관련 부서"], [
-                ["Issue", issue["title"], issue["status_label"], issue["severity_label"], issue["department"]]
+            *table(["구분", "내용", "등록일", "상태", "심각도", "관련 부서"], [
+                ["Issue", issue["title"], issue["registered_at"], issue["status_label"], issue["severity_label"], issue["department"]]
                 for issue in primary_issues
-            ] or [["Issue", "해당 기간의 미해결 Issue가 없습니다.", "-", "-", "-"]]),
+            ] or [["Issue", "해당 기간의 미해결 Issue가 없습니다.", "-", "-", "-", "-"]]),
             "",
             "## 3. 진행 중 Todo",
             *table(["Todo", "담당 부서 또는 담당자", "상태", "마감", "출처"], [
@@ -244,7 +244,7 @@ class ReportRepository:
             *([f"{index}. {clean(item['title'])}의 상태와 다음 조치를 확인" for index, item in enumerate([*active_todos, *primary_issues][:6], 1)] or ["1. 추가 운영 데이터 확인 필요"]),
             "",
             "## 7. 참고 자료",
-            *([f"- {clean(doc['title'])} ({clean(doc['doc_id'])})" for doc in documents] or ["- 해당 기간에 연결된 문서가 없습니다."]),
+            *([f"- [{clean(doc['title'])}](doc://{clean(doc['doc_id'])})" for doc in documents] or ["- 해당 기간에 연결된 문서가 없습니다."]),
         ])
         return "\n".join(lines)
 
@@ -650,6 +650,12 @@ class ReportRepository:
         severity = str(row.get("severity") or "medium").lower()
         severity_label = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low"}.get(severity, "확인 필요")
         department = cls._short_text(row.get("dept") or row.get("assignee_team"), 120)
+        created_at = row.get("created_at")
+        registered_at = (
+            created_at.date().isoformat()
+            if hasattr(created_at, "date")
+            else cls._short_text(created_at, 30) or "확인 필요"
+        )
         return {
             "id": row["id"],
             "title": cls._short_text(row.get("title"), 220) or "확인 필요",
@@ -662,6 +668,7 @@ class ReportRepository:
             "assignee": cls._short_text(row.get("assignee_name"), 80) or "미지정",
             "risk_reason": cls._short_text(row.get("risk_reason"), 500) or "원인 확인 필요",
             "source": cls._short_text(row.get("source"), 180) or "확인 필요",
+            "registered_at": registered_at,
         }
 
     @staticmethod

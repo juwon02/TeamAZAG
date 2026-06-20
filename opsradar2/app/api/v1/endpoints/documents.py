@@ -316,7 +316,12 @@ async def get_document_issues(document_id: str, db: AsyncSession = Depends(get_d
 
 
 @router.get("/{document_id}/download")
-async def download_document(document_id: str, db: AsyncSession = Depends(get_db)):
+async def download_document(
+    document_id: str,
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    actor = await _resolve_actor(db, authorization)
     try:
         doc_uuid = uuid.UUID(document_id)
     except ValueError as exc:
@@ -324,6 +329,22 @@ async def download_document(document_id: str, db: AsyncSession = Depends(get_db)
     document = await db.get(Document, doc_uuid)
     if not document or document.deleted_at is not None or not document.storage_uri:
         raise HTTPException(status_code=404, detail="document not found")
+    if str(actor.get("role") or "").lower() != "admin":
+        membership = await db.execute(
+            text(
+                """
+                SELECT 1
+                FROM project_members
+                WHERE project_id = :project_id
+                  AND user_id = CAST(:user_id AS uuid)
+                  AND status = 'active'
+                LIMIT 1
+                """
+            ),
+            {"project_id": str(document.project_id), "user_id": actor["user_id"]},
+        )
+        if membership.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="document not found")
     file_path = Path(document.storage_uri)
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="source file no longer exists")

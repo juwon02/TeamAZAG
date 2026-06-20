@@ -9,7 +9,7 @@
     return idMap.get(key);
   }
 
-  async function request(path, options = {}) {
+  function getAccessToken() {
     let token = localStorage.getItem("access_token");
     if (!token) {
       try {
@@ -21,6 +21,11 @@
     if (!token) {
       try { token = JSON.parse(localStorage.getItem("auth") || "null")?.token || null; } catch (_) {}
     }
+    return token;
+  }
+
+  async function fetchApi(path, options = {}) {
+    const token = getAccessToken();
     const headers = options.body instanceof FormData
       ? { ...(options.headers || {}) }
       : { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -38,16 +43,52 @@
         throw new Error("운영 API 서버에 연결할 수 없습니다. 백엔드(8002) 상태를 확인하세요.");
       }
     }
+    return res;
+  }
+
+  async function errorDetail(res) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      detail = body.detail || body.message || detail;
+    } catch (_) {}
+    return res.status === 401 ? "로그인이 만료되었습니다. 다시 로그인해 주세요." : detail;
+  }
+
+  async function request(path, options = {}) {
+    const res = await fetchApi(path, options);
     if (!res.ok) {
-      let detail = `${res.status} ${res.statusText}`;
-      try {
-        const body = await res.json();
-        detail = body.detail || body.message || detail;
-      } catch (_) {}
-      if (res.status === 401) detail = "로그인이 만료되었습니다. 다시 로그인해 주세요.";
-      throw new Error(detail);
+      throw new Error(await errorDetail(res));
     }
     return res.status === 204 ? null : res.json();
+  }
+
+  function filenameFromDisposition(disposition, fallbackName) {
+    const encoded = String(disposition || "").match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const plain = String(disposition || "").match(/filename="?([^";]+)"?/i)?.[1];
+    try {
+      return decodeURIComponent(encoded || plain || fallbackName);
+    } catch (_) {
+      return plain || fallbackName;
+    }
+  }
+
+  async function downloadDocument(documentId, fallbackName = "source-document") {
+    if (!documentId) throw new Error("다운로드할 문서 정보가 없습니다.");
+    const res = await fetchApi(`/documents/${encodeURIComponent(documentId)}/download`, {
+      headers: { Accept: "application/octet-stream" },
+    });
+    if (!res.ok) throw new Error(await errorDetail(res));
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filenameFromDisposition(res.headers.get("content-disposition"), fallbackName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   function replaceArray(target, values) {
@@ -774,6 +815,7 @@
 
   window.opsRadarApi = {
     request,
+    downloadDocument,
     uploadDocument,
     getDocumentStatus,
     getDocumentChunks,
