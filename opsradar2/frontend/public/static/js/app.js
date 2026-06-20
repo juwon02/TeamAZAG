@@ -1860,8 +1860,33 @@ window.openAssistantTodoDetail=openAssistantTodoDetail;
 // ════════════════════════════════════════════════
 // AI Assistant (흐름 5)
 // ════════════════════════════════════════════════
-const CHAT_SESSION_KEY = 'opsradar_chat_sessions';
-const CHAT_CURRENT_KEY = 'opsradar_current_session_id';
+const CHAT_SESSION_KEY_PREFIX = 'opsradar_chat_sessions';
+const CHAT_CURRENT_KEY_PREFIX = 'opsradar_current_session_id';
+function getChatStorageScope(){
+  let user = null;
+  try{ user=JSON.parse(localStorage.getItem('opsradar_session') || 'null')?.user || null; }catch(e){}
+  let fallbackUser = null;
+  try{ fallbackUser=JSON.parse(localStorage.getItem('user') || 'null'); }catch(e){}
+  const identity = user?.id || user?.username || user?.email || localStorage.getItem('opsradar_user_id') || fallbackUser?.id || fallbackUser?.username || localStorage.getItem('opsradar_user_name');
+  const safeIdentity = String(identity || 'signed-out').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '_').slice(0, 120);
+  return safeIdentity || 'signed-out';
+}
+function getChatStorageKeys(){
+  const scope=getChatStorageScope();
+  return {
+    scope,
+    sessionsKey:`${CHAT_SESSION_KEY_PREFIX}:${scope}`,
+    currentKey:`${CHAT_CURRENT_KEY_PREFIX}:${scope}`,
+  };
+}
+function ensureChatStorageScope(){
+  const { scope }=getChatStorageKeys();
+  if(G.chatStorageScope===scope) return false;
+  G.chatStorageScope=scope;
+  G.currentChatSessionId=null;
+  G.lastChatPrompt='';
+  return true;
+}
 function getInitialChatHtml(){
   return `
     <div class="msg chat-intro-msg"><div class="msg-av av-ai"><i class="ti ti-sparkles" style="font-size:13px"></i></div>
@@ -1874,11 +1899,13 @@ function getInitialChatHtml(){
     </div></div></div>`;
 }
 function loadChatSessions(){
-  try{ const raw=localStorage.getItem(CHAT_SESSION_KEY); if(raw) return JSON.parse(raw).filter(Boolean); }catch(e){}
+  const { sessionsKey }=getChatStorageKeys();
+  try{ const raw=localStorage.getItem(sessionsKey); if(raw) return JSON.parse(raw).filter(Boolean); }catch(e){}
   return [];
 }
 function saveChatSessions(sessions){
-  try{ localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(sessions || [])); }catch(e){}
+  const { sessionsKey }=getChatStorageKeys();
+  try{ localStorage.setItem(sessionsKey, JSON.stringify(sessions || [])); }catch(e){}
 }
 function generateSessionTitle(firstUserMessage){
   const text=normalizeText(firstUserMessage || '').trim();
@@ -1894,18 +1921,22 @@ function summarizeChatSession(session){
   return `${userMsgs[0].slice(0,42)}${userMsgs[0].length>42?'…':''}`;
 }
 function getCurrentChatSession(){
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions();
-  let id=localStorage.getItem(CHAT_CURRENT_KEY);
+  let id=localStorage.getItem(currentKey);
   let session=sessions.find(s=>s.id===id);
   if(!session){ session=createNewChatSession(false); }
   return session;
 }
 function createNewChatSession(showNotice=true){
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions();
   const session={ id:'session_'+Date.now(), title:'새 운영 질문 기록', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), summary:'아직 요약 전입니다.', messages:[] };
   sessions.unshift(session);
   saveChatSessions(sessions.slice(0,20));
-  localStorage.setItem(CHAT_CURRENT_KEY, session.id);
+  localStorage.setItem(currentKey, session.id);
   G.currentChatSessionId=session.id;
   G.lastChatPrompt='';
   renderChatSessionList();
@@ -1914,9 +1945,11 @@ function createNewChatSession(showNotice=true){
   return session;
 }
 function setCurrentChatSession(sessionId){
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const session=loadChatSessions().find(s=>s.id===sessionId);
   if(!session) return;
-  localStorage.setItem(CHAT_CURRENT_KEY, session.id);
+  localStorage.setItem(currentKey, session.id);
   G.currentChatSessionId=session.id;
   G.lastChatPrompt=(session.messages||[]).filter(m=>m.role==='user').slice(-1)[0]?.content || '';
   renderChatSessionList();
@@ -1924,8 +1957,10 @@ function setCurrentChatSession(sessionId){
 }
 function saveMessageToCurrentSession(role, content, meta={}){
   if(G.restoringChat) return;
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions();
-  let session=sessions.find(s=>s.id===(localStorage.getItem(CHAT_CURRENT_KEY) || G.currentChatSessionId));
+  let session=sessions.find(s=>s.id===(localStorage.getItem(currentKey) || G.currentChatSessionId));
   if(!session){ session=createNewChatSession(false); return saveMessageToCurrentSession(role, content, meta); }
   const message={ role, content:normalizeText(content), createdAt:new Date().toISOString(), ...meta };
   session.messages=session.messages || [];
@@ -1935,7 +1970,7 @@ function saveMessageToCurrentSession(role, content, meta={}){
   session.summary=(session.messages.length>8) ? `${session.messages.length}개 메시지를 요약 카드로 접어 표시 중` : '요약 전';
   const next=[session, ...sessions.filter(s=>s.id!==session.id)].slice(0,20);
   saveChatSessions(next);
-  localStorage.setItem(CHAT_CURRENT_KEY, session.id);
+  localStorage.setItem(currentKey, session.id);
   renderChatSessionList();
 }
 function formatChatSessionDate(value){
@@ -1944,9 +1979,11 @@ function formatChatSessionDate(value){
 }
 function renderChatSessionList(){
   const list=document.getElementById('chatSessionList'); if(!list) return;
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions();
   if(!sessions.length){ list.innerHTML='<div class="chat-session-empty">저장된 운영 질문 기록이 없습니다.</div>'; return; }
-  const currentId=localStorage.getItem(CHAT_CURRENT_KEY) || G.currentChatSessionId;
+  const currentId=localStorage.getItem(currentKey) || G.currentChatSessionId;
   list.innerHTML=sessions.map(session=>{
     const messages=session.messages || [];
     const lastUser=[...messages].reverse().find(m=>m.role==='user');
@@ -1961,30 +1998,42 @@ function renderChatSessionList(){
 }
 function deleteChatSession(sessionId){
   if(!confirm('이 분석 세션을 삭제할까요?')) return;
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions().filter(s=>s.id!==sessionId);
   saveChatSessions(sessions);
-  if((localStorage.getItem(CHAT_CURRENT_KEY) || G.currentChatSessionId)===sessionId){
-    if(sessions[0]) localStorage.setItem(CHAT_CURRENT_KEY,sessions[0].id); else localStorage.removeItem(CHAT_CURRENT_KEY);
+  if((localStorage.getItem(currentKey) || G.currentChatSessionId)===sessionId){
+    if(sessions[0]) localStorage.setItem(currentKey,sessions[0].id); else localStorage.removeItem(currentKey);
   }
   if(!sessions.length) createNewChatSession(false); else { renderChatSessionList(); renderCurrentChatMessages(); }
   showToast('분석 세션을 삭제했습니다.','success');
 }
 function clearCurrentChatSession(){
   if(!confirm('현재 분석 세션의 대화 내용을 초기화할까요?')) return;
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   const sessions=loadChatSessions();
-  const currentId=localStorage.getItem(CHAT_CURRENT_KEY) || G.currentChatSessionId;
+  const currentId=localStorage.getItem(currentKey) || G.currentChatSessionId;
   const session=sessions.find(s=>s.id===currentId);
   if(session){ session.messages=[]; session.title='새 운영 질문 기록'; session.summary='아직 요약 전입니다.'; session.updatedAt=new Date().toISOString(); saveChatSessions(sessions); }
   renderChatSessionList();
   renderCurrentChatMessages();
 }
 function initChatSessions(){
+  ensureChatStorageScope();
+  const { currentKey }=getChatStorageKeys();
   let sessions=loadChatSessions();
   if(!sessions.length) createNewChatSession(false);
-  else if(!sessions.some(s=>s.id===localStorage.getItem(CHAT_CURRENT_KEY))) localStorage.setItem(CHAT_CURRENT_KEY,sessions[0].id);
+  else if(!sessions.some(s=>s.id===localStorage.getItem(currentKey))) localStorage.setItem(currentKey,sessions[0].id);
   renderChatSessionList();
   renderCurrentChatMessages();
 }
+window.resetPrivateChatView=function(){
+  G.chatStorageScope=null;
+  G.currentChatSessionId=null;
+  G.lastChatPrompt='';
+  if(document.getElementById('chatArea')) initChatSessions();
+};
 function renderCurrentChatMessages(){
   const area=document.getElementById('chatArea'); if(!area) return;
   const session=getCurrentChatSession();
@@ -3482,6 +3531,9 @@ function clearOpsRadarSession(){
     localStorage.removeItem('token');
     localStorage.removeItem('auth');
     sessionStorage.clear();
+    G.chatStorageScope=null;
+    G.currentChatSessionId=null;
+    G.lastChatPrompt='';
   }catch(e){}
 }
 function getStoredUserInfo(){

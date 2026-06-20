@@ -29,6 +29,8 @@ function App() {
     window.localStorage.setItem("opsradar_session", JSON.stringify(sessionData));
     window.localStorage.setItem("opsradar_user_role", data.user.role);
     window.localStorage.setItem("opsradar_user_name", data.user.name);
+    window.localStorage.setItem("opsradar_user_id", data.user.id);
+    window.resetPrivateChatView?.();
     setSession(sessionData);
     // Static workflow data may have loaded before authentication. Refresh it once
     // the session token exists so calendar, Todo, and member data use the new session.
@@ -41,6 +43,7 @@ function App() {
     window.localStorage.removeItem("opsradar_session");
     window.localStorage.removeItem("opsradar_user_role");
     window.localStorage.removeItem("opsradar_user_name");
+    window.localStorage.removeItem("opsradar_user_id");
     setSession(null);
   }
 

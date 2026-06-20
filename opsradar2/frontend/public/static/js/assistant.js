@@ -36,6 +36,72 @@
     return `${item.title || "제목 확인 필요"} · ${state} · ${owner}${due}`;
   }
 
+  function sourceItems(sources) {
+    return (Array.isArray(sources) ? sources : [sources]).filter(Boolean);
+  }
+
+  function documentSources(sources) {
+    const seen = new Set();
+    return sourceItems(sources)
+      .filter((source) => source && typeof source === "object" && source.type === "document" && source.id)
+      .map((source) => ({ id: String(source.id), title: String(source.title || "출처 문서") }))
+      .filter((source) => !seen.has(source.id) && seen.add(source.id));
+  }
+
+  function sourceDownloadButton(source) {
+    return `<button type="button" class="assistant-source-download" data-document-id="${escapeHtml(source.id)}" data-document-name="${escapeHtml(source.title)}" title="원본 문서 다운로드">${escapeHtml(source.title)}</button>`;
+  }
+
+  function bindAssistantDocumentDownloads(container) {
+    container?.querySelectorAll(".assistant-source-download").forEach((button) => {
+      if (button._assistantDownloadBound) return;
+      button._assistantDownloadBound = true;
+      button.addEventListener("click", async () => {
+        if (!window.opsRadarApi?.downloadDocument) {
+          window.showToast?.("문서 다운로드 연결을 준비 중입니다. 잠시 후 다시 시도해주세요.", "warn");
+          return;
+        }
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "다운로드 중...";
+        try {
+          await window.opsRadarApi.downloadDocument(button.dataset.documentId, button.dataset.documentName || "source-document");
+        } catch (error) {
+          console.warn("Assistant source document download failed", error);
+          window.showToast?.(error.message || "출처 문서를 다운로드하지 못했습니다.", "warn");
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+    });
+  }
+
+  function renderAssistantDocumentContext(sources) {
+    const documents = documentSources(sources);
+    const container = document.getElementById("chatSourceList");
+    if (!container) return;
+    if (!documents.length) {
+      renderChatContextList("chatSourceList", normalizeSources(sources), "근거 문서가 연결되지 않았습니다.");
+      return;
+    }
+    container.innerHTML = documents.map((source) => `
+      <div class="chat-context-item text-content">
+        <strong>${sourceDownloadButton(source)}</strong>
+        <span>클릭하면 AI 답변의 원본 문서를 다운로드합니다.</span>
+      </div>`).join("");
+    bindAssistantDocumentDownloads(container);
+  }
+
+  function renderAssistantSourceSummary(sources) {
+    const documents = documentSources(sources);
+    if (documents.length) {
+      return `<div class="ai-card-source"><i class="ti ti-file-text" style="font-size:11px"></i><span>근거 문서</span><div class="assistant-source-download-list">${documents.map(sourceDownloadButton).join("")}</div></div>`;
+    }
+    const labels = normalizeSources(sources);
+    return labels.length ? `<div class="ai-card-source"><i class="ti ti-file-text" style="font-size:11px"></i> 근거: ${escapeHtml(labels.join(", "))}</div>` : "";
+  }
+
   function updateAssistantStatus(mode) {
     const badge = document.getElementById("chatAssistantStatus");
     if (!badge) return;
@@ -46,10 +112,9 @@
   }
 
   window.updateChatContextPanel = function (_text = "", sources = null, context = {}) {
-    const documents = normalizeSources(sources);
     const todos = (context.related_todos || context.relatedTodos || []).map((item) => relatedLabel(item, "todo"));
     const issues = (context.related_issues || context.relatedIssues || []).map((item) => relatedLabel(item, "issue"));
-    renderChatContextList("chatSourceList", documents, "근거 문서가 연결되지 않았습니다.");
+    renderAssistantDocumentContext(sources);
     renderChatContextList("chatTodoList", todos, "직접 연결된 Todo 없음");
     renderChatContextList("chatIssueList", issues, "직접 연결된 Issue 없음");
   };
@@ -68,10 +133,11 @@
       const questionButtons = questions.length
         ? `<div class="assistant-suggestions">${questions.slice(0, 3).map((question) => `<button type="button" class="assistant-suggestion" data-chat-question="${escapeHtml(question)}">${escapeHtml(question)}</button>`).join("")}</div>`
         : "";
-      div.innerHTML = `<div class="msg-av av-ai"><i class="ti ti-sparkles" style="font-size:13px"></i></div><div class="assistant-response-wrap"><div class="ai-analysis-card"><div class="ai-card-kicker">GROUNDED OPERATION ANALYSIS</div><div class="ai-card-title">운영 근거 기반 답변</div><div class="assistant-answer text-content">${renderMarkdown(text)}</div>${normalizeSources(sources).length ? `<div class="ai-card-source"><i class="ti ti-file-text" style="font-size:11px"></i> 근거: ${escapeHtml(normalizeSources(sources).join(", "))}</div>` : ""}</div>${questionButtons}${withBtn ? '<div style="margin-top:6px"><div class="tbtn" style="font-size:10px;padding:4px 10px;color:var(--accent)" onclick="nav(\'knowledge\')"><i class="ti ti-transfer"></i> 인수인계 문서 생성</div></div>' : ""}</div>`;
+      div.innerHTML = `<div class="msg-av av-ai"><i class="ti ti-sparkles" style="font-size:13px"></i></div><div class="assistant-response-wrap"><div class="ai-analysis-card"><div class="ai-card-kicker">GROUNDED OPERATION ANALYSIS</div><div class="ai-card-title">운영 근거 기반 답변</div><div class="assistant-answer text-content">${renderMarkdown(text)}</div>${renderAssistantSourceSummary(sources)}</div>${questionButtons}${withBtn ? '<div style="margin-top:6px"><div class="tbtn" style="font-size:10px;padding:4px 10px;color:var(--accent)" onclick="nav(\'knowledge\')"><i class="ti ti-transfer"></i> 인수인계 문서 생성</div></div>' : ""}</div>`;
       div.querySelectorAll("[data-chat-question]").forEach((button) => {
         button.addEventListener("click", () => window.sendMsg(button.dataset.chatQuestion));
       });
+      bindAssistantDocumentDownloads(div);
       window.updateChatContextPanel(G.lastChatPrompt || "", sources, context);
       saveMessageToCurrentSession("assistant", text, { src: sources, withBtn, context });
     }
