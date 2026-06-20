@@ -4,7 +4,100 @@
     completed:"완료된 업무", inProgress:"진행 중인 업무", technical:"AI 및 기술적 상세 내용",
     risk:"리스크 관리 및 해결 방안", retrospective:"팀 회고", nextPlan:"차주 계획"
   };
-  const keys = Object.fromEntries(Object.entries(labels).map(([key, value]) => [value, key]));
+  const keys = {
+    ...Object.fromEntries(Object.entries(labels).map(([key, value]) => [value, key])),
+    "주요 발생 이슈":"technical", "주요 운영 이슈":"technical",
+    "진행 중 Todo":"inProgress", "미완료 업무":"inProgress",
+    "미해결 리스크":"risk", "월간 리스크 분석":"risk",
+    "부서별 확인사항":"retrospective", "부서별 진행 현황":"retrospective",
+    "다음 액션":"nextPlan", "다음 달 관리 포인트":"nextPlan"
+  };
+
+  function escapeMarkdownHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function tableCells(line) {
+    return String(line || "").trim().replace(/^\||\|$/g, "").split("|").map((cell) => escapeMarkdownHtml(cell.trim()));
+  }
+
+  function isTableDivider(line) {
+    return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(String(line || ""));
+  }
+
+  window.renderReportMarkdown = function (content) {
+    const lines = String(content || "").replace(/\r\n?/g, "\n").split("\n");
+    const html = [];
+    let paragraph = [];
+    let listType = null;
+    const flushParagraph = () => {
+      if (paragraph.length) html.push(`<p class="text-content">${paragraph.map(escapeMarkdownHtml).join(" ")}</p>`);
+      paragraph = [];
+    };
+    const closeList = () => {
+      if (listType) html.push(`</${listType}>`);
+      listType = null;
+    };
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const tableHeader = line.trim().startsWith("|") && isTableDivider(lines[index + 1]);
+      if (tableHeader) {
+        flushParagraph(); closeList();
+        const header = tableCells(line);
+        const rows = [];
+        index += 2;
+        while (index < lines.length && lines[index].trim().startsWith("|")) {
+          rows.push(tableCells(lines[index]));
+          index += 1;
+        }
+        index -= 1;
+        html.push(`<div class="report-markdown-table-wrap"><table class="report-markdown-table"><thead><tr>${header.map((cell) => `<th>${cell}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${header.map((_, cellIndex) => `<td>${row[cellIndex] || ""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        continue;
+      }
+      const heading = line.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        flushParagraph(); closeList();
+        const level = Math.min(heading[1].length + 1, 4);
+        html.push(`<h${level} class="report-markdown-h${level}">${escapeMarkdownHtml(heading[2])}</h${level}>`);
+        continue;
+      }
+      const bullet = line.match(/^\s*-\s+(.+)$/);
+      const numbered = line.match(/^\s*\d+\.\s+(.+)$/);
+      if (bullet || numbered) {
+        flushParagraph();
+        const nextType = numbered ? "ol" : "ul";
+        if (listType && listType !== nextType) closeList();
+        if (!listType) { html.push(`<${nextType} class="report-markdown-list">`); listType = nextType; }
+        html.push(`<li class="text-content">${escapeMarkdownHtml((bullet || numbered)[1])}</li>`);
+        continue;
+      }
+      if (!line.trim()) { flushParagraph(); closeList(); continue; }
+      paragraph.push(line.trim());
+    }
+    flushParagraph(); closeList();
+    return html.join("");
+  };
+
+  window.sanitizeStoredReportHtml = function (content) {
+    const template = document.createElement("template");
+    template.innerHTML = String(content || "");
+    template.content.querySelectorAll("script,style,iframe,object,embed,link,meta").forEach((node) => node.remove());
+    template.content.querySelectorAll("*").forEach((node) => {
+      Array.from(node.attributes).forEach((attribute) => {
+        if (attribute.name !== "class") node.removeAttribute(attribute.name);
+      });
+      if (node.hasAttribute("class")) {
+        const safeClasses = node.className.split(/\s+/).filter((name) => name === "text-content" || name.startsWith("report-markdown-"));
+        if (safeClasses.length) node.className = safeClasses.join(" ");
+        else node.removeAttribute("class");
+      }
+    });
+    return template.innerHTML;
+  };
 
   window.parseReportMarkdown = function (content) {
     const sections = Object.fromEntries(Object.keys(labels).map((key) => [key, []]));
@@ -87,13 +180,18 @@
         id: generated.report_id, apiId: generated.report_id, type,
         title: type === "monthly" ? `${startDate.slice(0, 7)} 월간 운영 보고서` : `${startDate} 주간 운영 보고서`,
         period: `${generated.start_date} ~ ${generated.end_date}`,
-        sections, html: generated.content, createdAt: new Date().toISOString(),
+        sections, markdown: generated.content, html: generated.content, createdAt: new Date().toISOString(),
       };
       closeModal("reportPeriodModal");
       await window.opsRadarApi.loadReports();
-      renderReportDraft({ ...draft, sections: Object.entries(sections).map(([key, items]) => [labels[key], items]) });
+      window.renderReportDraft({ ...draft, sections: Object.entries(sections).map(([key, items]) => [labels[key], items]) });
       G.currentReportDraft = draft;
-      showToast(`${getReportTypeLabel(type)} AI 초안을 생성했습니다.`, "success");
+      showToast(
+        generated.generation_mode === "fallback"
+          ? `${getReportTypeLabel(type)} 근거 기반 초안을 생성했습니다. AI 연결 상태를 확인하면 더 풍부한 판단 문서로 생성됩니다.`
+          : `${getReportTypeLabel(type)} AI 초안을 생성했습니다.`,
+        generated.generation_mode === "fallback" ? "info" : "success",
+      );
     } catch (error) {
       console.warn("Report draft generation failed", error);
       showToast(`보고서 초안 생성에 실패했습니다. ${error.message || ""}`, "warn");

@@ -25,6 +25,7 @@ class CalendarRepository:
                   ce.starts_at::date::text AS event_date,
                   to_char(ce.starts_at, 'HH24:MI') AS event_time,
                   ce.event_type,
+                  ce.member_id::text AS member_id,
                   u.name AS person,
                   ce.source_type,
                   ce.approval_status,
@@ -143,15 +144,19 @@ class CalendarRepository:
             text(
                 """
                 WITH target AS (
-                  SELECT source_type
+                  SELECT title, member_id, created_at
                   FROM calendar_events
                   WHERE id = CAST(:event_id AS uuid)
                     AND project_id = CAST(:project_id AS uuid)
-                    AND source_type LIKE 'absence:%'
+                    AND event_type = 'absence'
                 )
                 DELETE FROM calendar_events
                 WHERE project_id = CAST(:project_id AS uuid)
-                  AND source_type = (SELECT source_type FROM target)
+                  AND event_type = 'absence'
+                  AND source_type = 'manual'
+                  AND title = (SELECT title FROM target)
+                  AND member_id IS NOT DISTINCT FROM (SELECT member_id FROM target)
+                  AND created_at = (SELECT created_at FROM target)
                 """
             ),
             {"event_id": event_id, "project_id": project_id},

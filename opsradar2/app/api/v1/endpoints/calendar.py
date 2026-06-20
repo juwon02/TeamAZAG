@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
@@ -113,9 +113,6 @@ async def create_calendar_events(
         if duplicate:
             raise HTTPException(409, "an identical calendar event already exists")
 
-    source_type = "manual"
-    if event_type == "absence" and len(event_dates) > 1:
-        source_type = f"absence:{uuid4()}"
     return await service.create_events(
         {
             "project_id": project_id,
@@ -123,7 +120,9 @@ async def create_calendar_events(
             "event_time": event_time,
             "event_type": event_type,
             "member_id": member_id,
-            "source_type": source_type,
+            # The live DB only permits ai, manual, and chat here. A range is
+            # grouped from its shared transaction timestamp on read/delete.
+            "source_type": "manual",
         },
         event_dates,
     )

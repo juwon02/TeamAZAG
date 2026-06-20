@@ -38,6 +38,7 @@ function CalendarScreen() {
   useEffect(() => {
     const grid = document.getElementById('calGrid')
     if (!grid) return
+    window.dispatchEvent(new Event('opsradar:calendar-ready'))
     const run = () => capTags(grid)
     run()
     // childList(직계 .cal-cell 추가/제거)만 관찰 → 후처리(셀 내부 변경)는 재트리거 안 함(루프 방지).
@@ -54,6 +55,9 @@ function CalendarScreen() {
           <span id="calUpdatedBadge" className="badge b-success" style={{ display: 'none' }}>방금 업데이트됨</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select id="calendarTeamFilter" className="calendar-team-filter" aria-label="캘린더 팀 필터" defaultValue="전체" onChange={(event) => window.setCalendarTeamFilter?.(event.target.value)}>
+            <option value="전체">전체</option><option value="영업관리팀">영업관리팀</option><option value="구매팀">구매팀</option><option value="품질 클레임팀">품질 클레임팀</option><option value="물류팀">물류팀</option>
+          </select>
           <div className="tbtn primary" onClick={() => window.openAISuggestModal?.()} style={{ gap: '5px' }}>
             <i className="ti ti-sparkles"></i> AI 추천 일정 생성
           </div>

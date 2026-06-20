@@ -1,6 +1,7 @@
 """Report business logic."""
 
 from app.repositories.report_repository import ReportRepository
+from app.services.report_draft_service import ReportDraftService
 
 
 class ReportService:
@@ -14,9 +15,16 @@ class ReportService:
         start_date: str | None = None,
     ) -> dict:
         normalized_period = "monthly" if period == "monthly" else "weekly"
-        if start_date:
-            return await self.repo.generate(normalized_period, project_id=project_id, start_date=start_date)
-        return await self.repo.generate(normalized_period, project_id=project_id)
+        prepared = await self.repo.prepare_generation(
+            normalized_period,
+            project_id=project_id,
+            start_date=start_date,
+        )
+        ai_content = await ReportDraftService().generate(normalized_period, prepared["report_input"])
+        content = ai_content or self.repo.fallback_content(prepared)
+        result = await self.repo.store_generated(prepared, content)
+        result["generation_mode"] = "ai" if ai_content else "fallback"
+        return result
 
     async def update_report(self, report_id: str, content: str) -> bool:
         return await self.repo.update(report_id, content)

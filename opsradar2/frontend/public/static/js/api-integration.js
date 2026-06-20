@@ -25,16 +25,26 @@
       ? { ...(options.headers || {}) }
       : { "Content-Type": "application/json", ...(options.headers || {}) };
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API}${path}`, {
-      ...options,
-      headers,
-    });
+    const requestOptions = { ...options, headers };
+    let res;
+    try {
+      res = await fetch(`${API}${path}`, requestOptions);
+    } catch (networkError) {
+      const fallbackApi = API.replace("//localhost:8002", "//127.0.0.1:8002");
+      if (fallbackApi === API) throw networkError;
+      try {
+        res = await fetch(`${fallbackApi}${path}`, requestOptions);
+      } catch (_) {
+        throw new Error("운영 API 서버에 연결할 수 없습니다. 백엔드(8002) 상태를 확인하세요.");
+      }
+    }
     if (!res.ok) {
       let detail = `${res.status} ${res.statusText}`;
       try {
         const body = await res.json();
         detail = body.detail || body.message || detail;
       } catch (_) {}
+      if (res.status === 401) detail = "로그인이 만료되었습니다. 다시 로그인해 주세요.";
       throw new Error(detail);
     }
     return res.status === 204 ? null : res.json();
@@ -241,6 +251,7 @@
     renderMemberAdminPanel();
     applyTodoRecommendations();
     window.applyWorkflowRoleVisibility?.();
+    window.refreshCalendarTeamFilter?.();
     window.renderTodos?.();
     window.syncTodoCalendar?.();
     return members;
@@ -343,7 +354,11 @@
     } catch (error) { console.warn("Member delete API failed", error); showToast("담당자 삭제에 실패했습니다.", "warn"); }
   };
   function isAbsenceRange(event) {
-    return String(event?.source_type || "").startsWith("absence:");
+    return event?.event_type === "absence" && Boolean(event?.created_at);
+  }
+
+  function absenceRangeKey(event) {
+    return [event.member_id || "", event.title || "", event.created_at || ""].join("|");
   }
 
   function shortCalendarDate(value) {
@@ -354,13 +369,14 @@
   function absenceRangeMeta(events) {
     const groups = new Map();
     events.filter(isAbsenceRange).forEach((event) => {
-      const key = String(event.source_type);
+      const key = absenceRangeKey(event);
       const group = groups.get(key) || [];
       group.push(event);
       groups.set(key, group);
     });
     const metaById = new Map();
     groups.forEach((group, sourceType) => {
+      if (group.length < 2) return;
       const sorted = [...group].sort((left, right) => String(left.event_date).localeCompare(String(right.event_date)));
       const first = sorted[0];
       const last = sorted[sorted.length - 1];
@@ -402,7 +418,10 @@
         t: tagTitle,
         c: `${calendarClass(event.event_type)}${rangeClass}`,
         eventType: event.event_type,
+        memberId: event.member_id || "",
+        person: event.person || "",
         sourceType: event.source_type || "manual",
+        isAbsenceRange: Boolean(range),
         rangeLabel: range
           ? `${[event.person, event.title].filter(Boolean).join(" ")} · ${shortCalendarDate(range.startDate)}~${shortCalendarDate(range.endDate)}`
           : "",

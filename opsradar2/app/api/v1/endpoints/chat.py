@@ -12,10 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.llm_client import AzureOpenAIConfigError
 from app.ai.retriever import build_context, retrieve
 from app.ai.summarizer import answer_question, extract_todos
+from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.assistant_context_service import AssistantContextService
+from app.services.operational_assistant_service import OperationalAssistantService
 
 router = APIRouter()
 
@@ -37,59 +39,25 @@ class ExtractRequest(BaseModel):
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(payload: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """Answer with current WorkRader data, plus document RAG when available."""
-    operational_context, operational_sources = await AssistantContextService(db).build_context()
-    team_members = await _load_team_members(db)
-
-    rag_context = ""
-    rag_sources: list[dict] = []
-    try:
-        results = await retrieve(payload.message, top_k=3)
-        rag_context = build_context(results)
-        rag_sources = [
-            {
-                "title": result.get("source") or result.get("file_name"),
-                "score": result.get("score"),
-                "document_id": result.get("document_id"),
-                "type": "document",
-            }
-            for result in results
-        ]
-    except (FileNotFoundError, AzureOpenAIConfigError, ModuleNotFoundError, RuntimeError, ValueError):
-        rag_context = ""
-
-    context = "\n\n".join(part for part in [rag_context, operational_context] if part.strip())
-    knowledge_answer = _local_knowledge_answer(payload.message, rag_context)
-    if knowledge_answer:
-        answer = knowledge_answer
-    elif _is_operational_question(payload.message):
-        answer = _local_answer(payload.message, operational_context, team_members)
-    elif settings.AI_PROVIDER.lower() != "azure":
-        answer = _local_knowledge_answer(payload.message, rag_context) or _local_answer(payload.message, operational_context, team_members)
-    else:
-        try:
-            answer_result = await answer_question(payload.message, context)
-            answer = answer_result.get("answer", "")
-        except Exception:
-            answer = _local_answer(payload.message, operational_context, team_members)
-
-        if not answer.strip() or "AI_PROVIDER=azure" in answer:
-            answer = _local_answer(payload.message, operational_context, team_members)
-
-    return ChatResponse(
-        answer=answer,
-        sources=rag_sources + operational_sources,
-        suggested_questions=[
-            "현재 위험한 이슈가 뭐야?",
-            "미완료 Todo 알려줘",
-            "다가오는 일정 알려줘",
-        ],
+async def chat(
+    payload: ChatRequest,
+    actor: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Answer only from the authenticated user's project-scoped evidence."""
+    result = await OperationalAssistantService(db).answer(
+        message=payload.message,
+        actor=actor,
+        history=[item.model_dump() for item in payload.history],
     )
+    return ChatResponse(**result)
 
 
 @router.post("/extract")
-async def extract_from_text(payload: ExtractRequest):
+async def extract_from_text(
+    payload: ExtractRequest,
+    _actor: dict = Depends(get_current_user),
+):
     result = await extract_todos(payload.text)
     return {
         "todos": result.get("todos", []),

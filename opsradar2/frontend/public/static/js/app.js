@@ -327,6 +327,20 @@ function renderReportDetail(report){
     return;
   }
   const sections = normalizeReportSections(report.sections);
+  const markdown = report.markdown || (report.html && !String(report.html).trim().startsWith('<') ? report.html : '');
+  const savedHtml = report.html && String(report.html).trim().startsWith('<') ? report.html : '';
+  const reportBody = markdown && typeof window.renderReportMarkdown === 'function'
+    ? `<section class="report-doc-section report-markdown-content">${window.renderReportMarkdown(markdown)}</section>`
+    : savedHtml && typeof window.sanitizeStoredReportHtml === 'function'
+      ? `<section class="report-doc-section report-markdown-content">${window.sanitizeStoredReportHtml(savedHtml)}</section>`
+    : `
+      ${reportSectionHtml('완료된 업무', sections.completed)}
+      ${reportSectionHtml('진행 중인 업무', sections.inProgress)}
+      ${reportSectionHtml('AI 및 기술적 상세 내용', sections.technical)}
+      ${reportSectionHtml('리스크 관리 및 해결 방안', sections.risk)}
+      ${reportSectionHtml('팀 회고', sections.retrospective)}
+      ${reportSectionHtml('차주 계획', sections.nextPlan)}
+      ${reportSectionHtml('관련 문서 / 출처', report.docs || ['연결된 문서가 없습니다.'])}`;
   detail.className = 'report-detail-doc';
   detail.innerHTML = `
     <div class="report-doc-head">
@@ -346,13 +360,7 @@ function renderReportDetail(report){
         <button class="tbtn" type="button" onclick="shareReport('${escapeHtml(report.id)}')"><i class="ti ti-share"></i> 공유</button>
       </div>
     </div>
-    ${reportSectionHtml('완료된 업무', sections.completed)}
-    ${reportSectionHtml('진행 중인 업무', sections.inProgress)}
-    ${reportSectionHtml('AI 및 기술적 상세 내용', sections.technical)}
-    ${reportSectionHtml('리스크 관리 및 해결 방안', sections.risk)}
-    ${reportSectionHtml('팀 회고', sections.retrospective)}
-    ${reportSectionHtml('차주 계획', sections.nextPlan)}
-    ${reportSectionHtml('관련 문서 / 출처', report.docs || ['연결된 문서가 없습니다.'])}`;
+    ${reportBody}`;
 }
 function getReportDraftData(type){
   const selected = type || G.currentReportPeriod || 'weekly';
@@ -399,13 +407,19 @@ function renderReportDraft(data){
   if(!editor || !editorWrap) return;
   if(detail) detail.style.display = 'none';
   editorWrap.style.display = 'flex';
+  const markdown = data.markdown || (data.html && !String(data.html).trim().startsWith('<') ? data.html : '');
+  const savedHtml = data.html && String(data.html).trim().startsWith('<') ? data.html : '';
   const sectionHtml = data.sections.map(([title,items]) => `
     <h3 class="text-content" style="font-size:13px;font-weight:700;color:var(--text);margin:14px 0 6px">${escapeHtml(title)}</h3>
     <ul style="padding-left:18px;margin:0 0 8px;color:var(--text2)">${(Array.isArray(items)?items:[items]).map(item=>`<li class="text-content" style="margin:4px 0">${escapeHtml(item)}</li>`).join('')}</ul>`).join('');
-  editor.innerHTML = `
-    <div class="text-content" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:10px">${escapeHtml(data.title)}</div>
-    <p style="margin-bottom:12px;color:var(--text2)">${escapeHtml(getReportTypeLabel(data.type))} 초안입니다. 필요 시 본문을 직접 수정한 뒤 저장할 수 있습니다.</p>
-    ${sectionHtml}`;
+  editor.innerHTML = markdown && typeof window.renderReportMarkdown === 'function'
+    ? window.renderReportMarkdown(markdown)
+    : savedHtml && typeof window.sanitizeStoredReportHtml === 'function'
+      ? window.sanitizeStoredReportHtml(savedHtml)
+    : `
+      <div class="text-content" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:10px">${escapeHtml(data.title)}</div>
+      <p style="margin-bottom:12px;color:var(--text2)">${escapeHtml(getReportTypeLabel(data.type))} 초안입니다. 필요 시 본문을 직접 수정한 뒤 저장할 수 있습니다.</p>
+      ${sectionHtml}`;
   G.currentReportDraft = data;
   G.selectedReportId = null;
   document.querySelectorAll('#reportList .report-item').forEach(item => item.classList.remove('active'));
@@ -468,7 +482,8 @@ function editReport(reportId){
   const report = fetchReports().find(item => item.id === reportId);
   if(!report) return;
   G.currentReportDraft = report;
-  renderReportDraft({ title:report.title, type:report.type, period:report.period, sections:Object.entries(normalizeReportSections(report.sections)).map(([key,items]) => [{completed:'완료된 업무',inProgress:'진행 중인 업무',technical:'AI 및 기술적 상세 내용',risk:'리스크 관리 및 해결 방안',retrospective:'팀 회고',nextPlan:'차주 계획'}[key] || key, items]) });
+  const markdown = report.markdown || (report.html && !String(report.html).trim().startsWith('<') ? report.html : '');
+  renderReportDraft({ title:report.title, type:report.type, period:report.period, markdown, html:report.html, sections:Object.entries(normalizeReportSections(report.sections)).map(([key,items]) => [{completed:'완료된 업무',inProgress:'진행 중인 업무',technical:'AI 및 기술적 상세 내용',risk:'리스크 관리 및 해결 방안',retrospective:'팀 회고',nextPlan:'차주 계획'}[key] || key, items]) });
 }
 function setReportPeriod(period){
   G.currentReportPeriod = period === 'monthly' ? 'monthly' : 'weekly';
@@ -1976,12 +1991,12 @@ function renderCurrentChatMessages(){
   G.restoringChat=true;
   (session.messages||[]).forEach(message=>{
     if(message.kind==='schedule') renderScheduleAssistantMessage(message.content, message.parsed || parseScheduleMsg(message.content), message.calDate || null);
-    else appendChatMsg(message.role==='assistant'?'ai':'user', message.content, message.src || null, !!message.withBtn);
+    else appendChatMsg(message.role==='assistant'?'ai':'user', message.content, message.src || null, !!message.withBtn, message.context || {});
   });
   G.restoringChat=false;
   enforceChatLimit();
   const latestAssistant=[...(session.messages||[])].reverse().find(m=>m.role==='assistant');
-  if(latestAssistant) updateChatContextPanel(`${G.lastChatPrompt || ''} ${latestAssistant.content}`, latestAssistant.src || null);
+  if(latestAssistant) updateChatContextPanel(`${G.lastChatPrompt || ''} ${latestAssistant.content}`, latestAssistant.src || null, latestAssistant.context || {});
 }
 function startNewChat(){ createNewChatSession(true); }
 async function sendMsg(text){
@@ -3013,7 +3028,7 @@ function renderCalendar(year, month){
     const div = document.createElement('div');
     div.className = `cal-cell${(ev && ev.today) || isToday ? ' today' : ''}${ev && ev.risk ? ' risk' : ''}${isNew ? ' new-event' : ''}${isSelected ? ' cal-selected' : ''}`;
     const visibleTags = (ev?.tags || [])
-      .filter((tag) => !tag.hideOnCalendar)
+      .filter((tag) => !tag.hideOnCalendar && window.isCalendarTagVisible?.(tag) !== false)
       .sort((left, right) => {
         const rank = (tag) => tag.eventType === 'absence' || String(tag.sourceType || '').startsWith('absence:') ? 0 : tag.todoStatus === 'approved' ? 1 : tag.todoStatus === 'done' ? 2 : 3;
         return rank(left) - rank(right);
@@ -3052,7 +3067,7 @@ function openCalModal(d) {
   if(modalDate) modalDate.textContent = `${G.currentCalYear}년 ${G.currentCalMonth + 1}월 ${d}일`;
   const list = document.getElementById('calModalList');
   if(list){
-    list.innerHTML = tags.length ? tags.map((t, i) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)"><span class="cal-tag ${t.c}" style="flex:1">${t.rangeLabel || t.t}</span><div onclick="deleteCalTag(${d},${i})" style="cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;border:1px solid var(--border)" title="${String(t.sourceType || '').startsWith('absence:') ? '기간 부재 일정 전체 삭제' : '삭제'}">×</div></div>`).join('') : `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">등록된 일정이 없습니다.</div>`;
+    list.innerHTML = tags.length ? tags.map((t, i) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)"><span class="cal-tag ${t.c}" style="flex:1">${t.rangeLabel || t.t}</span><div onclick="deleteCalTag(${d},${i})" style="cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;border:1px solid var(--border)" title="${t.isAbsenceRange ? '기간 부재 일정 전체 삭제' : '삭제'}">×</div></div>`).join('') : `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">등록된 일정이 없습니다.</div>`;
   }
   const input = document.getElementById('calModalInput'); if(input) input.value = '';
   calSelectedColor = 'ct-info';
@@ -3086,7 +3101,7 @@ async function addCalTag() {
     showToast(`${G.currentCalMonth + 1}월 ${d}일 일정이 DB에 추가되었습니다.`, 'info');
   }catch(error){
     console.warn('Calendar create API failed',error);
-    showToast('캘린더 등록에 실패했습니다.','warn');
+    showToast(String(error?.message || '캘린더 등록에 실패했습니다.'),'warn');
   }
 }
 async function deleteCalTag(d, idx) {
@@ -3104,7 +3119,7 @@ async function deleteCalTag(d, idx) {
         return;
       }
 
-      const isAbsenceRange = String(tag?.sourceType || '').startsWith('absence:');
+      const isAbsenceRange = Boolean(tag?.isAbsenceRange);
       if(isAbsenceRange && !window.confirm('이 기간의 부재 일정을 모두 삭제할까요?')) return;
       await window.opsRadarApi.request(`/calendar/${eventId}${isAbsenceRange ? '?series=true' : ''}`,{method:'DELETE'});
       await window.opsRadarApi.loadCalendar();
@@ -3117,7 +3132,7 @@ async function deleteCalTag(d, idx) {
 
     renderCalendar(G.currentCalYear,G.currentCalMonth);
     openCalModal(d);
-    showToast(String(tag?.sourceType || '').startsWith('absence:') ? '기간 부재 일정이 삭제되었습니다.' : '일정이 삭제되었습니다.','info');
+    showToast(tag?.isAbsenceRange ? '기간 부재 일정이 삭제되었습니다.' : '일정이 삭제되었습니다.','info');
   }catch(error){
     console.warn('Calendar delete API failed',error);
     showToast('캘린더 삭제에 실패했습니다.','warn');

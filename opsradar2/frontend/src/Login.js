@@ -1,9 +1,11 @@
 import { useState } from "react";
 
 const API_BASE =
-  window.location.port === "8002"
+  ["8002", "3001"].includes(window.location.port)
     ? "/api/v1"
-    : `${window.location.protocol}//${window.location.hostname}:8002/api/v1`;
+    : (["localhost", "127.0.0.1"].includes(window.location.hostname)
+      ? "http://127.0.0.1:8002/api/v1"
+      : `${window.location.protocol}//${window.location.hostname}:8002/api/v1`);
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");

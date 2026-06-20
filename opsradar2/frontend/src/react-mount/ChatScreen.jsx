@@ -28,7 +28,7 @@ const TOPBAR_INNER = `
       <div class="chat-topbar-sub">운영 데이터 기반 질의응답 · 일정 등록 · 근거 문서 연결</div>
     </div>
     <div class="chat-top-actions">
-      <span class="badge b-success" style="display:flex;align-items:center;gap:4px"><i class="ti ti-circle-filled" style="font-size:8px"></i> RAG 연결됨</span>
+      <span id="chatAssistantStatus" class="badge b-success" style="display:flex;align-items:center;gap:4px"><i class="ti ti-circle-filled" style="font-size:8px"></i> 근거 기반 분석</span>
       <button class="tbtn" type="button" onclick="createNewChatSession(true)"><i class="ti ti-plus"></i> 새 분석 세션</button>
     </div>
   `

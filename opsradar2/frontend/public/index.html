@@ -9,15 +9,17 @@
 
 <link rel="stylesheet" href="/static/css/theme.css?v=20260619">
 <link rel="stylesheet" href="/static/css/layout.css?v=20260619">
-<link rel="stylesheet" href="/static/css/components.css?v=20260620-absence-range">
+<link rel="stylesheet" href="/static/css/components.css?v=20260620-grounded-assistant">
 <link rel="stylesheet" href="/static/css/role-workflow-enhancements.css?v=20260619">
 <link rel="stylesheet" href="/static/css/workflow-v2.css?v=20260620-calendar-todos">
 </head>
 
 <body><script>
-window.OPSRADAR_API_BASE = window.location.port === "8002"
+window.OPSRADAR_API_BASE = ["8002", "3001"].includes(window.location.port)
   ? "/api/v1"
-  : `${window.location.protocol}//${window.location.hostname}:8002/api/v1`;
+  : (["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? "http://127.0.0.1:8002/api/v1"
+    : `${window.location.protocol}//${window.location.hostname}:8002/api/v1`);
 </script>
 
 <div style="display:flex;flex:1;overflow:hidden">
@@ -607,7 +609,7 @@ window.OPSRADAR_API_BASE = window.location.port === "8002"
       <div class="chat-topbar-sub">운영 데이터 기반 질의응답 · 일정 등록 · 근거 문서 연결</div>
     </div>
     <div class="chat-top-actions">
-      <span class="badge b-success" style="display:flex;align-items:center;gap:4px"><i class="ti ti-circle-filled" style="font-size:8px"></i> RAG 연결됨</span>
+      <span id="chatAssistantStatus" class="badge b-success" style="display:flex;align-items:center;gap:4px"><i class="ti ti-circle-filled" style="font-size:8px"></i> 근거 기반 분석</span>
       <button class="tbtn" type="button" onclick="createNewChatSession(true)"><i class="ti ti-plus"></i> 새 분석 세션</button>
     </div>
   </div>
@@ -1024,23 +1026,24 @@ Content: API 연결 일정과 담당자 확인이 필요합니다.</pre></div>
   </button>
 </div>
 </div>
-<script src="/static/js/app.js?v=20260620-absence-range"></script>
-<script src="/static/js/api-integration.js?v=20260620-absence-range"></script>
+<script src="/static/js/app.js?v=20260620-grounded-assistant"></script>
+<script src="/static/js/api-integration.js?v=20260620-calendar-range-fix"></script>
 <script src="/static/js/storage.js?v=20260619"></script>
 <script src="/static/js/dashboard.js?v=20260619"></script>
 <script src="/static/js/todo.js?v=20260619"></script>
 <script src="/static/js/issue.js?v=20260619"></script>
 <script src="/static/js/calendar.js?v=20260619"></script>
 <script src="/static/js/handoff.js?v=20260619"></script>
-<script src="/static/js/report.js?v=20260619"></script>
-<script src="/static/js/assistant.js?v=20260619"></script>
+<script src="/static/js/report.js?v=20260620-report-ai-final"></script>
+<script src="/static/js/assistant.js?v=20260620-grounded-assistant"></script>
 <script src="/static/js/settings.js?v=20260619"></script>
 <script src="/static/js/ops-workflow-enhancements.js?v=20260620-calendar-todos"></script>
 <script src="/static/js/todo-calendar-enhancements.js?v=20260619"></script>
 <script src="/static/js/role-workflow-enhancements.js?v=20260620-calendar-sync"></script>
+<script src="/static/js/calendar-team-filter.js?v=20260620-calendar-filter-fix"></script>
 <script src="/static/js/workflow-v2.js?v=20260620-member-issue-actions"></script>
 <!-- React strangler-fig mount: Todo 탭/목록/카드/상세는 React 렌더링, 기존 Todo 전역 함수는 compatibility wrapper 유지. -->
 <div id="react-mount"></div>
-<script type="module" src="/static/react/main.js?v=20260620-absence-range"></script>
+<script type="module" src="/static/react/main.js?v=20260620-grounded-assistant"></script>
 <div id="root"></div></body>
 </html>
