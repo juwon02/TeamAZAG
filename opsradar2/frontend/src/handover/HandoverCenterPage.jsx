@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import HandoffHome from "./HandoffHome";
 import HandoffDetail from "./HandoffDetail";
 import HandoffArchive from "./HandoffArchive";
-import { DEFAULT_HANDOFF_CONDITIONS, DEFAULT_ONBOARDING_CONDITIONS, HANDOFF_CANDIDATES, ONBOARDING_CANDIDATES, buildPreviewData, readArchives, writeArchives } from "./handoverData";
+import { DEFAULT_HANDOFF_CONDITIONS, DEFAULT_ONBOARDING_CONDITIONS, HANDOFF_CANDIDATES, ONBOARDING_CANDIDATES, buildPreviewData, readArchives, writeArchives, fetchHandoffCandidates } from "./handoverData";
 import { normalizeMode, setHandoffController } from "./handoffStateAdapter";
 import "./handover.css";
 
@@ -19,11 +19,14 @@ export default function HandoverCenterPage() {
   const [archiveId, setArchiveId] = useState("");
   const [previewOverrides, setPreviewOverrides] = useState({ handoff: null, onboarding: null });
   const [savedDraftId, setSavedDraftId] = useState("");
+  const [handoffCandidates, setHandoffCandidates] = useState(HANDOFF_CANDIDATES);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const activeConditions = mode === "onboarding" ? onboarding : handoff;
-  const activeCandidates = mode === "onboarding" ? ONBOARDING_CANDIDATES : HANDOFF_CANDIDATES;
+  const activeCandidates = mode === "onboarding" ? ONBOARDING_CANDIDATES : handoffCandidates;
   const activeIds = mode === "onboarding" ? onboardingIds : handoffIds;
-  const generatedHandoffPreview = useMemo(() => buildPreviewData("handoff", handoff, HANDOFF_CANDIDATES, handoffIds), [handoff, handoffIds]);
+  const generatedHandoffPreview = useMemo(() => buildPreviewData("handoff", handoff, handoffCandidates, handoffIds), [handoff, handoffCandidates, handoffIds]);
   const generatedOnboardingPreview = useMemo(() => buildPreviewData("onboarding", onboarding, ONBOARDING_CANDIDATES, onboardingIds), [onboarding, onboardingIds]);
   const previewType = mode === "onboarding" ? "onboarding" : "handoff";
   const preview = previewOverrides[previewType] || (previewType === "onboarding" ? generatedOnboardingPreview : generatedHandoffPreview);
@@ -33,6 +36,7 @@ export default function HandoverCenterPage() {
 
   useEffect(() => setHandoffController({ openMode, openPreview, getPreviewData }), [generatedHandoffPreview, generatedOnboardingPreview, previewOverrides]);
   useEffect(() => { const command = (event) => event.detail?.command === "preview" ? openPreview(event.detail.mode) : openMode(event.detail?.mode || "home"); const nav = () => openMode("home"); window.addEventListener("opsradar:handoff-command", command); window.addEventListener("opsradar:open-handover", nav); return () => { window.removeEventListener("opsradar:handoff-command", command); window.removeEventListener("opsradar:open-handover", nav); }; }, [generatedHandoffPreview, generatedOnboardingPreview, previewOverrides]);
+  useEffect(() => { setLoading(true); fetchHandoffCandidates().then((candidates) => { setHandoffCandidates(candidates); setHandoffIds(candidates.map((v) => v.id)); }).catch(() => { setError("API 연결 실패 - 기본 데이터를 사용합니다."); }).finally(() => setLoading(false)); }, []);
 
   const resetEditedPreview = (type = previewType) => { setSavedDraftId(""); setPreviewOverrides((current) => ({ ...current, [type]: null })); };
   const changeCondition = (key, value) => { resetEditedPreview(); (mode === "onboarding" ? setOnboarding : setHandoff)((current) => ({ ...current, [key]: value })); };

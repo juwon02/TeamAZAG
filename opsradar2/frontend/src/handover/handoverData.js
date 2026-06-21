@@ -80,5 +80,57 @@ export function buildPreviewData(type, conditions, candidates, selectedIds) {
   };
 }
 
+const API_BASE = "/api/v1";
+
+function getAuthToken() {
+  return localStorage.getItem("access_token") || localStorage.getItem("token") || "";
+}
+
+function normalizePriority(value) {
+  const v = (value || "").toLowerCase();
+  if (v === "high" || v === "critical") return "High";
+  if (v === "low") return "Low";
+  return "Medium";
+}
+
+export async function fetchHandoffCandidates() {
+  const [todosRes, issuesRes] = await Promise.all([
+    fetch(`${API_BASE}/todos?status=in_progress&limit=50`),
+    fetch(`${API_BASE}/issues?status=open&limit=50`),
+  ]);
+  if (!todosRes.ok || !issuesRes.ok) throw new Error("API fetch failed");
+  const [todosData, issuesData] = await Promise.all([todosRes.json(), issuesRes.json()]);
+
+  const todoItems = (todosData.todos || []).map((t) => ({
+    id: `todo_${t.todo_id}`,
+    group: "진행 중 Todo",
+    title: t.title,
+    meta: t.assignee || "",
+    priority: normalizePriority(t.priority),
+  }));
+
+  const issueItems = (issuesData.issues || []).map((i) => ({
+    id: `issue_${i.id}`,
+    group: "미해결 이슈",
+    title: i.title,
+    meta: i.assignee || "",
+    priority: normalizePriority(i.risk_level),
+  }));
+
+  const staticItems = HANDOFF_CANDIDATES.filter(
+    (c) => c.group !== "진행 중 Todo" && c.group !== "미해결 이슈"
+  );
+
+  return [...todoItems, ...issueItems, ...staticItems];
+}
+
+export async function fetchWorkflowReview() {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(`${API_BASE}/workflow/review`, { headers });
+  if (!res.ok) throw new Error("Workflow review fetch failed");
+  return res.json();
+}
+
 export function readArchives() { try { const data = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || "[]"); return Array.isArray(data) ? data : []; } catch { return []; } }
 export function writeArchives(value) { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(value)); }
