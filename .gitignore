@@ -48,6 +48,7 @@ Thumbs.db
 
 # Shell scripts (Linux/macOS)
 *.sh
+!opsradar2/docker/db/init-opsradar.sh
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
