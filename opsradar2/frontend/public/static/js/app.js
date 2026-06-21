@@ -3050,8 +3050,24 @@ function updateCalendarHeader(){
   const title = document.getElementById('calMonthTitle') || wrap.querySelector('.chip');
   const prevDate = new Date(G.currentCalYear, G.currentCalMonth - 1, 1);
   const nextDate = new Date(G.currentCalYear, G.currentCalMonth + 1, 1);
-  if(prevBtn){ prevBtn.id = 'calPrevBtn'; prevBtn.textContent = `← ${prevDate.getMonth() + 1}월`; prevBtn.onclick = goToPrevMonth; prevBtn.setAttribute('role','button'); prevBtn.setAttribute('tabindex','0'); }
-  if(nextBtn){ nextBtn.id = 'calNextBtn'; nextBtn.textContent = `${nextDate.getMonth() + 1}월 →`; nextBtn.onclick = goToNextMonth; nextBtn.setAttribute('role','button'); nextBtn.setAttribute('tabindex','0'); }
+  if(prevBtn){
+    prevBtn.id = 'calPrevBtn';
+    prevBtn.innerHTML = '<i class="ti ti-chevron-left"></i>';
+    prevBtn.title = `${prevDate.getMonth() + 1}월로 이동`;
+    prevBtn.setAttribute('aria-label', `${prevDate.getMonth() + 1}월로 이동`);
+    prevBtn.onclick = goToPrevMonth;
+    prevBtn.setAttribute('role','button');
+    prevBtn.setAttribute('tabindex','0');
+  }
+  if(nextBtn){
+    nextBtn.id = 'calNextBtn';
+    nextBtn.innerHTML = '<i class="ti ti-chevron-right"></i>';
+    nextBtn.title = `${nextDate.getMonth() + 1}월로 이동`;
+    nextBtn.setAttribute('aria-label', `${nextDate.getMonth() + 1}월로 이동`);
+    nextBtn.onclick = goToNextMonth;
+    nextBtn.setAttribute('role','button');
+    nextBtn.setAttribute('tabindex','0');
+  }
   if(title){ title.id = 'calMonthTitle'; title.textContent = `${G.currentCalYear}년 ${G.currentCalMonth + 1}월`; }
 }
 function renderCalendar(year, month){
