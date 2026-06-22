@@ -17,8 +17,15 @@ import ReportsScreen from './ReportsScreen.jsx'
 import CalendarScreen from './CalendarScreen.jsx'
 import IssuesScreen from './IssuesScreen.jsx'
 import DashboardScreen from './DashboardScreen.jsx'
-import KnowledgeScreen from './KnowledgeScreen.jsx'
+import HandoverCenterPage from './handover/HandoverCenterPage.jsx'
+import { installHandoffCompatibility } from './handover/handoffStateAdapter.js'
 import AnalysisScreen from './AnalysisScreen.jsx'
+
+// handoff.js가 sync script로 먼저 실행되므로, 모듈 최상위에서 즉시 호출해
+// window.__HANDOFF_REACT_ENABLED__ = true 를 최대한 일찍 설정.
+// (handoff.js의 IIFE는 이미 실행됐지만, 이후 window.nav 패치 이전에
+//  installHandoffCompatibility가 selectKnowledgeType 등을 덮어써 React 이벤트로 라우팅.)
+installHandoffCompatibility()
 import ChatScreen from './ChatScreen.jsx'
 import TodoScreen from './TodoScreen.jsx'
 
@@ -175,15 +182,18 @@ function mountReactDashboard() {
   )
 }
 
-// 인수인계 센터(s-knowledge) — 보고서·캘린더와 동일: 화면 전체 vanilla 소유라
-// React 는 셸 구조를 memo 로 1회만 렌더하고, handoff.js(window.nav 패치)+app.js 가 이 노드에
-// #knowledgeContent 를 주입/바인딩한다. 재렌더 0(MutationObserver 미사용). <style>는 head 라 무관.
+// 인수인계 센터(s-knowledge) — HandoverCenterPage(staged-workflow 이관).
+// React state 로 홈/상세/아카이브를 관리. fetchHandoffCandidates()가 /api/v1/todos·issues 실호출.
+// installHandoffCompatibility()로 vanilla handoff.js의 selectKnowledgeType/openHandoffPreview
+// 전역 함수를 React 이벤트로 브릿징 → 기존 sidebar nav·app.js 호출자 무수정.
 function mountReactKnowledge() {
   const el = document.getElementById('s-knowledge')
   if (!el) return
+  // handover.css의 #s-knowledge[data-react-owned="true"] 규칙 적용을 위해 속성 설정.
+  el.dataset.reactOwned = 'true'
   createRoot(el).render(
     <StrictMode>
-      <KnowledgeScreen />
+      <HandoverCenterPage />
     </StrictMode>,
   )
 }
